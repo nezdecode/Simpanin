@@ -1,0 +1,54 @@
+# --- Xcode ---
+xcuserdata/
+*.xcuserstate
+*.xcscmblueprint
+*.xccheckout
+DerivedData/
+build/
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+timeline.xctimeline
+playground.xcworkspace
+
+# --- Swift Package Manager ---
+.build/
+.swiftpm/
+Packages/*/.build/
+Packages/*/.swiftpm/
+
+# --- macOS ---
+.DS_Store
+
+# --- Scans: deny all images and PDFs ---
+# Simpanin stores photos of real ID documents (KTP, SIM, STNK, passport).
+# Real test scans must never enter this repository, which becomes public at
+# launch. So every image and PDF is ignored everywhere, and only synthetic
+# fixtures under Fixtures/Synthetic/ are allowed back in. The pre-commit hook
+# in scripts/hooks/ enforces the same rule for files added with --force.
+*.jpg
+*.jpeg
+*.png
+*.heic
+*.pdf
+*.JPG
+*.JPEG
+*.PNG
+*.HEIC
+*.PDF
+!Fixtures/Synthetic/**/
+!Fixtures/Synthetic/**/*.jpg
+!Fixtures/Synthetic/**/*.jpeg
+!Fixtures/Synthetic/**/*.png
+!Fixtures/Synthetic/**/*.heic
+!Fixtures/Synthetic/**/*.pdf
+!Fixtures/Synthetic/**/*.JPG
+!Fixtures/Synthetic/**/*.JPEG
+!Fixtures/Synthetic/**/*.PNG
+!Fixtures/Synthetic/**/*.HEIC
+!Fixtures/Synthetic/**/*.PDF
+
+# Safety net in case real scans are dropped into the repo root by mistake.
+/TestScans/
