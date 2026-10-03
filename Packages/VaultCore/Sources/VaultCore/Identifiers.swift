@@ -1,0 +1,42 @@
+import Foundation
+
+/// A UUID-based identifier. Its text form is the lowercase UUID string, used the same
+/// way everywhere: in JSON, in associated data, in file names and as the HKDF salt.
+public struct Identifier<Kind>: Hashable, Sendable {
+    public let uuid: UUID
+
+    public init() { uuid = UUID() }
+    public init(_ uuid: UUID) { self.uuid = uuid }
+
+    /// Accepts only the canonical lowercase form, so one id has exactly one spelling.
+    public init?(string: String) {
+        guard let uuid = UUID(uuidString: string), uuid.uuidString.lowercased() == string else { return nil }
+        self.uuid = uuid
+    }
+
+    public var string: String { uuid.uuidString.lowercased() }
+}
+
+extension Identifier: Codable {
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let text = try container.decode(String.self)
+        guard let id = Identifier(string: text) else {
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Not a lowercase UUID")
+        }
+        self = id
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(string)
+    }
+}
+
+public enum VaultIDKind {}
+public enum DocumentIDKind {}
+public enum PageIDKind {}
+
+public typealias VaultID = Identifier<VaultIDKind>
+public typealias DocumentID = Identifier<DocumentIDKind>
+public typealias PageID = Identifier<PageIDKind>
