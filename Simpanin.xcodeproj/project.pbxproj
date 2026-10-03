@@ -33,27 +33,6 @@
 		358873F43071696F00707845 /* SimpaninUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SimpaninUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		3588741030716A0200707845 /* Exceptions for "docs" folder in "Simpanin" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				"decisions.md",
-				"document-vault-brief.md",
-				"document-vault-security-storage-design.md",
-			);
-			target = 358873DC3071696D00707845 /* Simpanin */;
-		};
-		3588741130716A0200707845 /* Exceptions for "docs" folder in "SimpaninUITests" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				"decisions.md",
-				"document-vault-brief.md",
-				"document-vault-security-storage-design.md",
-			);
-			target = 358873F33071696F00707845 /* SimpaninUITests */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		358873DF3071696D00707845 /* Simpanin */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
@@ -68,15 +47,6 @@
 		358873F73071696F00707845 /* SimpaninUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = SimpaninUITests;
-			sourceTree = "<group>";
-		};
-		35887409307169E200707845 /* docs */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				3588741030716A0200707845 /* Exceptions for "docs" folder in "Simpanin" target */,
-				3588741130716A0200707845 /* Exceptions for "docs" folder in "SimpaninUITests" target */,
-			);
-			path = docs;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -110,7 +80,6 @@
 		358873D43071696D00707845 = {
 			isa = PBXGroup;
 			children = (
-				35887409307169E200707845 /* docs */,
 				358873DF3071696D00707845 /* Simpanin */,
 				358873ED3071696F00707845 /* SimpaninTests */,
 				358873F73071696F00707845 /* SimpaninUITests */,
@@ -192,7 +161,6 @@
 			);
 			fileSystemSynchronizedGroups = (
 				358873F73071696F00707845 /* SimpaninUITests */,
-				35887409307169E200707845 /* docs */,
 			);
 			name = SimpaninUITests;
 			packageProductDependencies = (

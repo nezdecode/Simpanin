@@ -52,3 +52,9 @@ Packages/*/.swiftpm/
 
 # Safety net in case real scans are dropped into the repo root by mistake.
 /TestScans/
+
+# Private planning docs and agent notes. They hold business plans, personal
+# device test results and private links, so they stay out of the public repo.
+# Backup copy: ~/Developer/iOSDev/Simpanin-private/
+/docs/
+/CLAUDE.md

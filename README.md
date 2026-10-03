@@ -8,8 +8,6 @@ Simpanin is a privacy-first iOS app for keeping personal documents such as KTP, 
 - No analytics, no crash reporting, no third-party SDKs. The only dependency is Apple's [swift-crypto](https://github.com/apple/swift-crypto).
 - Real document scans are never part of this repository; tests use synthetic data only.
 
-Design: [docs/document-vault-security-storage-design.md](docs/document-vault-security-storage-design.md).
-
 ## Development
 
 Install the pre-commit hook once per clone. It rejects images and PDFs outside `Fixtures/Synthetic/`:

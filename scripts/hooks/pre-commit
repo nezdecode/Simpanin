@@ -1,5 +1,6 @@
 #!/bin/sh
-# Rejects any staged image or PDF outside Fixtures/Synthetic/.
+# Rejects any staged image or PDF outside Fixtures/Synthetic/, and the
+# private docs/ folder and CLAUDE.md.
 # Real document scans must never be committed; see .gitignore.
 # Install once per clone: git config core.hooksPath scripts/hooks
 
@@ -11,6 +12,16 @@ bad=$(git diff --cached --name-only --diff-filter=ACMR -z \
 if [ -n "$bad" ]; then
   echo "pre-commit: refusing to commit images or PDFs outside Fixtures/Synthetic/:" >&2
   echo "$bad" | sed 's/^/  /' >&2
+  echo "Unstage them with: git rm --cached <file>" >&2
+  exit 1
+fi
+private=$(git diff --cached --name-only --diff-filter=ACMR -z \
+  | tr '\0' '\n' \
+  | grep -E '^(docs/|CLAUDE\.md$)')
+
+if [ -n "$private" ]; then
+  echo "pre-commit: refusing to commit private files (docs/, CLAUDE.md):" >&2
+  echo "$private" | sed 's/^/  /' >&2
   echo "Unstage them with: git rm --cached <file>" >&2
   exit 1
 fi
