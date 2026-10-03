@@ -30,14 +30,14 @@ public protocol KeyStore: Sendable {
     func deleteVaultKey(for vaultID: VaultID) async throws
 }
 
-// MARK: - Clock
+// MARK: - VaultClock
 
 /// The current time, injected so the 30-day purge and orphan cleanup can be tested.
-public protocol Clock: Sendable {
+public protocol VaultClock: Sendable {
     var now: Date { get }
 }
 
-public struct SystemClock: Clock {
+public struct SystemClock: VaultClock {
     public init() {}
     public var now: Date { Date() }
 }

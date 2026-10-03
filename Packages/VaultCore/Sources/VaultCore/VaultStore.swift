@@ -41,7 +41,7 @@ public actor VaultStore {
     private let root: URL
     private let projectionURL: URL
     private let keyStore: any KeyStore
-    private let clock: any Clock
+    private let clock: any VaultClock
     private let fileProtector: any FileProtector
     private let reminderOffsets: [Int]
     private let crashHook: (@Sendable (WriteStep) throws -> Void)?
@@ -63,13 +63,13 @@ public actor VaultStore {
     ///   - rootDirectory: the vault folder (Application Support/Vault in the app).
     ///   - projectionURL: projection.json (in the App Group container in the app).
     ///   - reminderOffsets: days before expiry written into the projection.
-    public init(rootDirectory: URL, projectionURL: URL, keyStore: any KeyStore, clock: any Clock = SystemClock(),
+    public init(rootDirectory: URL, projectionURL: URL, keyStore: any KeyStore, clock: any VaultClock = SystemClock(),
                 fileProtector: any FileProtector = NoFileProtection(), reminderOffsets: [Int] = [60, 30, 7]) {
         self.init(rootDirectory: rootDirectory, projectionURL: projectionURL, keyStore: keyStore, clock: clock,
                   fileProtector: fileProtector, reminderOffsets: reminderOffsets, crashHook: nil)
     }
 
-    init(rootDirectory: URL, projectionURL: URL, keyStore: any KeyStore, clock: any Clock,
+    init(rootDirectory: URL, projectionURL: URL, keyStore: any KeyStore, clock: any VaultClock,
          fileProtector: any FileProtector = NoFileProtection(), reminderOffsets: [Int] = [60, 30, 7],
          crashHook: (@Sendable (WriteStep) throws -> Void)?) {
         root = rootDirectory

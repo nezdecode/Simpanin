@@ -54,7 +54,7 @@ actor InMemoryKeyStore: KeyStore {
 
 // MARK: - Clock
 
-final class TestClock: VaultCore.Clock {
+final class TestClock: VaultClock {
     private let date: Mutex<Date>
     init(_ now: Date = Date()) { date = Mutex(now) }
     var now: Date { date.withLock { $0 } }
