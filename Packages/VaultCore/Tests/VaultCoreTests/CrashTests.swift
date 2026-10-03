@@ -94,9 +94,13 @@ struct CrashTests {
 
             run.clock.advance(by: 3600)  // old enough for orphan cleanup
             let reopened = run.makeStore()
-            try await reopened.open()
+            let report = try await reopened.open()
             let expected = steps.prefix(k).contains(.indexWritten) ? after : before
             #expect(try await reopened.snapshot() == expected, "\(label)")
+            // A crash right after index.enc was moved aside leaves it missing: the
+            // newest change may be lost, and the app shows the no-number notice.
+            #expect(report.newestChangeMayBeLost == (steps[k - 1] == .indexMovedToPrevious), "\(label)")
+            #expect(!report.recoveredFromPages, "\(label)")
             try await expectConsistent(run, reopened, label)
         }
     }
@@ -125,8 +129,9 @@ struct CrashTests {
 
             run.clock.advance(by: 3600)
             let reopened = run.makeStore()
-            try await reopened.open()
+            let report = try await reopened.open()
             #expect(try await reopened.snapshot() == after, "\(label)")
+            #expect(report.newestChangeMayBeLost == (steps[k - 1] == .indexMovedToPrevious), "\(label)")
             try await expectConsistent(run, reopened, label)
             // Whatever step the crash hit, no index file keeps B's sealed key once reopened.
             for url in [run.indexURL, run.previousIndexURL] where FileManager.default.fileExists(atPath: url.path) {

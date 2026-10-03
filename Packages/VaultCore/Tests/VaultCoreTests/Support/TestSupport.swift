@@ -105,6 +105,8 @@ final class TestVault {
     var indexURL: URL { root.appending(path: "index.enc") }
     var previousIndexURL: URL { root.appending(path: "index.prev.enc") }
     var headerURL: URL { root.appending(path: "vault.json") }
+    /// Application Support/Quarantine in the app.
+    var quarantineURL: URL { base.appending(path: "Quarantine", directoryHint: .isDirectory) }
 
     init(keyStore: InMemoryKeyStore = InMemoryKeyStore(), clock: TestClock = TestClock()) throws {
         base = FileManager.default.temporaryDirectory
@@ -144,6 +146,18 @@ final class TestVault {
     }
 
     func pageURL(_ id: PageID) -> URL { pagesDirectory.appending(path: "\(id.string).enc") }
+
+    /// Every file under `directory`, keyed by its path relative to `directory`.
+    static func files(in directory: URL) throws -> [String: Data] {
+        var result: [String: Data] = [:]
+        let base = directory.standardizedFileURL.path + "/"
+        if let e = FileManager.default.enumerator(at: directory, includingPropertiesForKeys: [.isRegularFileKey]) {
+            for case let url as URL in e where (try? url.resourceValues(forKeys: [.isRegularFileKey]))?.isRegularFile == true {
+                result[String(url.standardizedFileURL.path.dropFirst(base.count))] = try Data(contentsOf: url)
+            }
+        }
+        return result
+    }
 
     /// Every regular file under the vault root and the projection.
     func allFiles() throws -> [URL] {

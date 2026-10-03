@@ -9,6 +9,16 @@ import Testing
 struct VaultKeyRuleTests {
     static let lockedFailures: [InMemoryKeyStore.ReadFailure] = [.locked, .interactionNotAllowed, .unexpected]
 
+    /// The Keychain status the app needs, for example to tell "passcode turned off"
+    /// (-25293) from other locked states. Errors that are not Keychain errors carry nil.
+    static func expectedError(_ failure: InMemoryKeyStore.ReadFailure) -> VaultError {
+        switch failure {
+        case .locked: .vaultKeyUnavailable(status: -25293)
+        case .interactionNotAllowed: .vaultKeyUnavailable(status: -25308)
+        case .unexpected: .vaultKeyUnavailable(status: nil)
+        }
+    }
+
     @Test func newVaultCreatesKeyOnlyWhenNotFound() async throws {
         let vault = try TestVault()
         let report = try await vault.makeStore().open()
@@ -21,7 +31,7 @@ struct VaultKeyRuleTests {
     func lockedKeyStoreNeverCreatesANewVault(_ failure: InMemoryKeyStore.ReadFailure) async throws {
         let vault = try TestVault()
         await vault.keyStore.setReadFailure(failure)
-        await #expect(throws: VaultError.vaultKeyUnavailable) { try await vault.makeStore().open() }
+        await #expect(throws: Self.expectedError(failure)) { try await vault.makeStore().open() }
         #expect(await vault.keyStore.createCount == 0)
         #expect(try vault.allFiles().isEmpty)  // nothing written
     }
@@ -38,7 +48,7 @@ struct VaultKeyRuleTests {
         let filesBefore = try vault.allFiles().map { try Data(contentsOf: $0) }
 
         await vault.keyStore.setReadFailure(failure)
-        await #expect(throws: VaultError.vaultKeyUnavailable) { try await vault.makeStore().open() }
+        await #expect(throws: Self.expectedError(failure)) { try await vault.makeStore().open() }
         #expect(await vault.keyStore.createCount == 1)
         #expect(bytes(try #require(await vault.keyStore.key(for: header.vaultId))) == bytes(key))
         #expect(try vault.header() == header)

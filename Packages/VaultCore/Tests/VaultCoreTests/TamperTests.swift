@@ -52,6 +52,8 @@ struct TamperTests {
         let reopened = vault.makeStore()
         let report = try await reopened.open()
         #expect(report.indexSource == .previous)
+        #expect(report.newestChangeMayBeLost)
+        #expect(!report.recoveredFromPages)
         // index.prev.enc is one generation older: it has A but not B. B's page was
         // committed, so it is re-attached from its page header instead of deleted;
         // only B's fields (which lived in the lost index) are gone.
@@ -103,6 +105,7 @@ struct TamperTests {
         let reopened = vault.makeStore()
         let report = try await reopened.open()
         #expect(report.indexSource == .previous)
+        #expect(report.newestChangeMayBeLost)
         // The stale copy is not used: the vault shows index.prev.enc's newer generation.
         #expect(try await reopened.recentlyDeleted().map(\.id) == [a])
         #expect(try await vault.readIndex(at: vault.indexURL).generation > previous.generation)
@@ -115,5 +118,6 @@ struct TamperTests {
         try FileManager.default.copyItem(at: other.indexURL, to: vault.indexURL)
         let report = try await vault.makeStore().open()
         #expect(report.indexSource == .previous)
+        #expect(report.newestChangeMayBeLost)
     }
 }

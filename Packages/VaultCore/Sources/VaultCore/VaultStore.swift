@@ -21,6 +21,13 @@ public struct OpenReport: Sendable, Equatable {
     public var removedOrphanPages = 0
     /// Page files that could not be opened. They are never deleted.
     public var unreadablePages = 0
+    /// The vault opened from index.prev.enc (index.enc was unreadable, stale, or missing
+    /// after a crash), so the newest change may be lost. The app shows a one-time notice
+    /// without a number, because the count cannot always be known.
+    public var newestChangeMayBeLost = false
+    /// Both index files were unusable and documents were rebuilt from page images: fields
+    /// are empty and deleted documents may be back. The app shows a one-time notice.
+    public var recoveredFromPages = false
 }
 
 /// A step of the write order, reported to the crash-simulation hook in tests.
@@ -136,6 +143,9 @@ public actor VaultStore {
         let wrapKey = VaultCrypto.wrapKey(from: vaultKey, vaultID: header.vaultId)
         let loaded = try loadIndex(vaultID: header.vaultId, indexKey: indexKey, wrapKey: wrapKey)
         report.indexSource = report.createdVault ? .new : loaded.source
+        report.newestChangeMayBeLost = !report.createdVault && loaded.source == .previous
+        report.recoveredFromPages = !report.createdVault && loaded.source == .recovered
+            && !loaded.index.documents.isEmpty
         report.unreadablePages = loaded.unreadablePages
         state = OpenState(header: header, indexKey: indexKey, wrapKey: wrapKey, index: loaded.index,
                           indexFileIsCurrent: loaded.source == .current)
@@ -157,6 +167,43 @@ public actor VaultStore {
         }
         lastReport = report
         return report
+    }
+
+    /// "Mulai vault baru": locks the store, moves the whole vault folder unchanged to
+    /// `quarantineDirectory/<yyyyMMdd-HHmmss in UTC>` (adding -2, -3... if that name is
+    /// taken), then opens a new vault with a new vault id. Nothing is deleted, and the old
+    /// vault's key is not touched, so a later version can still try to recover it. The app
+    /// confirms first, then cancels the old vault's reminders.
+    /// - Returns: where the old vault now lives, or nil if there was no vault folder.
+    @discardableResult
+    public func startNewVault(quarantineDirectory: URL) async throws -> URL? {
+        if let openTask { _ = try? await openTask.value }
+        lock()
+        let fm = FileManager.default
+        var moved: URL?
+        if fm.fileExists(atPath: root.path) {
+            try fm.createDirectory(at: quarantineDirectory, withIntermediateDirectories: true)
+            let destination = quarantineDestination(in: quarantineDirectory)
+            try fm.moveItem(at: root, to: destination)
+            moved = destination
+        }
+        try await open()
+        return moved
+    }
+
+    private func quarantineDestination(in directory: URL) -> URL {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let c = calendar.dateComponents([.year, .month, .day, .hour, .minute, .second], from: now())
+        let base = String(format: "%04d%02d%02d-%02d%02d%02d",
+                          c.year ?? 0, c.month ?? 0, c.day ?? 0, c.hour ?? 0, c.minute ?? 0, c.second ?? 0)
+        var name = base
+        var suffix = 2
+        while FileManager.default.fileExists(atPath: directory.appending(path: name).path) {
+            name = "\(base)-\(suffix)"
+            suffix += 1
+        }
+        return directory.appending(path: name, directoryHint: .isDirectory)
     }
 
     // MARK: - Reading
@@ -574,7 +621,7 @@ public actor VaultStore {
         } catch KeyStoreError.itemNotFound {
             throw VaultError.vaultKeyMissing
         } catch {
-            throw VaultError.vaultKeyUnavailable
+            throw Self.unavailable(error)
         }
     }
 
@@ -586,11 +633,20 @@ public actor VaultStore {
             do {
                 return try await keyStore.createVaultKey(for: vaultID)
             } catch {
-                throw VaultError.vaultKeyUnavailable
+                throw Self.unavailable(error)
             }
         } catch {
-            throw VaultError.vaultKeyUnavailable
+            throw Self.unavailable(error)
         }
+    }
+
+    /// Keeps the Keychain status so the app can tell "passcode turned off" (-25293) from
+    /// other locked states. The status is a number, never key material.
+    private static func unavailable(_ error: any Error) -> VaultError {
+        if case KeyStoreError.unavailable(let status) = error {
+            return .vaultKeyUnavailable(status: status)
+        }
+        return .vaultKeyUnavailable(status: nil)
     }
 
     private func documentKey(_ entry: IndexEntry) throws -> SymmetricKey {

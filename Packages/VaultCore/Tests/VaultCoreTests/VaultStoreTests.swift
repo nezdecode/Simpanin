@@ -8,6 +8,8 @@ struct VaultStoreTests {
         let vault = try TestVault()
         let report = try await vault.makeStore().open()
         #expect(report.createdVault)
+        #expect(!report.newestChangeMayBeLost)
+        #expect(!report.recoveredFromPages)
         let header = try vault.header()
         #expect(header.formatVersion == 1)
         #expect(header.keySlots.map(\.kind) == [.device])
@@ -19,6 +21,8 @@ struct VaultStoreTests {
         let again = try await vault.makeStore().open()
         #expect(!again.createdVault)
         #expect(again.indexSource == .current)
+        #expect(!again.newestChangeMayBeLost)
+        #expect(!again.recoveredFromPages)
         #expect(await vault.keyStore.createCount == 1)
     }
 

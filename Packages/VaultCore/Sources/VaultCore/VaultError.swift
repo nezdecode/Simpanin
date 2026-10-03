@@ -9,7 +9,9 @@ public enum VaultError: Error, Equatable, Sendable {
     case unsupportedVersion
     /// The key store reports the vault key exists but cannot be read now (locked,
     /// passcode removed, user cancelled). The vault must not be recreated.
-    case vaultKeyUnavailable
+    /// `status` is the Keychain status code when the key store gave one (for example
+    /// -25293 after the passcode was turned off), nil for any other error.
+    case vaultKeyUnavailable(status: Int32?)
     /// vault.json exists but the key store has no vault key for it. Never answered by
     /// creating a new key, because that would orphan every document.
     case vaultKeyMissing

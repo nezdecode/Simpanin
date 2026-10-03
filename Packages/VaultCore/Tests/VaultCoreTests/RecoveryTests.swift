@@ -43,6 +43,8 @@ struct RecoveryTests {
         let store = f.vault.makeStore()
         let report = try await store.open()
         #expect(report.indexSource == .recovered)
+        #expect(report.recoveredFromPages)
+        #expect(!report.newestChangeMayBeLost)
         #expect(report.unreadablePages == 0)
         #expect(try await recoveredPages(store) == f.pagesByDocument)
         // Fields lived only in the index, so they are gone; the documents are not.
@@ -53,7 +55,9 @@ struct RecoveryTests {
         // Recovered documents come back as live, and the rebuilt index opens normally next time.
         #expect(try await store.recentlyDeleted().isEmpty)
         let again = f.vault.makeStore()
-        #expect(try await again.open().indexSource == .current)
+        let againReport = try await again.open()
+        #expect(againReport.indexSource == .current)
+        #expect(!againReport.recoveredFromPages)  // a one-time notice
         #expect(try await recoveredPages(again) == f.pagesByDocument)
     }
 
@@ -62,7 +66,9 @@ struct RecoveryTests {
         try FileManager.default.removeItem(at: f.vault.indexURL)
         try FileManager.default.removeItem(at: f.vault.previousIndexURL)
         let store = f.vault.makeStore()
-        #expect(try await store.open().indexSource == .recovered)
+        let report = try await store.open()
+        #expect(report.indexSource == .recovered)
+        #expect(report.recoveredFromPages)
         #expect(try await recoveredPages(store) == f.pagesByDocument)
     }
 
