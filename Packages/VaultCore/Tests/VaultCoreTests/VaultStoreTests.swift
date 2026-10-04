@@ -129,6 +129,64 @@ struct VaultStoreTests {
         #expect(try vault.projection().documents.map(\.id) == [id])
     }
 
+    @Test func deletingTwiceChangesNothing() async throws {
+        let vault = try TestVault()
+        let store = vault.makeStore()
+        try await store.open()
+        let id = try await store.createDocument(type: .sim, expiry: Synthetic.simExpiry, pinned: false,
+                                                fields: Synthetic.simFields, pages: [Synthetic.page("sim")])
+        try await store.delete(id)
+        let deletedAt = try await store.document(id).deletedAt
+        let filesBefore = try TestVault.files(in: vault.base)
+        vault.clock.advance(by: 5 * 86_400)
+
+        try await store.delete(id)
+        // The 30-day timer does not restart, and no new index generation is written.
+        #expect(try await store.document(id).deletedAt == deletedAt)
+        #expect(try TestVault.files(in: vault.base) == filesBefore)
+    }
+
+    @Test func deletedDocumentRejectsEditsAndPageChanges() async throws {
+        let vault = try TestVault()
+        let store = vault.makeStore()
+        try await store.open()
+        let id = try await store.createDocument(type: .sim, expiry: Synthetic.simExpiry, pinned: false,
+                                                fields: Synthetic.simFields, pages: [Synthetic.page("sim")])
+        let page = try await store.document(id).pageIDs[0]
+        try await store.delete(id)
+        let filesBefore = try TestVault.files(in: vault.base)
+
+        await #expect(throws: VaultError.documentDeleted) {
+            try await store.editDocument(id, type: .sim, expiry: nil, pinned: true, fields: Synthetic.simFields)
+        }
+        await #expect(throws: VaultError.documentDeleted) { try await store.addPage(Synthetic.page("x"), to: id) }
+        await #expect(throws: VaultError.documentDeleted) {
+            try await store.replacePage(page, of: id, with: Synthetic.page("x"))
+        }
+        #expect(try TestVault.files(in: vault.base) == filesBefore)
+
+        // After restoring, editing works again.
+        try await store.restore(id)
+        try await store.editDocument(id, type: .sim, expiry: nil, pinned: true, fields: Synthetic.simFields)
+        #expect(try await store.document(id).pinned)
+    }
+
+    @Test func pageHeadersCarryTheirPosition() async throws {
+        let vault = try TestVault()
+        let store = vault.makeStore()
+        try await store.open()
+        let id = try await store.createDocument(type: .passport, expiry: nil, pinned: false, fields: DocumentFields(),
+                                                pages: [Synthetic.page("p0"), Synthetic.page("p1")])
+        _ = try await store.addPage(Synthetic.page("p2"), to: id)
+        let first = try await store.document(id).pageIDs[0]
+        _ = try await store.replacePage(first, of: id, with: Synthetic.page("p0-rescan"))  // keeps position 0
+
+        let positions = try await store.document(id).pageIDs.map { pageID in
+            try PageFile(decoding: Data(contentsOf: vault.pageURL(pageID))).header.position
+        }
+        #expect(positions == [0, 1, 2])
+    }
+
     @Test func projectionUsesInjectedReminderOffsets() async throws {
         let vault = try TestVault()
         let store = VaultStore(rootDirectory: vault.root, projectionURL: vault.projectionURL,

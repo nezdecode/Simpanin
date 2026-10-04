@@ -23,4 +23,13 @@ public enum VaultError: Error, Equatable, Sendable {
     case locked
     case documentNotFound
     case pageNotFound
+    /// The document is in Recently deleted; restore it before editing or changing pages.
+    case documentDeleted
+    /// A quarantine folder's vault.json cannot be read, or names a different vault than
+    /// expected. The folder is left untouched.
+    case quarantineUnreadable
+    /// The quarantine entry names the vault that is in use. Nothing is deleted.
+    case quarantineInUse
+    /// Flushing the new index to disk failed, so step 3 deleted nothing.
+    case flushFailed
 }

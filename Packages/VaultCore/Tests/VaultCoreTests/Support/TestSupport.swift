@@ -20,11 +20,15 @@ actor InMemoryKeyStore: KeyStore {
 
     private var keys: [VaultID: SymmetricKey] = [:]
     private(set) var createCount = 0
+    private(set) var deleteCount = 0
     var readFailure: ReadFailure?
+    /// Makes `deleteVaultKey` fail with this status.
+    var deleteFailureStatus: Int32?
 
     init(keys: [VaultID: SymmetricKey] = [:]) { self.keys = keys }
 
     func setReadFailure(_ failure: ReadFailure?) { readFailure = failure }
+    func setDeleteFailure(status: Int32?) { deleteFailureStatus = status }
     func setKey(_ key: SymmetricKey?, for vaultID: VaultID) { keys[vaultID] = key }
     func key(for vaultID: VaultID) -> SymmetricKey? { keys[vaultID] }
 
@@ -48,6 +52,9 @@ actor InMemoryKeyStore: KeyStore {
     }
 
     func deleteVaultKey(for vaultID: VaultID) async throws {
+        deleteCount += 1
+        if let deleteFailureStatus { throw KeyStoreError.unavailable(status: deleteFailureStatus) }
+        guard keys[vaultID] != nil else { throw KeyStoreError.itemNotFound }
         keys[vaultID] = nil
     }
 }
@@ -60,6 +67,41 @@ final class TestClock: VaultClock {
     var now: Date { date.withLock { $0 } }
     func set(_ now: Date) { date.withLock { $0 = now } }
     func advance(by seconds: TimeInterval) { date.withLock { $0 += seconds } }
+}
+
+// MARK: - Flush
+
+/// Records every flush, with what was on disk at that moment, so tests can check that the
+/// new index was flushed before step 3 deleted anything.
+final class RecordingFlusher: IndexFlusher {
+    struct Event: Sendable {
+        let url: URL
+        /// The bytes of the flushed file at flush time.
+        let contents: Data
+        /// Page files present at flush time.
+        let pageFiles: Set<String>
+    }
+
+    private let events = Mutex<[Event]>([])
+    private let method: FlushMethod
+    private let failure: (any Error & Sendable)?
+    private let pagesDirectory: URL
+
+    init(pagesDirectory: URL, method: FlushMethod = .fullFsync, failure: (any Error & Sendable)? = nil) {
+        self.pagesDirectory = pagesDirectory
+        self.method = method
+        self.failure = failure
+    }
+
+    var recorded: [Event] { events.withLock { $0 } }
+
+    func flush(_ url: URL) throws -> FlushMethod {
+        let names = (try? FileManager.default.contentsOfDirectory(atPath: pagesDirectory.path)) ?? []
+        let event = Event(url: url, contents: (try? Data(contentsOf: url)) ?? Data(), pageFiles: Set(names))
+        events.withLock { $0.append(event) }
+        if let failure { throw failure }
+        return method
+    }
 }
 
 // MARK: - Simulated crash
@@ -118,9 +160,9 @@ final class TestVault {
 
     deinit { try? FileManager.default.removeItem(at: base) }
 
-    func makeStore(crash: CrashSwitch? = nil) -> VaultStore {
+    func makeStore(crash: CrashSwitch? = nil, flusher: (any IndexFlusher)? = nil) -> VaultStore {
         VaultStore(rootDirectory: root, projectionURL: projectionURL, keyStore: keyStore,
-                   clock: clock, crashHook: crash?.hook)
+                   clock: clock, crashHook: crash?.hook, flusher: flusher ?? FileSystemFlusher())
     }
 
     /// A copy of this vault (same key store contents, own clock) in a new directory.

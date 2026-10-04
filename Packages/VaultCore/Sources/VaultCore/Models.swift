@@ -202,12 +202,15 @@ struct PageHeader: Hashable, Sendable, Codable {
     var formatVersion: Int
     var docId: DocumentID
     var pageId: PageID
+    /// The page's index in its document, so recovery restores the page order.
+    var position: Int
     var sealedKey: Data
 
-    init(docId: DocumentID, pageId: PageID, sealedKey: Data) {
+    init(docId: DocumentID, pageId: PageID, position: Int, sealedKey: Data) {
         formatVersion = Self.currentFormatVersion
         self.docId = docId
         self.pageId = pageId
+        self.position = position
         self.sealedKey = sealedKey
     }
 }

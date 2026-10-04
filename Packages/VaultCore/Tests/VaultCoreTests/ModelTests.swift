@@ -91,14 +91,15 @@ struct ModelTests {
     // MARK: pages/<pageId>.enc
 
     @Test func pageFileLayoutIsLengthPrefixedHeaderThenSealedBytes() throws {
-        let header = PageHeader(docId: docID, pageId: pageID, sealedKey: Data(repeating: 7, count: 60))
+        let header = PageHeader(docId: docID, pageId: pageID, position: 1, sealedKey: Data(repeating: 7, count: 60))
         let sealed = Data(repeating: 9, count: 40)
         let encoded = try PageFile(header: header, sealedContent: sealed).encoded()
 
         let length = Int(encoded.prefix(4).reduce(UInt32(0)) { $0 << 8 | UInt32($1) })
         let headerJSON = try jsonObject(encoded.dropFirst(4).prefix(length))
-        #expect(Set(headerJSON.keys) == ["formatVersion", "docId", "pageId", "sealedKey"])
+        #expect(Set(headerJSON.keys) == ["formatVersion", "docId", "pageId", "position", "sealedKey"])
         #expect(headerJSON["formatVersion"] as? Int == 1)
+        #expect(headerJSON["position"] as? Int == 1)
         #expect(Data(encoded.suffix(from: 4 + length)) == sealed)
 
         let decoded = try PageFile(decoding: encoded)
@@ -108,7 +109,7 @@ struct ModelTests {
 
     @Test func truncatedPageFileIsCorrupt() throws {
         let encoded = try PageFile(
-            header: PageHeader(docId: docID, pageId: pageID, sealedKey: Data([1])),
+            header: PageHeader(docId: docID, pageId: pageID, position: 0, sealedKey: Data([1])),
             sealedContent: Data([2])
         ).encoded()
         try #require(encoded.count > 10)

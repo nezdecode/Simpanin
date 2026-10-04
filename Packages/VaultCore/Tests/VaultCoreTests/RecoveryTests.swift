@@ -104,6 +104,40 @@ struct RecoveryTests {
         }
     }
 
+    // MARK: Page order (design doc: the header stores each page's position)
+
+    func makeRescannedKTP() async throws -> (TestVault, DocumentID) {
+        let vault = try TestVault()
+        let store = vault.makeStore()
+        try await store.open()
+        let id = try await store.createDocument(type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields,
+                                                pages: [Synthetic.page("front"), Synthetic.page("back")])
+        vault.clock.advance(by: 60)
+        _ = try await store.replacePage(try await store.document(id).pageIDs[0], of: id,
+                                        with: Synthetic.page("front-rescan"))
+        return (vault, id)
+    }
+
+    @Test func recoveryKeepsPageOrderAfterAReplace() async throws {
+        // The review's case: the rescanned front used to come back last.
+        let (vault, id) = try await makeRescannedKTP()
+        try Data("x".utf8).write(to: vault.indexURL)
+        try Data("x".utf8).write(to: vault.previousIndexURL)
+        let store = vault.makeStore()
+        #expect(try await store.open().indexSource == .recovered)
+        #expect(try await store.pages(of: id).map(\.data) == [Synthetic.page("front-rescan"), Synthetic.page("back")])
+    }
+
+    @Test func fallbackKeepsPageOrderAfterAReplace() async throws {
+        // index.enc lost: index.prev.enc still lists the old front, whose file is gone; the
+        // rescanned front is re-attached at its stored position.
+        let (vault, id) = try await makeRescannedKTP()
+        try Data("x".utf8).write(to: vault.indexURL)
+        let store = vault.makeStore()
+        #expect(try await store.open().indexSource == .previous)
+        #expect(try await store.pages(of: id).map(\.data) == [Synthetic.page("front-rescan"), Synthetic.page("back")])
+    }
+
     // MARK: Orphaned page files
 
     func makeOrphans() async throws -> (TestVault, [URL]) {
