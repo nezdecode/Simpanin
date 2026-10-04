@@ -5,7 +5,9 @@ import Testing
 
 /// Design doc, write order step 2: "If step 3 will delete any file, first flush the new index
 /// to disk with F_FULLFSYNC, so a power loss cannot leave a deleted page that the surviving
-/// index still needs. Also flush the vault directory itself, so the renames are durable too."
+/// index still needs. Also flush the vault directory itself, so the renames are durable too.
+/// Before those, flush every page file written in step 1 of the same change and the pages
+/// folder, so a replaced page can never be deleted while its replacement is still only in memory."
 @Suite("Index flush before deleting pages")
 struct FlushTests {
     struct FlushError: Error {}
@@ -18,9 +20,12 @@ struct FlushTests {
 
     func path(_ url: URL) -> String { url.standardizedFileURL.path }
 
-    /// The two flushes, in order: the new index file, then the vault directory.
-    func expectIndexThenDirectory(_ events: [RecordingFlusher.Event], _ vault: TestVault) {
-        #expect(events.map { path($0.url) } == [path(vault.indexURL), path(vault.root)])
+    /// The flushes of one commit, in order: each new page file, the pages folder, the new
+    /// index file, the vault folder.
+    func expectFlushOrder(_ events: [RecordingFlusher.Event], _ vault: TestVault, newPages: [PageID]) {
+        let expected = newPages.map { path(vault.pageURL($0)) }
+            + [path(vault.pagesDirectory), path(vault.indexURL), path(vault.root)]
+        #expect(events.map { path($0.url) } == expected)
     }
 
     func generation(of sealedIndex: Data, in vault: TestVault) async throws -> VaultIndex {
@@ -45,7 +50,7 @@ struct FlushTests {
         #expect(await store.lastFlushMethod == nil)
     }
 
-    @Test func replacePageFlushesTheNewIndexBeforeDeletingTheOldPage() async throws {
+    @Test func replacePageFlushesNewPageThenPagesFolderThenIndexThenVaultFolder() async throws {
         let vault = try TestVault()
         let flusher = RecordingFlusher(pagesDirectory: vault.pagesDirectory)
         let store = try await makeStore(vault, flusher)
@@ -56,15 +61,17 @@ struct FlushTests {
         let new = try await store.replacePage(old, of: id, with: Synthetic.page("front-rescan"))
 
         let events = flusher.recorded
-        try #require(events.count == 2)
-        expectIndexThenDirectory(events, vault)
-        // At flush time the new index was already written...
-        let flushed = try await generation(of: events[0].contents, in: vault)
+        try #require(events.count == 4)
+        // The review's gap: the new page is flushed first, so the surviving index can never
+        // point to a page lost in a power loss after the old one was deleted.
+        expectFlushOrder(events, vault, newPages: [new])
+        #expect(events[0].contents == (try Data(contentsOf: vault.pageURL(new))))
+        // The index flushed is the new generation, pointing at the new page...
+        let flushed = try await generation(of: events[2].contents, in: vault)
         #expect(flushed.generation == generationBefore + 1)
         #expect(flushed.documents.first?.pageIds.first == new)
-        // ...and the old page had not been deleted yet, not even at the directory flush.
-        #expect(events[0].pageFiles.contains("\(old.string).enc"))
-        #expect(events[1].pageFiles.contains("\(old.string).enc"))
+        // ...and the old page still existed at every flush.
+        for event in events { #expect(event.pageFiles.contains("\(old.string).enc")) }
         #expect(!FileManager.default.fileExists(atPath: vault.pageURL(old).path))
         #expect(await store.lastFlushMethod == .fullFsync)
     }
@@ -80,12 +87,12 @@ struct FlushTests {
         try await store.deletePermanently(id)
 
         let events = flusher.recorded
-        try #require(events.count == 2)
-        expectIndexThenDirectory(events, vault)
-        let flushed = try await generation(of: events[0].contents, in: vault)
+        try #require(events.count == 3)
+        expectFlushOrder(events, vault, newPages: [])  // a purge writes no page in step 1
+        let flushed = try await generation(of: events[1].contents, in: vault)
         #expect(flushed.generation == generationBefore + 2)
         #expect(flushed.documents.isEmpty)
-        for page in pages { #expect(events[1].pageFiles.contains("\(page.string).enc")) }
+        for page in pages { #expect(events[2].pageFiles.contains("\(page.string).enc")) }
     }
 
     @Test func purgeOfADocumentWithoutPagesDoesNotFlush() async throws {
@@ -141,7 +148,24 @@ struct FlushTests {
         await #expect(throws: VaultError.flushFailed) {
             try await store.replacePage(old, of: id, with: Synthetic.page("front-rescan"))
         }
-        expectIndexThenDirectory(flusher.recorded, vault)
+        let new = try #require(try await store.document(id).pageIDs.first)
+        expectFlushOrder(flusher.recorded, vault, newPages: [new])
+        #expect(FileManager.default.fileExists(atPath: vault.pageURL(old).path))
+    }
+
+    @Test func failedPagesFolderFlushStopsBeforeTheIndex() async throws {
+        let vault = try TestVault()
+        let flusher = RecordingFlusher(pagesDirectory: vault.pagesDirectory, failure: FlushError(),
+                                       failOnlyAt: vault.pagesDirectory)
+        let store = try await makeStore(vault, flusher)
+        let id = try await store.createDocument(type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields,
+                                                pages: [Synthetic.page("front")])
+        let old = try await store.document(id).pageIDs[0]
+        await #expect(throws: VaultError.flushFailed) {
+            try await store.replacePage(old, of: id, with: Synthetic.page("front-rescan"))
+        }
+        let new = try #require(try await store.document(id).pageIDs.first)
+        #expect(flusher.recorded.map { path($0.url) } == [path(vault.pageURL(new)), path(vault.pagesDirectory)])
         #expect(FileManager.default.fileExists(atPath: vault.pageURL(old).path))
     }
 

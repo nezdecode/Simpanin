@@ -68,8 +68,8 @@ public actor VaultStore {
     private let reminderOffsets: [Int]
     private let crashHook: (@Sendable (WriteStep) throws -> Void)?
     private let flusher: any IndexFlusher
-    /// The flush call that ran last: `.fullFsync` only if both the index file and the vault
-    /// directory got F_FULLFSYNC (tests and diagnostics).
+    /// The flush call of the last commit that flushed: `.fullFsync` only if every flush in it
+    /// (new pages, pages folder, index, vault folder) got F_FULLFSYNC (tests and diagnostics).
     private(set) var lastFlushMethod: FlushMethod?
 
     private struct OpenState {
@@ -472,9 +472,10 @@ public actor VaultStore {
         try writeIndex(documents)
         if writeIndexTwice { try writeIndex(documents) }
 
-        // 3. Page files the index no longer references. Flush the new index to disk first, then
-        //    the vault directory so the renames are durable too: a power loss must not keep a
-        //    deletion while losing the index that made it safe.
+        // 3. Page files the index no longer references. Before deleting, flush to disk: the
+        //    page files written in step 1 and the pages folder (a replaced page must never be
+        //    deleted while its replacement is only in memory), then the new index, then the
+        //    vault folder so the renames are durable too.
         let fm = FileManager.default
         var doomed: [PageID] = []
         for pageID in obsoletePages where fm.fileExists(atPath: pageURL(pageID).path) {
@@ -482,10 +483,15 @@ public actor VaultStore {
         }
         if !doomed.isEmpty {
             do {
-                let fileMethod = try flusher.flush(indexURL)
-                let directoryMethod = try flusher.flush(root)
-                // A commit is only as durable as its weaker flush.
-                lastFlushMethod = fileMethod == .fullFsync && directoryMethod == .fullFsync ? .fullFsync : .fsync
+                var methods: [FlushMethod] = []
+                for (pageID, _) in newPages {
+                    methods.append(try flusher.flush(pageURL(pageID)))
+                }
+                methods.append(try flusher.flush(pagesDirectory))
+                methods.append(try flusher.flush(indexURL))
+                methods.append(try flusher.flush(root))
+                // A commit is only as durable as its weakest flush.
+                lastFlushMethod = methods.allSatisfy { $0 == .fullFsync } ? .fullFsync : .fsync
             } catch {
                 throw VaultError.flushFailed
             }
