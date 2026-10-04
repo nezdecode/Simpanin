@@ -146,6 +146,22 @@ struct VaultStoreTests {
         #expect(try TestVault.files(in: vault.base) == filesBefore)
     }
 
+    @Test func restoringALiveDocumentChangesNothing() async throws {
+        let vault = try TestVault()
+        let store = vault.makeStore()
+        try await store.open()
+        let id = try await store.createDocument(type: .sim, expiry: Synthetic.simExpiry, pinned: false,
+                                                fields: Synthetic.simFields, pages: [Synthetic.page("sim")])
+        let before = try TestVault.files(in: vault.base)
+        let generation = try await vault.readIndex(at: vault.indexURL).generation
+        vault.clock.advance(by: 60)
+
+        try await store.restore(id)
+        #expect(try TestVault.files(in: vault.base) == before)
+        #expect(try await vault.readIndex(at: vault.indexURL).generation == generation)
+        #expect(try await store.document(id).deletedAt == nil)
+    }
+
     @Test func deletedDocumentRejectsEditsAndPageChanges() async throws {
         let vault = try TestVault()
         let store = vault.makeStore()

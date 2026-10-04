@@ -68,7 +68,8 @@ public actor VaultStore {
     private let reminderOffsets: [Int]
     private let crashHook: (@Sendable (WriteStep) throws -> Void)?
     private let flusher: any IndexFlusher
-    /// The flush call that ran last (tests and diagnostics).
+    /// The flush call that ran last: `.fullFsync` only if both the index file and the vault
+    /// directory got F_FULLFSYNC (tests and diagnostics).
     private(set) var lastFlushMethod: FlushMethod?
 
     private struct OpenState {
@@ -406,8 +407,10 @@ public actor VaultStore {
         }
     }
 
-    /// Brings a document back from Recently deleted.
+    /// Brings a document back from Recently deleted. Restoring a live document changes
+    /// nothing and writes nothing.
     public func restore(_ id: DocumentID) throws {
+        guard try entry(id).deletedAt != nil else { return }
         try update(id) { entry, _ in
             entry.deletedAt = nil
             return ([], [])
@@ -469,8 +472,9 @@ public actor VaultStore {
         try writeIndex(documents)
         if writeIndexTwice { try writeIndex(documents) }
 
-        // 3. Page files the index no longer references. Flush the new index to disk first, so
-        //    a power loss cannot keep a deletion while losing the index that made it safe.
+        // 3. Page files the index no longer references. Flush the new index to disk first, then
+        //    the vault directory so the renames are durable too: a power loss must not keep a
+        //    deletion while losing the index that made it safe.
         let fm = FileManager.default
         var doomed: [PageID] = []
         for pageID in obsoletePages where fm.fileExists(atPath: pageURL(pageID).path) {
@@ -478,7 +482,10 @@ public actor VaultStore {
         }
         if !doomed.isEmpty {
             do {
-                lastFlushMethod = try flusher.flush(indexURL)
+                let fileMethod = try flusher.flush(indexURL)
+                let directoryMethod = try flusher.flush(root)
+                // A commit is only as durable as its weaker flush.
+                lastFlushMethod = fileMethod == .fullFsync && directoryMethod == .fullFsync ? .fullFsync : .fsync
             } catch {
                 throw VaultError.flushFailed
             }

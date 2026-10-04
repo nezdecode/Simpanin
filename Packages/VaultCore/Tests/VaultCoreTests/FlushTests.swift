@@ -5,7 +5,7 @@ import Testing
 
 /// Design doc, write order step 2: "If step 3 will delete any file, first flush the new index
 /// to disk with F_FULLFSYNC, so a power loss cannot leave a deleted page that the surviving
-/// index still needs."
+/// index still needs. Also flush the vault directory itself, so the renames are durable too."
 @Suite("Index flush before deleting pages")
 struct FlushTests {
     struct FlushError: Error {}
@@ -14,6 +14,13 @@ struct FlushTests {
         let store = vault.makeStore(flusher: flusher)
         try await store.open()
         return store
+    }
+
+    func path(_ url: URL) -> String { url.standardizedFileURL.path }
+
+    /// The two flushes, in order: the new index file, then the vault directory.
+    func expectIndexThenDirectory(_ events: [RecordingFlusher.Event], _ vault: TestVault) {
+        #expect(events.map { path($0.url) } == [path(vault.indexURL), path(vault.root)])
     }
 
     func generation(of sealedIndex: Data, in vault: TestVault) async throws -> VaultIndex {
@@ -49,19 +56,20 @@ struct FlushTests {
         let new = try await store.replacePage(old, of: id, with: Synthetic.page("front-rescan"))
 
         let events = flusher.recorded
-        try #require(events.count == 1)
-        #expect(events[0].url.standardizedFileURL == vault.indexURL.standardizedFileURL)
+        try #require(events.count == 2)
+        expectIndexThenDirectory(events, vault)
         // At flush time the new index was already written...
         let flushed = try await generation(of: events[0].contents, in: vault)
         #expect(flushed.generation == generationBefore + 1)
         #expect(flushed.documents.first?.pageIds.first == new)
-        // ...and the old page had not been deleted yet.
+        // ...and the old page had not been deleted yet, not even at the directory flush.
         #expect(events[0].pageFiles.contains("\(old.string).enc"))
+        #expect(events[1].pageFiles.contains("\(old.string).enc"))
         #expect(!FileManager.default.fileExists(atPath: vault.pageURL(old).path))
         #expect(await store.lastFlushMethod == .fullFsync)
     }
 
-    @Test func purgeFlushesOnceAfterBothIndexWrites() async throws {
+    @Test func purgeFlushesAfterBothIndexWrites() async throws {
         let vault = try TestVault()
         let flusher = RecordingFlusher(pagesDirectory: vault.pagesDirectory)
         let store = try await makeStore(vault, flusher)
@@ -72,11 +80,12 @@ struct FlushTests {
         try await store.deletePermanently(id)
 
         let events = flusher.recorded
-        try #require(events.count == 1)
+        try #require(events.count == 2)
+        expectIndexThenDirectory(events, vault)
         let flushed = try await generation(of: events[0].contents, in: vault)
         #expect(flushed.generation == generationBefore + 2)
         #expect(flushed.documents.isEmpty)
-        for page in pages { #expect(events[0].pageFiles.contains("\(page.string).enc")) }
+        for page in pages { #expect(events[1].pageFiles.contains("\(page.string).enc")) }
     }
 
     @Test func purgeOfADocumentWithoutPagesDoesNotFlush() async throws {
@@ -121,9 +130,38 @@ struct FlushTests {
         #expect(!FileManager.default.fileExists(atPath: vault.pageURL(old).path))
     }
 
+    @Test func failedDirectoryFlushDeletesNothing() async throws {
+        let vault = try TestVault()
+        let flusher = RecordingFlusher(pagesDirectory: vault.pagesDirectory, failure: FlushError(),
+                                       failOnlyAt: vault.root)
+        let store = try await makeStore(vault, flusher)
+        let id = try await store.createDocument(type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields,
+                                                pages: [Synthetic.page("front")])
+        let old = try await store.document(id).pageIDs[0]
+        await #expect(throws: VaultError.flushFailed) {
+            try await store.replacePage(old, of: id, with: Synthetic.page("front-rescan"))
+        }
+        expectIndexThenDirectory(flusher.recorded, vault)
+        #expect(FileManager.default.fileExists(atPath: vault.pageURL(old).path))
+    }
+
+    @Test func recordsTheWeakerMethodWhenTheTwoFlushesDiffer() async throws {
+        // The index got F_FULLFSYNC but the directory only fsync: the commit is only as durable
+        // as its weakest flush, so that is what is recorded.
+        let vault = try TestVault()
+        let root = vault.root.standardizedFileURL.path
+        let flusher = RecordingFlusher(pagesDirectory: vault.pagesDirectory,
+                                       method: { $0.standardizedFileURL.path == root ? .fsync : .fullFsync })
+        let store = try await makeStore(vault, flusher)
+        let id = try await store.createDocument(type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields,
+                                                pages: [Synthetic.page("front")])
+        _ = try await store.replacePage(try await store.document(id).pageIDs[0], of: id, with: Synthetic.page("x"))
+        #expect(await store.lastFlushMethod == .fsync)
+    }
+
     @Test func recordsTheMethodThatRan() async throws {
         let vault = try TestVault()
-        let flusher = RecordingFlusher(pagesDirectory: vault.pagesDirectory, method: .fsync)
+        let flusher = RecordingFlusher(pagesDirectory: vault.pagesDirectory, method: { _ in .fsync })
         let store = try await makeStore(vault, flusher)
         let id = try await store.createDocument(type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields,
                                                 pages: [Synthetic.page("front")])
@@ -149,6 +187,19 @@ struct FlushTests {
     @Test func missingFileFailsToFlush() {
         let url = FileManager.default.temporaryDirectory.appending(path: "missing-\(UUID().uuidString).bin")
         #expect(throws: VaultError.flushFailed) { try FileSystemFlusher().flush(url) }
+    }
+
+    @Test func realDirectoryFlushOnThisMachine() throws {
+        let directory = FileManager.default.temporaryDirectory.appending(path: "flushdir-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let method = try FileSystemFlusher().flush(directory)
+        print("DIRECTORY FLUSH METHOD ON THIS MACHINE: \(method)")
+        #if canImport(Darwin)
+        #expect(method == .fullFsync)
+        #else
+        #expect(method == .fsync)
+        #endif
     }
 
     @Test func realFlushOnThisMachine() throws {

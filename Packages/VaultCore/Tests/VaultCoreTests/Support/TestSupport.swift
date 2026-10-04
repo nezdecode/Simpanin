@@ -97,14 +97,18 @@ final class RecordingFlusher: IndexFlusher {
     }
 
     private let events = Mutex<[Event]>([])
-    private let method: FlushMethod
+    private let method: @Sendable (URL) -> FlushMethod
     private let failure: (any Error & Sendable)?
+    /// Fail only when flushing this path (nil: fail every flush, if `failure` is set).
+    private let failOnlyAt: URL?
     private let pagesDirectory: URL
 
-    init(pagesDirectory: URL, method: FlushMethod = .fullFsync, failure: (any Error & Sendable)? = nil) {
+    init(pagesDirectory: URL, method: @escaping @Sendable (URL) -> FlushMethod = { _ in .fullFsync },
+         failure: (any Error & Sendable)? = nil, failOnlyAt: URL? = nil) {
         self.pagesDirectory = pagesDirectory
         self.method = method
         self.failure = failure
+        self.failOnlyAt = failOnlyAt
     }
 
     var recorded: [Event] { events.withLock { $0 } }
@@ -113,8 +117,10 @@ final class RecordingFlusher: IndexFlusher {
         let names = (try? FileManager.default.contentsOfDirectory(atPath: pagesDirectory.path)) ?? []
         let event = Event(url: url, contents: (try? Data(contentsOf: url)) ?? Data(), pageFiles: Set(names))
         events.withLock { $0.append(event) }
-        if let failure { throw failure }
-        return method
+        if let failure, failOnlyAt == nil || failOnlyAt?.standardizedFileURL.path == url.standardizedFileURL.path {
+            throw failure
+        }
+        return method(url)
     }
 }
 
