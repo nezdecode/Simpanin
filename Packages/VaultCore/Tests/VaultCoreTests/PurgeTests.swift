@@ -50,11 +50,16 @@ struct PurgeTests {
             #expect(!index.documents.contains { $0.id == s.purged }, "\(url.lastPathComponent)")
             #expect(!index.documents.contains { $0.sealedKey == s.sealedKey }, "\(url.lastPathComponent)")
         }
-        // No file anywhere holds the sealed key, the raw key or the document id.
+        // No remaining page header holds the sealed key. Headers are decoded, not byte-scanned:
+        // the key is base64 inside JSON there, which escapes "/", so a byte search cannot find it.
+        for file in try s.vault.pageFiles() {
+            let header = try PageFile(decoding: Data(contentsOf: file)).header
+            #expect(header.sealedKey != s.sealedKey, "sealed key in \(file.lastPathComponent)")
+            #expect(header.docId != s.purged, "page of the purged document: \(file.lastPathComponent)")
+        }
+        // The document id appears as plain text in page headers, so a byte scan does work for it.
         for file in try s.vault.allFiles() {
             let data = try Data(contentsOf: file)
-            #expect(!data.contains(bytes: s.sealedKey), "sealed key in \(file.lastPathComponent)")
-            #expect(!data.contains(bytes: s.rawKey), "raw key in \(file.lastPathComponent)")
             #expect(!data.contains(bytes: Data(s.purged.string.utf8)), "doc id in \(file.lastPathComponent)")
         }
         // The other document is untouched.
@@ -91,6 +96,19 @@ struct PurgeTests {
         let s = try await makeSetup()
         try await s.store.deletePermanently(s.purged)
         try await expectNoTrace(s, s.store)
+    }
+
+    @Test func purgedDocumentDoesNotComeBackThroughRecovery() async throws {
+        let s = try await makeSetup()
+        try await s.store.deletePermanently(s.purged)
+        try Data("x".utf8).write(to: s.vault.indexURL)
+        try Data("x".utf8).write(to: s.vault.previousIndexURL)
+
+        let store = s.vault.makeStore()
+        #expect(try await store.open().indexSource == .recovered)
+        #expect(try await store.documents().map(\.id) == [s.kept])
+        #expect(try await store.recentlyDeleted().isEmpty)
+        #expect(try await store.pages(of: s.kept).map(\.data) == [Synthetic.page("k1")])
     }
 
     @Test func purgeWritesTheIndexTwice() async throws {

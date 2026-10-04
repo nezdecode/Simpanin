@@ -211,6 +211,65 @@ struct VaultStoreTests {
         #expect(try await store.fields(of: id) == Synthetic.ktpFields)
     }
 
+    @Test func lockedStoreRefusesEveryWrite() async throws {
+        let vault = try TestVault()
+        let store = vault.makeStore()
+        try await store.open()
+        let a = try await store.createDocument(type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields,
+                                               pages: [Synthetic.page("a")])
+        let b = try await store.createDocument(type: .sim, expiry: nil, pinned: false, fields: Synthetic.simFields,
+                                               pages: [Synthetic.page("b")])
+        try await store.delete(b)
+        let page = try await store.document(a).pageIDs[0]
+        await store.lock()
+        vault.clock.advance(by: 40 * 86_400)  // b would be due for purge
+        let before = try TestVault.files(in: vault.base)
+
+        await #expect(throws: VaultError.locked) {
+            try await store.createDocument(type: .ktp, expiry: nil, pinned: false, fields: DocumentFields(), pages: [])
+        }
+        await #expect(throws: VaultError.locked) {
+            try await store.editDocument(a, type: .ktp, expiry: nil, pinned: true, fields: DocumentFields())
+        }
+        await #expect(throws: VaultError.locked) { try await store.addPage(Synthetic.page("x"), to: a) }
+        await #expect(throws: VaultError.locked) { try await store.replacePage(page, of: a, with: Synthetic.page("x")) }
+        await #expect(throws: VaultError.locked) { try await store.delete(a) }
+        await #expect(throws: VaultError.locked) { try await store.restore(b) }
+        await #expect(throws: VaultError.locked) { try await store.deletePermanently(a) }
+        await #expect(throws: VaultError.locked) { try await store.purgeExpired() }
+        #expect(try TestVault.files(in: vault.base) == before)
+    }
+
+    @Test func concurrentOpensCreateOneVault() async throws {
+        let vault = try TestVault()
+        let store = vault.makeStore()
+        async let first = store.open()
+        async let second = store.open()
+        let reports = try await [first, second]
+        #expect(reports[0] == reports[1])
+        #expect(reports[0].createdVault)
+        #expect(await vault.keyStore.createCount == 1)
+        #expect(try TestVault.files(in: vault.root).keys.filter { $0 == "vault.json" }.count == 1)
+    }
+
+    @Test func fifteenMegabytePage() async throws {
+        let vault = try TestVault()
+        let store = vault.makeStore()
+        try await store.open()
+        let started = ContinuousClock.now
+        let big = Synthetic.largePage(bytes: 15_000_000)
+        let id = try await store.createDocument(type: .passport, expiry: nil, pinned: false, fields: DocumentFields(),
+                                                pages: [big])
+        let pageID = try await store.document(id).pageIDs[0]
+        #expect(try await store.page(pageID, of: id).data == big)
+
+        var file = try Data(contentsOf: vault.pageURL(pageID))
+        file[file.count / 2] ^= 0x01
+        try file.write(to: vault.pageURL(pageID))
+        await #expect(throws: VaultError.authenticationFailed) { try await store.page(pageID, of: id) }
+        print("LARGE PAGE TEST: 15 MB round trip and tamper in \(ContinuousClock.now - started)")
+    }
+
     @Test func unknownIdsAreReported() async throws {
         let vault = try TestVault()
         let store = vault.makeStore()

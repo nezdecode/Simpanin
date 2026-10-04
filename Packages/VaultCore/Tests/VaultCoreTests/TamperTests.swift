@@ -92,6 +92,23 @@ struct TamperTests {
         await #expect(throws: VaultError.authenticationFailed) { try await store.page(pageB, of: b) }
     }
 
+    @Test func pageSwappedWithinTheSameDocumentFailsToOpen() async throws {
+        // Same document, same key, same sealed key in the header: only the page id in the
+        // associated data ("page|v1|<docId>|<pageId>") can tell page 1 from page 2.
+        let vault = try TestVault()
+        let store = vault.makeStore()
+        try await store.open()
+        let id = try await store.createDocument(type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields,
+                                                pages: [Synthetic.page("front"), Synthetic.page("back")])
+        let pages = try await store.document(id).pageIDs
+        let first = try PageFile(decoding: Data(contentsOf: vault.pageURL(pages[0])))
+        let second = try PageFile(decoding: Data(contentsOf: vault.pageURL(pages[1])))
+        try PageFile(header: second.header, sealedContent: first.sealedContent).encoded()
+            .write(to: vault.pageURL(pages[1]))
+        await #expect(throws: VaultError.authenticationFailed) { try await store.page(pages[1], of: id) }
+        #expect(try await store.page(pages[0], of: id).data == Synthetic.page("front"))
+    }
+
     // MARK: Test 2: an older index put back fails to open
 
     @Test func olderIndexPutBackIsRejected() async throws {

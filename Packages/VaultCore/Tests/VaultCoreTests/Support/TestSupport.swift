@@ -18,17 +18,26 @@ actor InMemoryKeyStore: KeyStore {
 
     struct UnexpectedError: Error {}
 
+    enum CreateFailure: Sendable {
+        /// Adding the item fails with this Keychain status (for example: no device passcode).
+        case status(Int32)
+        /// Another process created the item between our read and our create.
+        case alreadyExists
+    }
+
     private var keys: [VaultID: SymmetricKey] = [:]
     private(set) var createCount = 0
     private(set) var deleteCount = 0
     var readFailure: ReadFailure?
     /// Makes `deleteVaultKey` fail with this status.
     var deleteFailureStatus: Int32?
+    var createFailure: CreateFailure?
 
     init(keys: [VaultID: SymmetricKey] = [:]) { self.keys = keys }
 
     func setReadFailure(_ failure: ReadFailure?) { readFailure = failure }
     func setDeleteFailure(status: Int32?) { deleteFailureStatus = status }
+    func setCreateFailure(_ failure: CreateFailure?) { createFailure = failure }
     func setKey(_ key: SymmetricKey?, for vaultID: VaultID) { keys[vaultID] = key }
     func key(for vaultID: VaultID) -> SymmetricKey? { keys[vaultID] }
 
@@ -45,6 +54,11 @@ actor InMemoryKeyStore: KeyStore {
 
     func createVaultKey(for vaultID: VaultID) async throws -> SymmetricKey {
         createCount += 1
+        switch createFailure {
+        case .status(let status): throw KeyStoreError.unavailable(status: status)
+        case .alreadyExists: throw KeyStoreError.itemAlreadyExists
+        case nil: break
+        }
         guard keys[vaultID] == nil else { throw KeyStoreError.itemAlreadyExists }
         let key = VaultCrypto.newKey()
         keys[vaultID] = key
@@ -237,6 +251,20 @@ enum Synthetic {
     static let ktpFields = DocumentFields(["nik": nik, "name": name])
     static let simFields = DocumentFields(["number": simNumber, "name": name])
     static let simExpiry = CalendarDate(year: 2030, month: 8, day: 17)!
+
+    /// A scan-sized stand-in, filled 8 bytes at a time so a 15 MB page takes milliseconds.
+    static func largePage(bytes count: Int) -> Data {
+        var data = Data(count: count)
+        data.withUnsafeMutableBytes { raw in
+            var x: UInt64 = 0x9E37_79B9_7F4A_7C15
+            let words = raw.bindMemory(to: UInt64.self)
+            for i in words.indices {
+                x ^= x << 13; x ^= x >> 7; x ^= x << 17
+                words[i] = x
+            }
+        }
+        return data
+    }
 
     /// Stand-ins for image bytes. Not real images, so nothing to leak.
     static func page(_ label: String, size: Int = 2_000) -> Data {

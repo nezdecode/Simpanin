@@ -61,6 +61,24 @@ struct VaultKeyRuleTests {
         #expect(try await reopened.fields(of: id) == Synthetic.ktpFields)
     }
 
+    static let createFailures: [InMemoryKeyStore.CreateFailure] = [.status(-25291), .alreadyExists]
+
+    @Test(arguments: createFailures)
+    func failedKeyCreationWritesNothing(_ failure: InMemoryKeyStore.CreateFailure) async throws {
+        // For example a phone with no passcode: the read says "not found", then adding the
+        // .userPresence item fails. No vault may be created without its key.
+        let vault = try TestVault()
+        await vault.keyStore.setCreateFailure(failure)
+        let expected: VaultError = switch failure {
+        case .status(let status): .vaultKeyUnavailable(status: status)
+        case .alreadyExists: .vaultKeyUnavailable(status: nil)
+        }
+        await #expect(throws: expected) { try await vault.makeStore().open() }
+        #expect(await vault.keyStore.createCount == 1)
+        #expect(!FileManager.default.fileExists(atPath: vault.root.path))
+        #expect(try vault.allFiles().isEmpty)
+    }
+
     @Test func existingVaultWithMissingKeyIsNotRecreated() async throws {
         let vault = try TestVault()
         let store = vault.makeStore()

@@ -101,6 +101,25 @@ struct CryptoTests {
         }
     }
 
+    @Test func pageIDAloneIsBound() throws {
+        let key = VaultCrypto.newKey()
+        let otherPage = PageID(UUID(uuidString: "99999999-8888-7777-6666-000000000000")!)
+        let sealed = try VaultCrypto.seal(Data("page".utf8), with: key, as: .page(docID, pageID))
+        #expect(throws: VaultError.authenticationFailed) {
+            try VaultCrypto.open(sealed, with: key, as: .page(docID, otherPage))
+        }
+    }
+
+    @Test func vaultIDAloneIsBound() throws {
+        // Same key, different vault id: only the associated data differs.
+        let key = VaultCrypto.newKey()
+        let otherVault = VaultID(UUID(uuidString: "6F9619FF-8B86-D011-B42D-000000000000")!)
+        let sealed = try VaultCrypto.seal(Data("index".utf8), with: key, as: .index(vaultID))
+        #expect(throws: VaultError.authenticationFailed) {
+            try VaultCrypto.open(sealed, with: key, as: .index(otherVault))
+        }
+    }
+
     @Test func wrongKeyFailsToOpen() throws {
         let sealed = try VaultCrypto.seal(Data("x".utf8), with: VaultCrypto.newKey(), as: .index(vaultID))
         #expect(throws: VaultError.authenticationFailed) {
