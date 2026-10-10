@@ -240,18 +240,20 @@ struct PageFile {
     }
 
     init(decoding data: Data) throws {
-        let bytes = [UInt8](data)
-        guard bytes.count >= 4 else { throw VaultError.corruptFile }
-        let length = bytes[0..<4].reduce(0) { $0 << 8 | Int($1) }
-        guard length > 0, length <= Self.maxHeaderLength, bytes.count >= 4 + length else {
+        // Index from startIndex: a slice of a larger Data doesn't start at 0.
+        let start = data.startIndex
+        guard data.count >= 4 else { throw VaultError.corruptFile }
+        let length = data[start..<start + 4].reduce(0) { $0 << 8 | Int($1) }
+        guard length > 0, length <= Self.maxHeaderLength, data.count >= 4 + length else {
             throw VaultError.corruptFile
         }
+        let headerEnd = start + 4 + length
         do {
-            header = try VaultJSON.decoder.decode(PageHeader.self, from: Data(bytes[4..<(4 + length)]))
+            header = try VaultJSON.decoder.decode(PageHeader.self, from: data[(start + 4)..<headerEnd])
         } catch {
             throw VaultError.corruptFile
         }
-        sealedContent = Data(bytes[(4 + length)...])
+        sealedContent = Data(data[headerEnd...])
     }
 
     func encoded() throws -> Data {
