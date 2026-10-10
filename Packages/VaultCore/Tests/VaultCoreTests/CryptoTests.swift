@@ -167,6 +167,15 @@ struct CryptoTests {
             try VaultCrypto.openDocumentKey(sealed, with: wrap, documentID: otherDocID)
         }
     }
+
+    @Test func documentKeyOfTheWrongLengthIsCorrupt() throws {
+        // It opens fine, so only the length check can catch it.
+        let wrap = VaultCrypto.newKey()
+        let short = try VaultCrypto.seal(Data(repeating: 1, count: 16), with: wrap, as: .documentKey(docID))
+        #expect(throws: VaultError.corruptFile) {
+            try VaultCrypto.openDocumentKey(short, with: wrap, documentID: docID)
+        }
+    }
 }
 
 func bytes(_ key: SymmetricKey) -> Data { key.withUnsafeBytes { Data($0) } }
