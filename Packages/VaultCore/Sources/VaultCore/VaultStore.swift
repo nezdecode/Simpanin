@@ -30,21 +30,6 @@ public struct OpenReport: Sendable, Equatable {
     public var recoveredFromPages = false
 }
 
-/// A vault that "Mulai vault baru" moved aside, as listed for "Data lama" in Settings.
-public struct QuarantinedVault: Sendable, Equatable {
-    public let vaultID: VaultID
-    public let folder: URL
-    /// Total size of the files in the folder.
-    public let sizeInBytes: Int64
-}
-
-/// Everything found in the quarantine folder. Folders whose vault.json cannot be read are
-/// reported, never touched.
-public struct QuarantineListing: Sendable, Equatable {
-    public var vaults: [QuarantinedVault]
-    public var unreadableFolders: [URL]
-}
-
 /// A step of the write order, reported to the crash-simulation hook in tests.
 enum WriteStep: Sendable, Equatable {
     case pagesWritten, indexMovedToPrevious, indexWritten, obsoletePagesDeleted, projectionWritten
@@ -54,25 +39,29 @@ enum WriteStep: Sendable, Equatable {
 /// projection, and follows the write order in the design doc for every change:
 /// 1. new page files, 2. index.enc -> index.prev.enc then the new index.enc,
 /// 3. delete page files the index no longer references, 4. projection.json.
+///
+/// This file holds the state, opening and locking. The rest is split by topic:
+/// VaultStore+Documents (reading and changes), +WriteOrder (`commit`), +Recovery (loading
+/// the index, page recovery, orphans), +Keys (vault.json and the vault key) and +Quarantine.
 public actor VaultStore {
     /// Documents in Recently deleted are purged this long after `deletedAt`.
     public static let purgeDelay: TimeInterval = 30 * 86_400
     /// Unreferenced page files younger than this are left alone.
     public static let orphanMinimumAge: TimeInterval = 5 * 60
 
-    private let root: URL
-    private let projectionURL: URL
-    private let keyStore: any KeyStore
-    private let clock: any VaultClock
-    private let fileProtector: any FileProtector
-    private let reminderOffsets: [Int]
-    private let crashHook: (@Sendable (WriteStep) throws -> Void)?
-    private let flusher: any IndexFlusher
+    let root: URL
+    let projectionURL: URL
+    let keyStore: any KeyStore
+    let clock: any VaultClock
+    let fileProtector: any FileProtector
+    let reminderOffsets: [Int]
+    let crashHook: (@Sendable (WriteStep) throws -> Void)?
+    let flusher: any IndexFlusher
     /// The flush call of the last commit that flushed: `.fullFsync` only if every flush in it
     /// (new pages, pages folder, index, vault folder) got F_FULLFSYNC (tests and diagnostics).
-    private(set) var lastFlushMethod: FlushMethod?
+    var lastFlushMethod: FlushMethod?
 
-    private struct OpenState {
+    struct OpenState {
         let header: VaultHeader
         let indexKey: SymmetricKey
         let wrapKey: SymmetricKey
@@ -81,9 +70,9 @@ public actor VaultStore {
         var indexFileIsCurrent: Bool
     }
 
-    private var state: OpenState?
+    var state: OpenState?
     private var lastReport: OpenReport?
-    private var openTask: Task<OpenReport, any Error>?
+    var openTask: Task<OpenReport, any Error>?
 
     /// - Parameters:
     ///   - rootDirectory: the vault folder (Application Support/Vault in the app).
@@ -116,11 +105,11 @@ public actor VaultStore {
 
     // MARK: - Paths
 
-    private var headerURL: URL { root.appending(path: "vault.json") }
-    private var indexURL: URL { root.appending(path: "index.enc") }
-    private var previousIndexURL: URL { root.appending(path: "index.prev.enc") }
-    private var pagesDirectory: URL { root.appending(path: "pages", directoryHint: .isDirectory) }
-    private func pageURL(_ id: PageID) -> URL { pagesDirectory.appending(path: "\(id.string).enc") }
+    var headerURL: URL { root.appending(path: "vault.json") }
+    var indexURL: URL { root.appending(path: "index.enc") }
+    var previousIndexURL: URL { root.appending(path: "index.prev.enc") }
+    var pagesDirectory: URL { root.appending(path: "pages", directoryHint: .isDirectory) }
+    func pageURL(_ id: PageID) -> URL { pagesDirectory.appending(path: "\(id.string).enc") }
 
     // MARK: - Open and lock
 
@@ -197,660 +186,19 @@ public actor VaultStore {
         return report
     }
 
-    /// "Mulai vault baru", first call: locks the store and moves the whole vault folder,
-    /// unchanged, to `quarantineDirectory/<yyyyMMdd-HHmmss in UTC>` (adding -2, -3... if that
-    /// name is taken). Nothing is deleted and the old vault's key is not touched. The app then
-    /// calls `open()`, which creates a new vault; if that fails, the old vault is still at the
-    /// returned folder. The app confirms first, then cancels the old vault's reminders.
-    /// - Returns: where the old vault now lives, or nil if there was no vault folder.
-    @discardableResult
-    public func quarantineVault(to quarantineDirectory: URL) async throws -> URL? {
-        if let openTask { _ = try? await openTask.value }
-        lock()
-        let fileManager = FileManager.default
-        guard fileManager.fileExists(atPath: root.path) else { return nil }
-        try fileManager.createDirectory(at: quarantineDirectory, withIntermediateDirectories: true)
-        let destination = quarantineDestination(in: quarantineDirectory)
-        try fileManager.moveItem(at: root, to: destination)
-        return destination
-    }
-
-    /// Quarantined vaults for "Data lama", oldest first. A folder whose vault.json cannot be
-    /// read is reported in `unreadableFolders` and never touched. Works while locked.
-    public func quarantinedVaults(in quarantineDirectory: URL) throws -> QuarantineListing {
-        var listing = QuarantineListing(vaults: [], unreadableFolders: [])
-        let fileManager = FileManager.default
-        guard fileManager.fileExists(atPath: quarantineDirectory.path) else { return listing }
-        let folders = try fileManager.contentsOfDirectory(
-            at: quarantineDirectory, includingPropertiesForKeys: [.isDirectoryKey],
-            options: [.skipsHiddenFiles]
-        )
-        .filter { (try? $0.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true }
-        .sorted { $0.lastPathComponent < $1.lastPathComponent }
-        for folder in folders {
-            if let header = try? readHeader(at: folder.appending(path: "vault.json")) {
-                listing.vaults.append(
-                    QuarantinedVault(
-                        vaultID: header.vaultId, folder: folder,
-                        sizeInBytes: try folderSize(folder)))
-            } else {
-                listing.unreadableFolders.append(folder)
-            }
-        }
-        return listing
-    }
-
-    /// Deletes a quarantined vault for good: first its Keychain item, then its folder. Refuses
-    /// (and touches nothing) when the folder's vault.json cannot be read or names another
-    /// vault, or when it is the vault in use. A key that is already gone counts as deleted; if
-    /// deleting the key fails, the folder stays so the user can try again.
-    public func deleteQuarantinedVault(_ vault: QuarantinedVault) async throws {
-        guard let header = try? readHeader(at: vault.folder.appending(path: "vault.json")),
-            header.vaultId == vault.vaultID
-        else {
-            throw VaultError.quarantineUnreadable
-        }
-        let liveID = state?.header.vaultId ?? (try? readHeader(at: headerURL))?.vaultId
-        guard liveID != vault.vaultID,
-            vault.folder.standardizedFileURL.path != root.standardizedFileURL.path
-        else {
-            throw VaultError.quarantineInUse
-        }
-        do {
-            try await keyStore.deleteVaultKey(for: vault.vaultID)
-        } catch KeyStoreError.itemNotFound {
-            // Already gone: nothing left to delete in the key store.
-        } catch {
-            throw Self.unavailable(error)
-        }
-        try FileManager.default.removeItem(at: vault.folder)
-    }
-
-    private func folderSize(_ folder: URL) throws -> Int64 {
-        var total: Int64 = 0
-        let keys: [URLResourceKey] = [.isRegularFileKey, .fileSizeKey]
-        if let files = FileManager.default.enumerator(at: folder, includingPropertiesForKeys: keys) {
-            for case let url as URL in files {
-                let values = try url.resourceValues(forKeys: Set(keys))
-                if values.isRegularFile == true { total += Int64(values.fileSize ?? 0) }
-            }
-        }
-        return total
-    }
-
-    private func quarantineDestination(in directory: URL) -> URL {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
-        let time = calendar.dateComponents([.year, .month, .day, .hour, .minute, .second], from: now())
-        let base = String(
-            format: "%04d%02d%02d-%02d%02d%02d",
-            time.year ?? 0, time.month ?? 0, time.day ?? 0, time.hour ?? 0, time.minute ?? 0, time.second ?? 0)
-        var name = base
-        var suffix = 2
-        while FileManager.default.fileExists(atPath: directory.appending(path: name).path) {
-            name = "\(base)-\(suffix)"
-            suffix += 1
-        }
-        return directory.appending(path: name, directoryHint: .isDirectory)
-    }
-
-    // MARK: - Reading
-
-    /// Live documents, in the order they were added.
-    public func documents() throws -> [Document] {
-        try requireState().index.documents.filter { $0.deletedAt == nil }.map(\.document)
-    }
-
-    /// Documents in Recently deleted.
-    public func recentlyDeleted() throws -> [Document] {
-        try requireState().index.documents.filter { $0.deletedAt != nil }.map(\.document)
-    }
-
-    public func document(_ id: DocumentID) throws -> Document {
-        try entry(id).document
-    }
-
-    public func fields(of id: DocumentID) throws -> DocumentFields {
-        let entry = try entry(id)
-        let key = try documentKey(entry)
-        let plain = try VaultCrypto.open(entry.sealedFields, with: key, as: .fields(id))
-        do {
-            return try VaultJSON.decoder.decode(DocumentFields.self, from: plain)
-        } catch {
-            throw VaultError.corruptFile
-        }
-    }
-
-    public func pages(of id: DocumentID) throws -> [Page] {
-        try entry(id).pageIds.map { try page($0, of: id) }
-    }
-
-    /// Decrypts one page. The page file must name this document and page in its header and
-    /// open with this document's key and "page|v1|<docId>|<pageId>".
-    public func page(_ pageID: PageID, of id: DocumentID) throws -> Page {
-        let entry = try entry(id)
-        guard entry.pageIds.contains(pageID) else { throw VaultError.pageNotFound }
-        let raw: Data
-        do {
-            raw = try Data(contentsOf: pageURL(pageID))
-        } catch {
-            throw VaultError.pageNotFound
-        }
-        let file = try PageFile(decoding: raw)
-        guard file.header.formatVersion <= PageHeader.currentFormatVersion else { throw VaultError.unsupportedVersion }
-        guard file.header.docId == id, file.header.pageId == pageID, file.header.sealedKey == entry.sealedKey else {
-            throw VaultError.authenticationFailed
-        }
-        let key = try documentKey(entry)
-        let data = try VaultCrypto.open(file.sealedContent, with: key, as: .page(id, pageID))
-        return Page(id: pageID, data: data)
-    }
-
-    // MARK: - Changes
-
-    /// Creates a document with a new random key. Each page is sealed straight from memory.
-    public func createDocument(
-        type: DocumentType, expiry: CalendarDate?, pinned: Bool,
-        fields: DocumentFields, pages: [Data]
-    ) throws -> DocumentID {
-        let state = try requireState()
-        let id = DocumentID()
-        let key = VaultCrypto.newKey()
-        let sealedKey = try VaultCrypto.sealDocumentKey(key, with: state.wrapKey, documentID: id)
-        var newPages: [(PageID, Data)] = []
-        for (position, data) in pages.enumerated() {
-            let pageID = PageID()
-            let file = try pageFile(
-                data, pageID: pageID, position: position, documentID: id, key: key, sealedKey: sealedKey)
-            newPages.append((pageID, file))
-        }
-        let stamp = now()
-        let entry = IndexEntry(
-            id: id, type: type, createdAt: stamp, updatedAt: stamp, expiry: expiry,
-            pinned: pinned, deletedAt: nil, sealedKey: sealedKey,
-            sealedFields: try sealFields(fields, key: key, documentID: id),
-            pageIds: newPages.map(\.0))
-        try commit(state.index.documents + [entry], newPages: newPages)
-        return id
-    }
-
-    /// Replaces type, expiry, pinned and fields. Fields are resealed with the same document
-    /// key and a fresh nonce. Throws `documentDeleted` while the document is in Recently deleted.
-    public func editDocument(
-        _ id: DocumentID, type: DocumentType, expiry: CalendarDate?, pinned: Bool,
-        fields: DocumentFields
-    ) throws {
-        try update(id, rejectDeleted: true) { entry, key in
-            entry.type = type
-            entry.expiry = expiry
-            entry.pinned = pinned
-            entry.sealedFields = try self.sealFields(fields, key: key, documentID: id)
-            entry.updatedAt = self.now()
-            return ([], [])
-        }
-    }
-
-    /// Appends a page to the end of the document.
-    public func addPage(_ data: Data, to id: DocumentID) throws -> PageID {
-        let pageID = PageID()
-        try update(id, rejectDeleted: true) { entry, key in
-            let file = try self.pageFile(
-                data, pageID: pageID, position: entry.pageIds.count, documentID: id,
-                key: key, sealedKey: entry.sealedKey)
-            entry.pageIds.append(pageID)
-            entry.updatedAt = self.now()
-            return ([(pageID, file)], [])
-        }
-        return pageID
-    }
-
-    /// Writes the new page, points the document at it, then deletes the old page file.
-    public func replacePage(_ pageID: PageID, of id: DocumentID, with data: Data) throws -> PageID {
-        let newID = PageID()
-        try update(id, rejectDeleted: true) { entry, key in
-            guard let position = entry.pageIds.firstIndex(of: pageID) else { throw VaultError.pageNotFound }
-            let file = try self.pageFile(
-                data, pageID: newID, position: position, documentID: id,
-                key: key, sealedKey: entry.sealedKey)
-            entry.pageIds[position] = newID
-            entry.updatedAt = self.now()
-            return ([(newID, file)], [pageID])
-        }
-        return newID
-    }
-
-    /// Moves the document to Recently deleted. Keys and files stay until the purge. Deleting a
-    /// document already in Recently deleted changes nothing, so its 30-day timer never restarts.
-    public func delete(_ id: DocumentID) throws {
-        guard try entry(id).deletedAt == nil else { return }
-        try update(id) { entry, _ in
-            entry.deletedAt = self.now()
-            return ([], [])
-        }
-    }
-
-    /// Brings a document back from Recently deleted. Restoring a live document changes
-    /// nothing and writes nothing.
-    public func restore(_ id: DocumentID) throws {
-        guard try entry(id).deletedAt != nil else { return }
-        try update(id) { entry, _ in
-            entry.deletedAt = nil
-            return ([], [])
-        }
-    }
-
-    /// Purges a document now, whether or not it is in Recently deleted. The app confirms first.
-    public func deletePermanently(_ id: DocumentID) throws {
-        let entry = try entry(id)
-        try purge([entry])
-    }
-
-    /// Purges documents deleted `purgeDelay` or longer ago. Returns how many were purged.
-    @discardableResult
-    public func purgeExpired() throws -> Int {
-        let now = now()
-        let expired = try requireState().index.documents.filter { entry in
-            guard let deletedAt = entry.deletedAt else { return false }
-            return now >= deletedAt + Self.purgeDelay
-        }
-        guard !expired.isEmpty else { return 0 }
-        try purge(expired)
-        return expired.count
-    }
-
-    /// Removes the entries and writes the index twice, so index.prev.enc no longer holds
-    /// their sealed keys either; then deletes their page files.
-    private func purge(_ entries: [IndexEntry]) throws {
-        let ids = Set(entries.map(\.id))
-        let remaining = try requireState().index.documents.filter { !ids.contains($0.id) }
-        try commit(remaining, obsoletePages: entries.flatMap(\.pageIds), writeIndexTwice: true)
-    }
-
-    /// - Parameter rejectDeleted: throw `documentDeleted` for a document in Recently deleted.
-    private func update(
-        _ id: DocumentID,
-        rejectDeleted: Bool = false,
-        _ change: (inout IndexEntry, SymmetricKey) throws -> (newPages: [(PageID, Data)], obsoletePages: [PageID])
-    ) throws {
-        var documents = try requireState().index.documents
-        guard let position = documents.firstIndex(where: { $0.id == id }) else { throw VaultError.documentNotFound }
-        if rejectDeleted, documents[position].deletedAt != nil { throw VaultError.documentDeleted }
-        let key = try documentKey(documents[position])
-        let (newPages, obsoletePages) = try change(&documents[position], key)
-        try commit(documents, newPages: newPages, obsoletePages: obsoletePages)
-    }
-
-    // MARK: - The write order
-
-    private func commit(
-        _ documents: [IndexEntry], newPages: [(PageID, Data)] = [],
-        obsoletePages: [PageID] = [], writeIndexTwice: Bool = false
-    ) throws {
-        // 1. New page files.
-        for (pageID, data) in newPages {
-            try write(data, to: pageURL(pageID), protection: .complete)
-        }
-        try step(.pagesWritten)
-
-        // 2. Rotate and write the index (twice for a purge).
-        try writeIndex(documents)
-        if writeIndexTwice { try writeIndex(documents) }
-
-        // 3. Page files the index no longer references. Before deleting, flush to disk: the
-        //    page files written in step 1 and the pages folder (a replaced page must never be
-        //    deleted while its replacement is only in memory), then the new index, then the
-        //    vault folder so the renames are durable too.
-        let fileManager = FileManager.default
-        var doomed: [PageID] = []
-        for pageID in obsoletePages where fileManager.fileExists(atPath: pageURL(pageID).path) {
-            doomed.append(pageID)
-        }
-        if !doomed.isEmpty {
-            do {
-                var methods: [FlushMethod] = []
-                for (pageID, _) in newPages {
-                    methods.append(try flusher.flush(pageURL(pageID)))
-                }
-                methods.append(try flusher.flush(pagesDirectory))
-                methods.append(try flusher.flush(indexURL))
-                methods.append(try flusher.flush(root))
-                // A commit is only as durable as its weakest flush.
-                lastFlushMethod = methods.allSatisfy { $0 == .fullFsync } ? .fullFsync : .fsync
-            } catch {
-                throw VaultError.flushFailed
-            }
-        }
-        for pageID in doomed {
-            try fileManager.removeItem(at: pageURL(pageID))
-        }
-        try step(.obsoletePagesDeleted)
-
-        // 4. Projection last.
-        try writeProjection(documents)
-        try step(.projectionWritten)
-    }
-
-    private func writeIndex(_ documents: [IndexEntry]) throws {
-        var state = try requireState()
-        let next = VaultIndex(generation: state.index.generation + 1, documents: documents)
-        let sealed = try VaultCrypto.seal(
-            VaultJSON.encoder.encode(next), with: state.indexKey,
-            as: .index(state.header.vaultId))
-        let fileManager = FileManager.default
-        if state.indexFileIsCurrent, fileManager.fileExists(atPath: indexURL.path) {
-            if fileManager.fileExists(atPath: previousIndexURL.path) {
-                try fileManager.removeItem(at: previousIndexURL)
-            }
-            try fileManager.moveItem(at: indexURL, to: previousIndexURL)
-        }
-        try step(.indexMovedToPrevious)
-        try write(sealed, to: indexURL, protection: .complete)
-        state.index = next
-        state.indexFileIsCurrent = true
-        self.state = state
-        try step(.indexWritten)
-    }
-
-    private func writeProjection(_ documents: [IndexEntry]) throws {
-        let projection = Projection(
-            documents: documents.filter { $0.deletedAt == nil }.map {
-                ProjectionEntry(id: $0.id, type: $0.type, expiry: $0.expiry, reminderOffsets: reminderOffsets)
-            })
-        try FileManager.default.createDirectory(
-            at: projectionURL.deletingLastPathComponent(),
-            withIntermediateDirectories: true)
-        try write(
-            VaultJSON.encoder.encode(projection), to: projectionURL,
-            protection: .completeUntilFirstUserAuthentication)
-    }
-
-    private func write(_ data: Data, to url: URL, protection: FileProtectionClass) throws {
-        try data.write(to: url, options: .atomic)
-        try fileProtector.protect(url, as: protection)
-    }
-
-    private func step(_ step: WriteStep) throws {
-        try crashHook?(step)
-    }
-
-    // MARK: - Loading the index
-
-    private enum IndexFile {
-        case missing, unreadable
-        case readable(VaultIndex)
-
-        var isMissing: Bool {
-            if case .missing = self { true } else { false }
-        }
-    }
-
-    private struct LoadedIndex {
-        var index: VaultIndex
-        var source: IndexSource
-        var unreadablePages = 0
-        /// index.prev.enc still lists documents that index.enc dropped (an interrupted purge).
-        var previousHoldsRemovedDocuments = false
-        /// Unreferenced pages are uncommitted leftovers and may be deleted.
-        var allowsOrphanCleanup = false
-    }
-
-    private func readIndexFile(_ url: URL, vaultID: VaultID, indexKey: SymmetricKey) throws -> IndexFile {
-        guard let sealed = try? Data(contentsOf: url) else {
-            return FileManager.default.fileExists(atPath: url.path) ? .unreadable : .missing
-        }
-        guard let plain = try? VaultCrypto.open(sealed, with: indexKey, as: .index(vaultID)) else { return .unreadable }
-        struct VersionProbe: Decodable { var schemaVersion: Int }
-        guard let probe = try? VaultJSON.decoder.decode(VersionProbe.self, from: plain) else { return .unreadable }
-        // A newer build wrote this vault: stop rather than fall back and overwrite it.
-        guard probe.schemaVersion <= VaultIndex.currentSchemaVersion else { throw VaultError.unsupportedVersion }
-        guard let index = try? VaultJSON.decoder.decode(VaultIndex.self, from: plain) else { return .unreadable }
-        return .readable(index)
-    }
-
-    private func loadIndex(vaultID: VaultID, indexKey: SymmetricKey, wrapKey: SymmetricKey) throws -> LoadedIndex {
-        let current = try readIndexFile(indexURL, vaultID: vaultID, indexKey: indexKey)
-        let previous = try readIndexFile(previousIndexURL, vaultID: vaultID, indexKey: indexKey)
-
-        switch (current, previous) {
-        case (.readable(let cur), .readable(let prev)) where cur.generation > prev.generation:
-            let removed = !Set(prev.documents.map(\.id)).isSubset(of: cur.documents.map(\.id))
-            return LoadedIndex(
-                index: cur, source: .current, previousHoldsRemovedDocuments: removed,
-                allowsOrphanCleanup: true)
-        case (.readable(let cur), .missing), (.readable(let cur), .unreadable):
-            return LoadedIndex(index: cur, source: .current, allowsOrphanCleanup: true)
-        case (.missing, .readable(let prev)):
-            // A crash between moving index.enc and writing the new one: the newer change
-            // was never committed, so its pages are leftovers.
-            return LoadedIndex(index: prev, source: .previous, allowsOrphanCleanup: true)
-        case (_, .readable(let prev)):
-            // index.enc is unreadable or stale (older than index.prev.enc). Its newest
-            // generation may have committed pages, so re-attach them instead of deleting.
-            var loaded = LoadedIndex(index: prev, source: .previous)
-            loaded.index.documents = try reattachPages(
-                to: prev.documents, wrapKey: wrapKey,
-                unreadable: &loaded.unreadablePages)
-            return loaded
-        default:
-            let indexFilesExist = !(current.isMissing && previous.isMissing)
-            var loaded = LoadedIndex(index: VaultIndex(generation: 0, documents: []), source: .recovered)
-            loaded.index.documents = try reattachPages(to: [], wrapKey: wrapKey, unreadable: &loaded.unreadablePages)
-            let recoveredPages = loaded.index.documents.reduce(0) { $0 + $1.pageIds.count }
-            if recoveredPages == 0, indexFilesExist || loaded.unreadablePages > 0 {
-                // Nothing opens with this key. Most likely the wrong key: change nothing.
-                throw VaultError.vaultUnreadable
-            }
-            return loaded
-        }
-    }
-
-    // MARK: - Page files on disk
-
-    private struct PageFileInfo {
-        let url: URL
-        let id: PageID
-        let modified: Date
-    }
-
-    private func listPageFiles() throws -> [PageFileInfo] {
-        let fileManager = FileManager.default
-        guard fileManager.fileExists(atPath: pagesDirectory.path) else { return [] }
-        let urls = try fileManager.contentsOfDirectory(
-            at: pagesDirectory, includingPropertiesForKeys: [.contentModificationDateKey])
-        return urls.compactMap { url in
-            guard url.pathExtension == "enc",
-                let id = PageID(string: url.deletingPathExtension().lastPathComponent)
-            else { return nil }
-            let modified = (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
-            return PageFileInfo(url: url, id: id, modified: modified ?? .distantPast)
-        }
-    }
-
-    /// Opens a page file with only the vault's wrap key, using the sealed document key in
-    /// its own header. Returns the header if the page is intact, nil otherwise.
-    private func verifiedHeader(_ info: PageFileInfo, wrapKey: SymmetricKey) -> PageHeader? {
-        guard let data = try? Data(contentsOf: info.url),
-            let file = try? PageFile(decoding: data),
-            file.header.formatVersion == PageHeader.currentFormatVersion,
-            file.header.pageId == info.id,
-            let key = try? VaultCrypto.openDocumentKey(
-                file.header.sealedKey, with: wrapKey,
-                documentID: file.header.docId),
-            (try? VaultCrypto.open(file.sealedContent, with: key, as: .page(file.header.docId, info.id))) != nil
-        else { return nil }
-        return file.header
-    }
-
-    /// Adds every intact page file that `documents` does not reference: to its document if
-    /// it exists, else to a new "other" document with empty fields. Drops references to
-    /// page files that no longer exist.
-    private func reattachPages(
-        to documents: [IndexEntry], wrapKey: SymmetricKey,
-        unreadable: inout Int
-    ) throws -> [IndexEntry] {
-        let files = try listPageFiles().sorted { ($0.modified, $0.id.string) < ($1.modified, $1.id.string) }
-        let existing = Set(files.map(\.id))
-        var result = documents.map { entry in
-            var entry = entry
-            entry.pageIds = entry.pageIds.filter(existing.contains)
-            return entry
-        }
-        let referenced = Set(result.flatMap(\.pageIds))
-        let stamp = now()
-        var positions: [PageID: Int] = [:]
-        var touched: Set<DocumentID> = []
-        for info in files where !referenced.contains(info.id) {
-            guard let header = verifiedHeader(info, wrapKey: wrapKey) else {
-                unreadable += 1
-                continue
-            }
-            positions[info.id] = header.position
-            touched.insert(header.docId)
-            if let position = result.firstIndex(where: { $0.id == header.docId }) {
-                result[position].pageIds.append(info.id)
-            } else {
-                let key = try VaultCrypto.openDocumentKey(header.sealedKey, with: wrapKey, documentID: header.docId)
-                result.append(
-                    IndexEntry(
-                        id: header.docId, type: .other, createdAt: stamp, updatedAt: stamp, expiry: nil, pinned: false,
-                        deletedAt: nil, sealedKey: header.sealedKey,
-                        sealedFields: try sealFields(DocumentFields(), key: key, documentID: header.docId),
-                        pageIds: [info.id]))
-            }
-        }
-        // Put every document that gained pages back in page order, using the position each
-        // page header stores. Ties (a crash left two versions of a page) keep file-time order.
-        for index in result.indices where touched.contains(result[index].id) {
-            let ordered = result[index].pageIds.enumerated().map { offset, pageID in
-                (pageID, positions[pageID] ?? storedPosition(of: pageID) ?? Int.max, offset)
-            }
-            result[index].pageIds = ordered.sorted { ($0.1, $0.2) < ($1.1, $1.2) }.map(\.0)
-        }
-        return result
-    }
-
-    /// The position in a page file's plaintext header, without decrypting the page.
-    private func storedPosition(of pageID: PageID) -> Int? {
-        guard let data = try? Data(contentsOf: pageURL(pageID)) else { return nil }
-        return (try? PageFile(decoding: data))?.header.position
-    }
-
-    /// Deletes page files that no index entry references, that are older than
-    /// `orphanMinimumAge`, and that open with this vault's key. Unreadable files are kept.
-    private func removeOrphanPages(unreadable: inout Int) throws -> Int {
-        let state = try requireState()
-        let referenced = Set(state.index.documents.flatMap(\.pageIds))
-        let now = clock.now
-        var removed = 0
-        for info in try listPageFiles() where !referenced.contains(info.id) {
-            guard verifiedHeader(info, wrapKey: state.wrapKey) != nil else {
-                unreadable += 1
-                continue
-            }
-            guard now.timeIntervalSince(info.modified) >= Self.orphanMinimumAge else { continue }
-            try FileManager.default.removeItem(at: info.url)
-            removed += 1
-        }
-        return removed
-    }
-
-    private func vaultFilesExist() throws -> Bool {
-        let fileManager = FileManager.default
-        if fileManager.fileExists(atPath: indexURL.path) || fileManager.fileExists(atPath: previousIndexURL.path) {
-            return true
-        }
-        return try !listPageFiles().isEmpty
-    }
-
-    // MARK: - Keys
-
-    private func readHeader(at url: URL) throws -> VaultHeader {
-        struct VersionProbe: Decodable { var formatVersion: Int }
-        guard let data = try? Data(contentsOf: url),
-            let probe = try? VaultJSON.decoder.decode(VersionProbe.self, from: data)
-        else {
-            throw VaultError.corruptFile
-        }
-        guard probe.formatVersion <= VaultHeader.currentFormatVersion else { throw VaultError.unsupportedVersion }
-        guard let header = try? VaultJSON.decoder.decode(VaultHeader.self, from: data) else {
-            throw VaultError.corruptFile
-        }
-        return header
-    }
-
-    /// The vault exists, so its key must too. Not found means the key is gone; anything
-    /// else means it is there but locked. Neither ever leads to a new key.
-    private func readExistingVaultKey(_ vaultID: VaultID) async throws -> SymmetricKey {
-        do {
-            return try await keyStore.readVaultKey(for: vaultID)
-        } catch KeyStoreError.itemNotFound {
-            throw VaultError.vaultKeyMissing
-        } catch {
-            throw Self.unavailable(error)
-        }
-    }
-
-    /// For a new vault: create a key only when the key store reports it does not exist.
-    private func readOrCreateNewVaultKey(_ vaultID: VaultID) async throws -> SymmetricKey {
-        do {
-            return try await keyStore.readVaultKey(for: vaultID)
-        } catch KeyStoreError.itemNotFound {
-            do {
-                return try await keyStore.createVaultKey(for: vaultID)
-            } catch {
-                throw Self.unavailable(error)
-            }
-        } catch {
-            throw Self.unavailable(error)
-        }
-    }
-
-    /// Keeps the Keychain status so the app can tell "passcode turned off" (-25293) from
-    /// other locked states. The status is a number, never key material.
-    private static func unavailable(_ error: any Error) -> VaultError {
-        if case KeyStoreError.unavailable(let status) = error {
-            return .vaultKeyUnavailable(status: status)
-        }
-        return .vaultKeyUnavailable(status: nil)
-    }
-
-    private func documentKey(_ entry: IndexEntry) throws -> SymmetricKey {
-        try VaultCrypto.openDocumentKey(entry.sealedKey, with: requireState().wrapKey, documentID: entry.id)
-    }
-
     // MARK: - Helpers
 
-    private func requireState() throws -> OpenState {
+    func requireState() throws -> OpenState {
         guard let state else { throw VaultError.locked }
         return state
     }
 
-    private func entry(_ id: DocumentID) throws -> IndexEntry {
-        guard let entry = try requireState().index.documents.first(where: { $0.id == id }) else {
-            throw VaultError.documentNotFound
-        }
-        return entry
-    }
-
     /// Timestamps are whole seconds so they survive the ISO 8601 round trip exactly.
-    private func now() -> Date {
+    func now() -> Date {
         Date(timeIntervalSince1970: clock.now.timeIntervalSince1970.rounded(.down))
     }
 
-    private func sealFields(_ fields: DocumentFields, key: SymmetricKey, documentID: DocumentID) throws -> Data {
+    func sealFields(_ fields: DocumentFields, key: SymmetricKey, documentID: DocumentID) throws -> Data {
         try VaultCrypto.seal(VaultJSON.encoder.encode(fields), with: key, as: .fields(documentID))
-    }
-
-    private func pageFile(
-        _ data: Data, pageID: PageID, position: Int, documentID: DocumentID, key: SymmetricKey,
-        sealedKey: Data
-    ) throws -> Data {
-        let sealed = try VaultCrypto.seal(data, with: key, as: .page(documentID, pageID))
-        return try PageFile(
-            header: PageHeader(
-                docId: documentID, pageId: pageID, position: position,
-                sealedKey: sealedKey),
-            sealedContent: sealed
-        ).encoded()
     }
 }
