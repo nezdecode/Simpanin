@@ -10,12 +10,14 @@ included:
 
 excluded:
   - "**/.build"
+  - "**/Package.swift"  # its first line must be swift-tools-version, so it has no header
 
 disabled_rules:  # layout rules that swift-format already decides
   - trailing_comma  # swift-format adds trailing commas to multiline collections
   - opening_brace   # swift-format puts the brace on its own line after a wrapped signature
 
 opt_in_rules:
+  - file_header
   - closure_spacing
   - empty_count
   - empty_string
@@ -42,6 +44,19 @@ identifier_name:
     - dk  # document key, the design doc's term
     - kk  # Kartu Keluarga, a document type
     - t0  # a test's start time
+
+file_header:  # Xcode's header plus the MPL notice, see CONTRIBUTING.md
+  required_pattern: |
+    \/\/
+    \/\/  SWIFTLINT_CURRENT_FILENAME
+    \/\/  (Simpanin|SimpaninTests|SimpaninUITests|VaultCore|VaultCoreTests)
+    \/\/
+    \/\/  Created by .+ on \d{1,2}\/\d{1,2}\/\d{2}\.
+    \/\/
+    \/\/  This Source Code Form is subject to the terms of the Mozilla Public
+    \/\/  License, v\. 2\.0\. If a copy of the MPL was not distributed with this
+    \/\/  file, You can obtain one at https:\/\/mozilla\.org\/MPL\/2\.0\/\.
+    \/\/
 
 custom_rules:
   vaultcore_imports:

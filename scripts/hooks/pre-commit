@@ -27,7 +27,7 @@ if [ -n "$private" ]; then
   exit 1
 fi
 
-# Staged Swift files must pass swift-format (layout) and SwiftLint (naming, size,
+# Staged Swift files must pass swift-format (layout) and SwiftLint (naming, size, headers,
 # VaultCore imports). The working-tree copy is checked, so stage whole files.
 PATH="$PATH:/opt/homebrew/bin:/usr/local/bin"
 swift_files=$(git diff --cached --name-only --diff-filter=ACMR -- '*.swift')
@@ -40,7 +40,9 @@ if [ -n "$swift_files" ]; then
     echo "pre-commit: swift-format found layout problems. Fix them with: swift format format -i <file>" >&2
     exit 1
   fi
-  if ! printf '%s\n' "$swift_files" | tr '\n' '\0' | xargs -0 swiftlint lint --strict --quiet; then
+  # Package.swift is excluded in .swiftlint.yml; with no other file left, skip SwiftLint.
+  lint_files=$(printf '%s\n' "$swift_files" | grep -v '\(^\|\/\)Package\.swift$')
+  if [ -n "$lint_files" ] && ! printf '%s\n' "$lint_files" | tr '\n' '\0' | xargs -0 swiftlint lint --strict --quiet; then
     echo "pre-commit: SwiftLint found problems (see above)." >&2
     exit 1
   fi

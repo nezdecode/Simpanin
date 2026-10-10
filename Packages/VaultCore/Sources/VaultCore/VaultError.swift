@@ -1,3 +1,14 @@
+//
+//  VaultError.swift
+//  VaultCore
+//
+//  Created by Inez Amanda on 4/10/26.
+//
+//  This Source Code Form is subject to the terms of the Mozilla Public
+//  License, v. 2.0. If a copy of the MPL was not distributed with this
+//  file, You can obtain one at https://mozilla.org/MPL/2.0/.
+//
+
 /// Errors from VaultCore. Cases carry no ids, field values or file contents, so they
 /// are safe to log.
 public enum VaultError: Error, Equatable, Sendable {
