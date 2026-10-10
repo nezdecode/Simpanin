@@ -4,9 +4,8 @@ import Testing
 
 @testable import VaultCore
 
-/// Review M1: "schema and format versions on every file". A file written by a newer app
-/// version must stop this version with `unsupportedVersion`, never be treated as corrupt:
-/// treating a newer index as unreadable would fall back or recover and overwrite it.
+/// A file from a newer app version stops this one with `unsupportedVersion`. Treating it as
+/// corrupt would fall back or recover, and overwrite it.
 @Suite("Newer format versions")
 struct VersionTests {
     func makeVault() async throws -> (TestVault, DocumentID) {

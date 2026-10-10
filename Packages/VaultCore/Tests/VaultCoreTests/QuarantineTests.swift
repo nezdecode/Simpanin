@@ -4,11 +4,8 @@ import Testing
 
 @testable import VaultCore
 
-/// "Mulai vault baru" (design doc, "Recovery screens and quarantine"): `quarantineVault(to:)`
-/// moves the whole vault folder to Quarantine/<yyyyMMdd-HHmmss in UTC>/, unchanged, and returns
-/// it; `open()` is a separate call that creates the new vault. Nothing is deleted and the old
-/// Keychain item is untouched. VaultCore also lists quarantined vaults and deletes one together
-/// with its Keychain item.
+/// "Mulai vault baru": `quarantineVault(to:)` moves the vault folder aside unchanged, then
+/// `open()` creates a new vault. Also listing and deleting quarantined vaults.
 @Suite("Quarantine")
 struct QuarantineTests {
     /// 2026-10-04 13:05:09 UTC
@@ -90,7 +87,7 @@ struct QuarantineTests {
     }
 
     @Test func openingFailsAfterTheMoveButTheAppKnowsWhereTheOldVaultIs() async throws {
-        // The review's Q1 case: the key store is locked when the new vault is opened.
+        // The key store is locked when the new vault is opened.
         let setup = try await makeVault()
         let store = setup.vault.makeStore()
         let moved = try #require(try await store.quarantineVault(to: setup.vault.quarantineURL))

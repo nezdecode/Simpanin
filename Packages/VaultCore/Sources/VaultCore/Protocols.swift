@@ -10,14 +10,11 @@ public enum KeyStoreError: Error, Equatable, Sendable {
     case itemNotFound
     /// An item for this vault already exists; it was not overwritten.
     case itemAlreadyExists
-    /// Any other failure (errSecAuthFailed -25293, errSecInteractionNotAllowed -25308,
-    /// user cancel...). The key exists but cannot be read now.
+    /// Any other failure (locked, passcode off, cancelled): the key exists but can't be read now.
     case unavailable(status: Int32)
 }
 
-/// Holds the vault key. The app implements it with the Keychain
-/// (WhenUnlockedThisDeviceOnly, .userPresence; see the design doc). Tests use an
-/// in-memory store.
+/// Holds the vault key. The app implements it with the Keychain; tests use an in-memory store.
 public protocol KeyStore: Sendable {
     /// Returns the vault key. Throws `KeyStoreError.itemNotFound` only when the item
     /// does not exist; every other failure must be a different error.
@@ -51,8 +48,7 @@ public enum FileProtectionClass: Sendable {
     case completeUntilFirstUserAuthentication
 }
 
-/// Applies Data Protection classes. VaultCore stays free of platform APIs; the app target
-/// implements this with FileManager attributes. Called after every file write.
+/// Applies a Data Protection class after every file write. The app implements it.
 public protocol FileProtector: Sendable {
     func protect(_ url: URL, as protection: FileProtectionClass) throws
 }

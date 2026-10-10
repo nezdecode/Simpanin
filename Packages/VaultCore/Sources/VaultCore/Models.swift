@@ -79,8 +79,7 @@ extension CalendarDate: Codable {
     }
 }
 
-/// The reviewed fields of a document (number, name, issue date, title...). Sealed with
-/// the document key; never in the projection, never logged.
+/// A document's fields (number, name, dates...). Never in the projection, never logged.
 public struct DocumentFields: Hashable, Sendable, Codable {
     public var values: [String: String]
     public init(_ values: [String: String] = [:]) { self.values = values }
@@ -100,8 +99,7 @@ public struct Document: Hashable, Sendable, Identifiable {
     public var pageIDs: [PageID]
 }
 
-/// One decrypted page: image or PDF bytes, exactly as given to the vault. The app
-/// detects the format from the bytes.
+/// One decrypted page: the image or PDF bytes exactly as stored.
 public struct Page: Hashable, Sendable, Identifiable {
     public let id: PageID
     public let data: Data
@@ -126,8 +124,7 @@ public struct KeySlotKind: RawRepresentable, Hashable, Sendable, Codable {
     public static let device = KeySlotKind(rawValue: "device")
 }
 
-/// A way to unlock the vault key. v1.1 adds "synced" and "recovery" slots, each holding
-/// the vault key sealed under another key.
+/// A way to unlock the vault key. Only "device" exists in v1.
 public struct KeySlot: Hashable, Sendable, Codable {
     public var kind: KeySlotKind
     public var createdAt: Date

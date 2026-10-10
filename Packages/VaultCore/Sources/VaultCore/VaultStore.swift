@@ -21,12 +21,9 @@ public struct OpenReport: Sendable, Equatable {
     public var removedOrphanPages = 0
     /// Page files that could not be opened. They are never deleted.
     public var unreadablePages = 0
-    /// The vault opened from index.prev.enc (index.enc was unreadable, stale, or missing
-    /// after a crash), so the newest change may be lost. The app shows a one-time notice
-    /// without a number, because the count cannot always be known.
+    /// Opened from index.prev.enc, so the newest change may be lost.
     public var newestChangeMayBeLost = false
-    /// Both index files were unusable and documents were rebuilt from page images: fields
-    /// are empty and deleted documents may be back. The app shows a one-time notice.
+    /// Rebuilt from page images: fields are empty and deleted documents may be back.
     public var recoveredFromPages = false
 }
 
@@ -35,14 +32,8 @@ enum WriteStep: Sendable, Equatable {
     case pagesWritten, indexMovedToPrevious, indexWritten, obsoletePagesDeleted, projectionWritten
 }
 
-/// The encrypted document store. Owns vault.json, the index files, the page files and the
-/// projection, and follows the write order in the design doc for every change:
-/// 1. new page files, 2. index.enc -> index.prev.enc then the new index.enc,
-/// 3. delete page files the index no longer references, 4. projection.json.
-///
-/// This file holds the state, opening and locking. The rest is split by topic:
-/// VaultStore+Documents (reading and changes), +WriteOrder (`commit`), +Recovery (loading
-/// the index, page recovery, orphans), +Keys (vault.json and the vault key) and +Quarantine.
+/// The encrypted document store. Every change follows the design doc's write order (see
+/// `commit`). The code is split by topic across the VaultStore+*.swift files.
 public actor VaultStore {
     /// Documents in Recently deleted are purged this long after `deletedAt`.
     public static let purgeDelay: TimeInterval = 30 * 86_400
@@ -57,8 +48,7 @@ public actor VaultStore {
     let reminderOffsets: [Int]
     let crashHook: (@Sendable (WriteStep) throws -> Void)?
     let flusher: any IndexFlusher
-    /// The flush call of the last commit that flushed: `.fullFsync` only if every flush in it
-    /// (new pages, pages folder, index, vault folder) got F_FULLFSYNC (tests and diagnostics).
+    /// How the last flushing commit flushed: `.fsync` if any of its flushes fell back.
     var lastFlushMethod: FlushMethod?
 
     struct OpenState {
@@ -113,10 +103,8 @@ public actor VaultStore {
 
     // MARK: - Open and lock
 
-    /// Unlocks the vault: reads the vault key, opens the index (falling back to
-    /// index.prev.enc, then to recovery from page headers), removes orphaned pages,
-    /// purges documents deleted 30 or more days ago and rewrites the projection.
-    /// Creates a new vault only when there is no vault.json and no vault file at all.
+    /// Unlocks the vault, then repairs the index if needed, removes orphan pages and purges.
+    /// Creates a vault only when no vault file exists at all.
     @discardableResult
     public func open() async throws -> OpenReport {
         if let openTask { return try await openTask.value }
@@ -169,8 +157,7 @@ public actor VaultStore {
 
         do {
             if loaded.source != .current || loaded.previousHoldsRemovedDocuments {
-                // Replace a missing, bad or stale index.enc, or finish an interrupted purge
-                // so index.prev.enc no longer holds a purged document's sealed key.
+                // Replace a bad or stale index.enc, or finish an interrupted purge.
                 try commit(loaded.index.documents)
             }
             if loaded.allowsOrphanCleanup {

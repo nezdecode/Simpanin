@@ -7,13 +7,11 @@ public enum VaultError: Error, Equatable, Sendable {
     case corruptFile
     /// A file has a format or schema version newer than this build understands.
     case unsupportedVersion
-    /// The key store reports the vault key exists but cannot be read now (locked,
-    /// passcode removed, user cancelled). The vault must not be recreated.
-    /// `status` is the Keychain status code when the key store gave one (for example
-    /// -25293 after the passcode was turned off), nil for any other error.
+    /// The vault key exists but cannot be read now (locked, passcode off, cancelled), so the
+    /// vault must not be recreated. `status` is the Keychain status, when there is one.
     case vaultKeyUnavailable(status: Int32?)
-    /// vault.json exists but the key store has no vault key for it. Never answered by
-    /// creating a new key, because that would orphan every document.
+    /// vault.json exists but its key is gone. Never answered with a new key: that would
+    /// orphan every document.
     case vaultKeyMissing
     /// Vault files exist but vault.json does not; refuse to create a new vault over them.
     case vaultHeaderMissing
@@ -25,11 +23,10 @@ public enum VaultError: Error, Equatable, Sendable {
     case pageNotFound
     /// The document is in Recently deleted; restore it before editing or changing pages.
     case documentDeleted
-    /// A quarantine folder's vault.json cannot be read, or names a different vault than
-    /// expected. The folder is left untouched.
+    /// A quarantine folder's vault.json is unreadable or names another vault.
     case quarantineUnreadable
     /// The quarantine entry names the vault that is in use. Nothing is deleted.
     case quarantineInUse
-    /// Flushing the new index to disk failed, so step 3 deleted nothing.
+    /// A flush before deleting files failed, so nothing was deleted.
     case flushFailed
 }

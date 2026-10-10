@@ -9,7 +9,6 @@ extension VaultStore {
         try requireState().index.documents.filter { $0.deletedAt == nil }.map(\.document)
     }
 
-    /// Documents in Recently deleted.
     public func recentlyDeleted() throws -> [Document] {
         try requireState().index.documents.filter { $0.deletedAt != nil }.map(\.document)
     }
@@ -33,8 +32,7 @@ extension VaultStore {
         try entry(id).pageIds.map { try page($0, of: id) }
     }
 
-    /// Decrypts one page. The page file must name this document and page in its header and
-    /// open with this document's key and "page|v1|<docId>|<pageId>".
+    /// The page file's header must name this document and page, or it fails to open.
     public func page(_ pageID: PageID, of id: DocumentID) throws -> Page {
         let entry = try entry(id)
         guard entry.pageIds.contains(pageID) else { throw VaultError.pageNotFound }
@@ -56,7 +54,7 @@ extension VaultStore {
 
     // MARK: - Changes
 
-    /// Creates a document with a new random key. Each page is sealed straight from memory.
+    /// Creates a document with its own random key. Pages are never written unencrypted.
     public func createDocument(
         type: DocumentType, expiry: CalendarDate?, pinned: Bool,
         fields: DocumentFields, pages: [Data]
@@ -82,8 +80,7 @@ extension VaultStore {
         return id
     }
 
-    /// Replaces type, expiry, pinned and fields. Fields are resealed with the same document
-    /// key and a fresh nonce. Throws `documentDeleted` while the document is in Recently deleted.
+    /// Throws `documentDeleted` while the document is in Recently deleted.
     public func editDocument(
         _ id: DocumentID, type: DocumentType, expiry: CalendarDate?, pinned: Bool,
         fields: DocumentFields
@@ -98,7 +95,6 @@ extension VaultStore {
         }
     }
 
-    /// Appends a page to the end of the document.
     public func addPage(_ data: Data, to id: DocumentID) throws -> PageID {
         let pageID = PageID()
         try update(id, rejectDeleted: true) { entry, key in
@@ -112,7 +108,7 @@ extension VaultStore {
         return pageID
     }
 
-    /// Writes the new page, points the document at it, then deletes the old page file.
+    /// The old page file is deleted only after the index points at the new one.
     public func replacePage(_ pageID: PageID, of id: DocumentID, with data: Data) throws -> PageID {
         let newID = PageID()
         try update(id, rejectDeleted: true) { entry, key in
@@ -127,8 +123,8 @@ extension VaultStore {
         return newID
     }
 
-    /// Moves the document to Recently deleted. Keys and files stay until the purge. Deleting a
-    /// document already in Recently deleted changes nothing, so its 30-day timer never restarts.
+    /// Moves the document to Recently deleted. A second delete changes nothing, so the 30-day
+    /// timer never restarts.
     public func delete(_ id: DocumentID) throws {
         guard try entry(id).deletedAt == nil else { return }
         try update(id) { entry, _ in
@@ -137,8 +133,7 @@ extension VaultStore {
         }
     }
 
-    /// Brings a document back from Recently deleted. Restoring a live document changes
-    /// nothing and writes nothing.
+    /// Restoring a live document writes nothing.
     public func restore(_ id: DocumentID) throws {
         guard try entry(id).deletedAt != nil else { return }
         try update(id) { entry, _ in
@@ -147,13 +142,13 @@ extension VaultStore {
         }
     }
 
-    /// Purges a document now, whether or not it is in Recently deleted. The app confirms first.
+    /// Purges a document now, even a live one.
     public func deletePermanently(_ id: DocumentID) throws {
         let entry = try entry(id)
         try purge([entry])
     }
 
-    /// Purges documents deleted `purgeDelay` or longer ago. Returns how many were purged.
+    /// Returns how many documents were purged.
     @discardableResult
     public func purgeExpired() throws -> Int {
         let now = now()
@@ -166,8 +161,7 @@ extension VaultStore {
         return expired.count
     }
 
-    /// Removes the entries and writes the index twice, so index.prev.enc no longer holds
-    /// their sealed keys either; then deletes their page files.
+    /// Writes the index twice so index.prev.enc loses the purged sealed keys too.
     private func purge(_ entries: [IndexEntry]) throws {
         let ids = Set(entries.map(\.id))
         let remaining = try requireState().index.documents.filter { !ids.contains($0.id) }
@@ -199,7 +193,7 @@ extension VaultStore {
         return entry
     }
 
-    // swiftlint:disable:next function_parameter_count - each is needed and labelled; a wrapper would hide them
+    // swiftlint:disable:next function_parameter_count - all six are needed
     private func pageFile(
         _ data: Data, pageID: PageID, position: Int, documentID: DocumentID, key: SymmetricKey,
         sealedKey: Data

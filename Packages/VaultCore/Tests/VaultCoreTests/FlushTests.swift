@@ -4,11 +4,8 @@ import Testing
 
 @testable import VaultCore
 
-/// Design doc, write order step 2: "If step 3 will delete any file, first flush the new index
-/// to disk with F_FULLFSYNC, so a power loss cannot leave a deleted page that the surviving
-/// index still needs. Also flush the vault directory itself, so the renames are durable too.
-/// Before those, flush every page file written in step 1 of the same change and the pages
-/// folder, so a replaced page can never be deleted while its replacement is still only in memory."
+/// Before step 3 deletes anything, the new pages, the pages folder, the index and the vault
+/// folder are flushed, in that order (design doc, write order).
 @Suite("Index flush before deleting pages")
 struct FlushTests {
     struct FlushError: Error {}
@@ -67,8 +64,7 @@ struct FlushTests {
 
         let events = flusher.recorded
         try #require(events.count == 4)
-        // The review's gap: the new page is flushed first, so the surviving index can never
-        // point to a page lost in a power loss after the old one was deleted.
+        // The new page is flushed first, so the index never points to a page lost in a power cut.
         expectFlushOrder(events, vault, newPages: [new])
         #expect(events[0].contents == (try Data(contentsOf: vault.pageURL(new))))
         // The index flushed is the new generation, pointing at the new page...
@@ -183,8 +179,7 @@ struct FlushTests {
     }
 
     @Test func recordsTheWeakerMethodWhenTheTwoFlushesDiffer() async throws {
-        // The index got F_FULLFSYNC but the directory only fsync: the commit is only as durable
-        // as its weakest flush, so that is what is recorded.
+        // The index got F_FULLFSYNC but the folder only fsync: the weakest flush is recorded.
         let vault = try TestVault()
         let root = vault.root.standardizedFileURL.path
         let flusher = RecordingFlusher(

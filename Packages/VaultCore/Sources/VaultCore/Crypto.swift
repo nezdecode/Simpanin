@@ -61,8 +61,7 @@ public enum VaultCrypto {
         return combined
     }
 
-    /// Opens data from `seal`. Any failure (wrong key, wrong associated data, tampered or
-    /// truncated bytes) is reported as `.authenticationFailed`.
+    /// Any failure (wrong key or associated data, tampered bytes) is `.authenticationFailed`.
     public static func open(_ sealed: Data, with key: SymmetricKey, as associatedData: AssociatedData) throws -> Data {
         do {
             let box = try AES.GCM.SealedBox(combined: sealed)

@@ -4,8 +4,7 @@ import Testing
 
 @testable import VaultCore
 
-/// Required test 3: stop after each step of the write order, reopen, and find the last
-/// good state with no data lost.
+/// Crash after each step of the write order, reopen, and find the last good state.
 @Suite("Crash simulation")
 struct CrashTests {
     enum Operation: String, CaseIterable, Sendable {
@@ -102,8 +101,7 @@ struct CrashTests {
             let report = try await reopened.open()
             let expected = steps.prefix(crashStep).contains(.indexWritten) ? after : before
             #expect(try await reopened.snapshot() == expected, "\(label)")
-            // A crash right after index.enc was moved aside leaves it missing: the
-            // newest change may be lost, and the app shows the no-number notice.
+            // A crash right after index.enc was moved aside: the newest change may be lost.
             #expect(report.newestChangeMayBeLost == (steps[crashStep - 1] == .indexMovedToPrevious), "\(label)")
             #expect(!report.recoveredFromPages, "\(label)")
             try await expectConsistent(run, reopened, label)
@@ -139,7 +137,7 @@ struct CrashTests {
             #expect(try await reopened.snapshot() == after, "\(label)")
             #expect(report.newestChangeMayBeLost == (steps[crashStep - 1] == .indexMovedToPrevious), "\(label)")
             try await expectConsistent(run, reopened, label)
-            // Whatever step the crash hit, no index file keeps B's sealed key once reopened.
+            // Whatever step the crash hit, no index file keeps the SIM's sealed key once reopened.
             for url in [run.indexURL, run.previousIndexURL] where FileManager.default.fileExists(atPath: url.path) {
                 let index = try await run.readIndex(at: url)
                 #expect(!index.documents.contains { $0.sealedKey == sealedB }, "\(label): \(url.lastPathComponent)")

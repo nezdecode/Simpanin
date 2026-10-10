@@ -4,12 +4,8 @@ import Testing
 
 @testable import VaultCore
 
-/// Required test 6: a committed v1 vault, built from synthetic data, still opens.
-/// Keep this fixture for every later format version; add a new one beside it, never replace it.
-///
-/// Expected values are frozen here as literals and SHA-256 hashes, independent of the
-/// `Synthetic` helpers, so changing a helper can never make this test pass against a
-/// different vault.
+/// The committed v1 vault must always open. Never replace it; add later versions beside it.
+/// Expected values are frozen literals and hashes, independent of the `Synthetic` helpers.
 @Suite("v1 fixture")
 struct FixtureTests {
     /// <repo>/Fixtures/Synthetic/VaultV1
@@ -143,7 +139,7 @@ struct FixtureTests {
     }
 
     @Test func v1FixtureOpensFromThePreviousIndex() async throws {
-        // F4: without index.enc, generation 8 from index.prev.enc: the passport is not deleted yet.
+        // Without index.enc, index.prev.enc (generation 8) is used: the passport is not deleted yet.
         let vault = try await openableCopy()
         try FileManager.default.removeItem(at: vault.indexURL)
         #expect(try await vault.readIndex(at: vault.previousIndexURL).generation == 8)

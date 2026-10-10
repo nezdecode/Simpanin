@@ -4,8 +4,7 @@ import Testing
 
 @testable import VaultCore
 
-/// Required test 4 (both index files corrupt: every page image is recovered), plus the
-/// guards that keep recovery and cleanup from destroying data.
+/// Recovery when both index files are lost, and the guards that keep it from destroying data.
 @Suite("Recovery and cleanup")
 struct RecoveryTests {
     struct Fixture {
@@ -125,7 +124,7 @@ struct RecoveryTests {
     }
 
     @Test func recoveryKeepsPageOrderAfterAReplace() async throws {
-        // The review's case: the rescanned front used to come back last.
+        // The rescanned front must come back first, not last.
         let (vault, id) = try await makeRescannedKTP()
         try Data("x".utf8).write(to: vault.indexURL)
         try Data("x".utf8).write(to: vault.previousIndexURL)

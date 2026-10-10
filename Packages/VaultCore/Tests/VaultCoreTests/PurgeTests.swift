@@ -4,7 +4,7 @@ import Testing
 
 @testable import VaultCore
 
-/// Required test 5: after a purge, no file in the vault holds the purged sealed key.
+/// After a purge, no file in the vault holds the purged sealed key.
 @Suite("Purge")
 struct PurgeTests {
     struct Setup {
@@ -54,8 +54,8 @@ struct PurgeTests {
             #expect(!index.documents.contains { $0.id == setup.purged }, "\(url.lastPathComponent)")
             #expect(!index.documents.contains { $0.sealedKey == setup.sealedKey }, "\(url.lastPathComponent)")
         }
-        // No remaining page header holds the sealed key. Headers are decoded, not byte-scanned:
-        // the key is base64 inside JSON there, which escapes "/", so a byte search cannot find it.
+        // Decode the headers rather than byte-scan: JSON escapes "/" in the base64 key, so a
+        // byte search would miss it.
         for file in try setup.vault.pageFiles() {
             let header = try PageFile(decoding: Data(contentsOf: file)).header
             #expect(header.sealedKey != setup.sealedKey, "sealed key in \(file.lastPathComponent)")

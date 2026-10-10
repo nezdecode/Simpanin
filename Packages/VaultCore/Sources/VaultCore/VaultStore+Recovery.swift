@@ -49,12 +49,10 @@ extension VaultStore {
         case (.readable(let cur), .missing), (.readable(let cur), .unreadable):
             return LoadedIndex(index: cur, source: .current, allowsOrphanCleanup: true)
         case (.missing, .readable(let prev)):
-            // A crash between moving index.enc and writing the new one: the newer change
-            // was never committed, so its pages are leftovers.
+            // A crash between the two index writes: the newer change never committed.
             return LoadedIndex(index: prev, source: .previous, allowsOrphanCleanup: true)
         case (_, .readable(let prev)):
-            // index.enc is unreadable or stale (older than index.prev.enc). Its newest
-            // generation may have committed pages, so re-attach them instead of deleting.
+            // index.enc is bad or stale, but its pages may be committed: keep them.
             var loaded = LoadedIndex(index: prev, source: .previous)
             loaded.index.documents = try reattachPages(
                 to: prev.documents, wrapKey: wrapKey,
@@ -95,8 +93,7 @@ extension VaultStore {
         }
     }
 
-    /// Opens a page file with only the vault's wrap key, using the sealed document key in
-    /// its own header. Returns the header if the page is intact, nil otherwise.
+    /// The page's header if it opens with this vault's key, else nil.
     private func verifiedHeader(_ info: PageFileInfo, wrapKey: SymmetricKey) -> PageHeader? {
         guard let data = try? Data(contentsOf: info.url),
             let file = try? PageFile(decoding: data),
@@ -110,9 +107,8 @@ extension VaultStore {
         return file.header
     }
 
-    /// Adds every intact page file that `documents` does not reference: to its document if
-    /// it exists, else to a new "other" document with empty fields. Drops references to
-    /// page files that no longer exist.
+    /// Adds intact unreferenced pages to their document, or to a new "other" document if it
+    /// is gone. Drops references to missing files.
     private func reattachPages(
         to documents: [IndexEntry], wrapKey: SymmetricKey,
         unreadable: inout Int
@@ -147,8 +143,7 @@ extension VaultStore {
                         pageIds: [info.id]))
             }
         }
-        // Put every document that gained pages back in page order, using the position each
-        // page header stores. Ties (a crash left two versions of a page) keep file-time order.
+        // Restore page order from the header positions; ties keep file-time order.
         for index in result.indices where touched.contains(result[index].id) {
             let ordered = result[index].pageIds.enumerated().map { offset, pageID in
                 (pageID, positions[pageID] ?? storedPosition(of: pageID) ?? Int.max, offset)
@@ -158,14 +153,14 @@ extension VaultStore {
         return result
     }
 
-    /// The position in a page file's plaintext header, without decrypting the page.
+    /// Reads the position from the plaintext header, without decrypting.
     private func storedPosition(of pageID: PageID) -> Int? {
         guard let data = try? Data(contentsOf: pageURL(pageID)) else { return nil }
         return (try? PageFile(decoding: data))?.header.position
     }
 
-    /// Deletes page files that no index entry references, that are older than
-    /// `orphanMinimumAge`, and that open with this vault's key. Unreadable files are kept.
+    /// Deletes unreferenced pages older than `orphanMinimumAge` that open with this vault's
+    /// key. Unreadable files are always kept.
     func removeOrphanPages(unreadable: inout Int) throws -> Int {
         let state = try requireState()
         let referenced = Set(state.index.documents.flatMap(\.pageIds))

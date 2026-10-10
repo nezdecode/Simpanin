@@ -3,7 +3,7 @@ import Testing
 
 @testable import VaultCore
 
-/// Required tests 1 and 2: tampered, swapped or stale files fail to open.
+/// Tampered, swapped or stale files fail to open.
 @Suite("Tampering")
 struct TamperTests {
     func makeVaultWithTwoDocuments() async throws -> (TestVault, VaultStore, DocumentID, DocumentID) {
@@ -57,9 +57,8 @@ struct TamperTests {
         #expect(report.indexSource == .previous)
         #expect(report.newestChangeMayBeLost)
         #expect(!report.recoveredFromPages)
-        // index.prev.enc is one generation older: it has A but not B. B's page was
-        // committed, so it is re-attached from its page header instead of deleted;
-        // only B's fields (which lived in the lost index) are gone.
+        // index.prev.enc is one generation older and lacks the SIM. Its page was committed, so
+        // it is re-attached from the page header; only its fields are lost.
         #expect(try await reopened.documents().map(\.id) == [ktp, sim])
         #expect(try await reopened.fields(of: ktp) == Synthetic.ktpFields)
         #expect(try await reopened.document(sim).type == .other)
@@ -78,13 +77,13 @@ struct TamperTests {
         try FileManager.default.removeItem(at: vault.pageURL(simPage))
         try FileManager.default.copyItem(at: vault.pageURL(ktpPage), to: vault.pageURL(simPage))
         await #expect(throws: VaultError.authenticationFailed) { try await store.page(simPage, of: sim) }
-        // A's own page still opens.
+        // The KTP's own page still opens.
         #expect(try await store.page(ktpPage, of: ktp).data == Synthetic.page("a"))
     }
 
     @Test func pageWithRewrittenHeaderStillFailsToOpenInAnotherSlot() async throws {
-        // Even with the header edited to claim document B, A's content is sealed with A's
-        // key and A's associated data, so it cannot open as B's page.
+        // Even with the header claiming the SIM, the KTP's page is sealed with the KTP's key
+        // and associated data, so it cannot open as the SIM's.
         let (vault, store, ktp, sim) = try await makeVaultWithTwoDocuments()
         let ktpPage = try await store.document(ktp).pageIDs[0]
         let simPage = try await store.document(sim).pageIDs[0]
@@ -117,7 +116,7 @@ struct TamperTests {
 
     @Test func olderIndexPutBackIsRejected() async throws {
         let (vault, store, ktp, sim) = try await makeVaultWithTwoDocuments()
-        let stale = try Data(contentsOf: vault.indexURL)  // generation with A and B
+        let stale = try Data(contentsOf: vault.indexURL)  // generation with both documents
         try await store.delete(ktp)  // newer generations
         try await store.editDocument(sim, type: .sim, expiry: nil, pinned: true, fields: Synthetic.simFields)
         let previous = try await vault.readIndex(at: vault.previousIndexURL)

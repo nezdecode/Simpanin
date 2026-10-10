@@ -18,8 +18,7 @@ extension VaultStore {
         return header
     }
 
-    /// The vault exists, so its key must too. Not found means the key is gone; anything
-    /// else means it is there but locked. Neither ever leads to a new key.
+    /// The vault exists, so a missing key is an error, never a reason to create one.
     func readExistingVaultKey(_ vaultID: VaultID) async throws -> SymmetricKey {
         do {
             return try await keyStore.readVaultKey(for: vaultID)
@@ -45,8 +44,7 @@ extension VaultStore {
         }
     }
 
-    /// Keeps the Keychain status so the app can tell "passcode turned off" (-25293) from
-    /// other locked states. The status is a number, never key material.
+    /// Keeps the Keychain status so the app can tell "passcode turned off" (-25293) apart.
     static func unavailable(_ error: any Error) -> VaultError {
         if case KeyStoreError.unavailable(let status) = error {
             return .vaultKeyUnavailable(status: status)

@@ -4,14 +4,13 @@ import Testing
 
 @testable import VaultCore
 
-/// Required test 7: create a new vault key only when the key store reports the key does
-/// not exist. Any other error means the key exists but is locked: surface it, create nothing.
+/// A new vault key is created only when the key store says the key does not exist. Any
+/// other error means it exists but is locked: surface it, create nothing.
 @Suite("Vault key rule")
 struct VaultKeyRuleTests {
     static let lockedFailures: [InMemoryKeyStore.ReadFailure] = [.locked, .interactionNotAllowed, .unexpected]
 
-    /// The Keychain status the app needs, for example to tell "passcode turned off"
-    /// (-25293) from other locked states. Errors that are not Keychain errors carry nil.
+    /// The Keychain status the app needs; nil for errors that are not Keychain errors.
     static func expectedError(_ failure: InMemoryKeyStore.ReadFailure) -> VaultError {
         switch failure {
         case .locked: .vaultKeyUnavailable(status: -25293)

@@ -17,10 +17,9 @@ extension VaultStore {
         try writeIndex(documents)
         if writeIndexTwice { try writeIndex(documents) }
 
-        // 3. Page files the index no longer references. Before deleting, flush to disk: the
-        //    page files written in step 1 and the pages folder (a replaced page must never be
-        //    deleted while its replacement is only in memory), then the new index, then the
-        //    vault folder so the renames are durable too.
+        // 3. Delete pages the index no longer references. First flush the new pages, the pages
+        //    folder, the index and the vault folder, so nothing is deleted before its
+        //    replacement is on disk.
         let fileManager = FileManager.default
         var doomed: [PageID] = []
         for pageID in obsoletePages where fileManager.fileExists(atPath: pageURL(pageID).path) {

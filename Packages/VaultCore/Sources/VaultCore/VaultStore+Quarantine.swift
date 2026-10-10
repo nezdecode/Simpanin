@@ -4,24 +4,18 @@ import Foundation
 public struct QuarantinedVault: Sendable, Equatable {
     public let vaultID: VaultID
     public let folder: URL
-    /// Total size of the files in the folder.
     public let sizeInBytes: Int64
 }
 
-/// Everything found in the quarantine folder. Folders whose vault.json cannot be read are
-/// reported, never touched.
+/// Everything in the quarantine folder. Unreadable folders are listed, never touched.
 public struct QuarantineListing: Sendable, Equatable {
     public var vaults: [QuarantinedVault]
     public var unreadableFolders: [URL]
 }
 
 extension VaultStore {
-    /// "Mulai vault baru", first call: locks the store and moves the whole vault folder,
-    /// unchanged, to `quarantineDirectory/<yyyyMMdd-HHmmss in UTC>` (adding -2, -3... if that
-    /// name is taken). Nothing is deleted and the old vault's key is not touched. The app then
-    /// calls `open()`, which creates a new vault; if that fails, the old vault is still at the
-    /// returned folder. The app confirms first, then cancels the old vault's reminders.
-    /// - Returns: where the old vault now lives, or nil if there was no vault folder.
+    /// Locks the store and moves the vault folder, unchanged, into `quarantineDirectory` as
+    /// `yyyyMMdd-HHmmss` in UTC (-2, -3 if taken). Deletes nothing; nil if there was no vault.
     @discardableResult
     public func quarantineVault(to quarantineDirectory: URL) async throws -> URL? {
         if let openTask { _ = try? await openTask.value }
@@ -34,8 +28,7 @@ extension VaultStore {
         return destination
     }
 
-    /// Quarantined vaults for "Data lama", oldest first. A folder whose vault.json cannot be
-    /// read is reported in `unreadableFolders` and never touched. Works while locked.
+    /// Oldest first. Works while locked.
     public func quarantinedVaults(in quarantineDirectory: URL) throws -> QuarantineListing {
         var listing = QuarantineListing(vaults: [], unreadableFolders: [])
         let fileManager = FileManager.default
@@ -59,10 +52,8 @@ extension VaultStore {
         return listing
     }
 
-    /// Deletes a quarantined vault for good: first its Keychain item, then its folder. Refuses
-    /// (and touches nothing) when the folder's vault.json cannot be read or names another
-    /// vault, or when it is the vault in use. A key that is already gone counts as deleted; if
-    /// deleting the key fails, the folder stays so the user can try again.
+    /// Deletes the Keychain item, then the folder. Refuses a mismatched or in-use vault; if
+    /// the key can't be deleted, the folder stays so the user can try again.
     public func deleteQuarantinedVault(_ vault: QuarantinedVault) async throws {
         guard let header = try? readHeader(at: vault.folder.appending(path: "vault.json")),
             header.vaultId == vault.vaultID

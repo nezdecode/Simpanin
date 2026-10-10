@@ -86,8 +86,7 @@ final class TestClock: VaultClock {
 
 // MARK: - Flush
 
-/// Records every flush, with what was on disk at that moment, so tests can check that the
-/// new index was flushed before step 3 deleted anything.
+/// Records every flush and what was on disk at that moment.
 final class RecordingFlusher: IndexFlusher {
     struct Event: Sendable {
         let url: URL
@@ -131,9 +130,8 @@ final class RecordingFlusher: IndexFlusher {
 
 struct SimulatedCrash: Error {}
 
-/// Once armed, records every write step and throws on the n-th one (1-based), to stop a
-/// write sequence exactly after that step. Steps before `arm()` (such as those done by
-/// `open()`) are ignored.
+/// Once armed, records each write step and throws on the n-th (1-based). Steps before
+/// `arm()`, such as those of `open()`, are ignored.
 final class CrashSwitch: Sendable {
     private struct State {
         var armed = false
