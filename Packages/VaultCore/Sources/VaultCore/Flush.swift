@@ -22,9 +22,9 @@ struct FileSystemFlusher: IndexFlusher {
 
     static let fullFsync: @Sendable (Int32) -> Int32 = { descriptor in
         #if canImport(Darwin)
-        return fcntl(descriptor, F_FULLFSYNC)
+            return fcntl(descriptor, F_FULLFSYNC)
         #else
-        return -1
+            return -1
         #endif
     }
 

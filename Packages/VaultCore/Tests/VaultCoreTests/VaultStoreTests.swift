@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+
 @testable import VaultCore
 
 @Suite("VaultStore lifecycle")
@@ -31,8 +32,9 @@ struct VaultStoreTests {
         let store = vault.makeStore()
         try await store.open()
         let pages = [Synthetic.page("ktp-front"), Synthetic.page("ktp-back")]
-        let id = try await store.createDocument(type: .ktp, expiry: nil, pinned: true,
-                                                fields: Synthetic.ktpFields, pages: pages)
+        let id = try await store.createDocument(
+            type: .ktp, expiry: nil, pinned: true,
+            fields: Synthetic.ktpFields, pages: pages)
 
         let doc = try await store.document(id)
         #expect(doc.type == .ktp)
@@ -54,8 +56,9 @@ struct VaultStoreTests {
         let store = vault.makeStore()
         try await store.open()
         let page = Synthetic.page("ktp-front")
-        let id = try await store.createDocument(type: .ktp, expiry: nil, pinned: false,
-                                                fields: Synthetic.ktpFields, pages: [page])
+        let id = try await store.createDocument(
+            type: .ktp, expiry: nil, pinned: false,
+            fields: Synthetic.ktpFields, pages: [page])
         try await store.editDocument(id, type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields)
         for file in try vault.allFiles() {
             let data = try Data(contentsOf: file)
@@ -69,13 +72,15 @@ struct VaultStoreTests {
         let vault = try TestVault()
         let store = vault.makeStore()
         try await store.open()
-        let id = try await store.createDocument(type: .other, expiry: nil, pinned: false,
-                                                fields: DocumentFields(), pages: [Synthetic.page("sim")])
+        let id = try await store.createDocument(
+            type: .other, expiry: nil, pinned: false,
+            fields: DocumentFields(), pages: [Synthetic.page("sim")])
         let created = try await store.document(id)
         vault.clock.advance(by: 60)
 
-        try await store.editDocument(id, type: .sim, expiry: Synthetic.simExpiry, pinned: true,
-                                     fields: Synthetic.simFields)
+        try await store.editDocument(
+            id, type: .sim, expiry: Synthetic.simExpiry, pinned: true,
+            fields: Synthetic.simFields)
         let edited = try await store.document(id)
         #expect(edited.type == .sim)
         #expect(edited.expiry == Synthetic.simExpiry)
@@ -83,16 +88,18 @@ struct VaultStoreTests {
         #expect(edited.createdAt == created.createdAt)
         #expect(edited.updatedAt > created.updatedAt)
         #expect(try await store.fields(of: id) == Synthetic.simFields)
-        #expect(try vault.projection().documents
-            == [ProjectionEntry(id: id, type: .sim, expiry: Synthetic.simExpiry, reminderOffsets: [60, 30, 7])])
+        #expect(
+            try vault.projection().documents
+                == [ProjectionEntry(id: id, type: .sim, expiry: Synthetic.simExpiry, reminderOffsets: [60, 30, 7])])
     }
 
     @Test func addAndReplacePages() async throws {
         let vault = try TestVault()
         let store = vault.makeStore()
         try await store.open()
-        let id = try await store.createDocument(type: .passport, expiry: nil, pinned: false,
-                                                fields: DocumentFields(), pages: [Synthetic.page("p1")])
+        let id = try await store.createDocument(
+            type: .passport, expiry: nil, pinned: false,
+            fields: DocumentFields(), pages: [Synthetic.page("p1")])
         let added = try await store.addPage(Synthetic.page("p2"), to: id)
         #expect(try await store.document(id).pageIDs.last == added)
 
@@ -110,8 +117,9 @@ struct VaultStoreTests {
         let vault = try TestVault()
         let store = vault.makeStore()
         try await store.open()
-        let id = try await store.createDocument(type: .sim, expiry: Synthetic.simExpiry, pinned: false,
-                                                fields: Synthetic.simFields, pages: [Synthetic.page("sim")])
+        let id = try await store.createDocument(
+            type: .sim, expiry: Synthetic.simExpiry, pinned: false,
+            fields: Synthetic.simFields, pages: [Synthetic.page("sim")])
         #expect(try vault.projection().documents.map(\.id) == [id])
 
         try await store.delete(id)
@@ -133,8 +141,9 @@ struct VaultStoreTests {
         let vault = try TestVault()
         let store = vault.makeStore()
         try await store.open()
-        let id = try await store.createDocument(type: .sim, expiry: Synthetic.simExpiry, pinned: false,
-                                                fields: Synthetic.simFields, pages: [Synthetic.page("sim")])
+        let id = try await store.createDocument(
+            type: .sim, expiry: Synthetic.simExpiry, pinned: false,
+            fields: Synthetic.simFields, pages: [Synthetic.page("sim")])
         try await store.delete(id)
         let deletedAt = try await store.document(id).deletedAt
         let filesBefore = try TestVault.files(in: vault.base)
@@ -150,8 +159,9 @@ struct VaultStoreTests {
         let vault = try TestVault()
         let store = vault.makeStore()
         try await store.open()
-        let id = try await store.createDocument(type: .sim, expiry: Synthetic.simExpiry, pinned: false,
-                                                fields: Synthetic.simFields, pages: [Synthetic.page("sim")])
+        let id = try await store.createDocument(
+            type: .sim, expiry: Synthetic.simExpiry, pinned: false,
+            fields: Synthetic.simFields, pages: [Synthetic.page("sim")])
         let before = try TestVault.files(in: vault.base)
         let generation = try await vault.readIndex(at: vault.indexURL).generation
         vault.clock.advance(by: 60)
@@ -166,8 +176,9 @@ struct VaultStoreTests {
         let vault = try TestVault()
         let store = vault.makeStore()
         try await store.open()
-        let id = try await store.createDocument(type: .sim, expiry: Synthetic.simExpiry, pinned: false,
-                                                fields: Synthetic.simFields, pages: [Synthetic.page("sim")])
+        let id = try await store.createDocument(
+            type: .sim, expiry: Synthetic.simExpiry, pinned: false,
+            fields: Synthetic.simFields, pages: [Synthetic.page("sim")])
         let page = try await store.document(id).pageIDs[0]
         try await store.delete(id)
         let filesBefore = try TestVault.files(in: vault.base)
@@ -191,8 +202,9 @@ struct VaultStoreTests {
         let vault = try TestVault()
         let store = vault.makeStore()
         try await store.open()
-        let id = try await store.createDocument(type: .passport, expiry: nil, pinned: false, fields: DocumentFields(),
-                                                pages: [Synthetic.page("p0"), Synthetic.page("p1")])
+        let id = try await store.createDocument(
+            type: .passport, expiry: nil, pinned: false, fields: DocumentFields(),
+            pages: [Synthetic.page("p0"), Synthetic.page("p1")])
         _ = try await store.addPage(Synthetic.page("p2"), to: id)
         let first = try await store.document(id).pageIDs[0]
         _ = try await store.replacePage(first, of: id, with: Synthetic.page("p0-rescan"))  // keeps position 0
@@ -205,21 +217,27 @@ struct VaultStoreTests {
 
     @Test func projectionUsesInjectedReminderOffsets() async throws {
         let vault = try TestVault()
-        let store = VaultStore(rootDirectory: vault.root, projectionURL: vault.projectionURL,
-                               keyStore: vault.keyStore, clock: vault.clock, reminderOffsets: [90, 14])
+        let store = VaultStore(
+            rootDirectory: vault.root, projectionURL: vault.projectionURL,
+            keyStore: vault.keyStore, clock: vault.clock, reminderOffsets: [90, 14])
         try await store.open()
-        _ = try await store.createDocument(type: .stnk, expiry: Synthetic.simExpiry, pinned: false,
-                                           fields: DocumentFields(), pages: [])
+        _ = try await store.createDocument(
+            type: .stnk, expiry: Synthetic.simExpiry, pinned: false,
+            fields: DocumentFields(), pages: [])
         #expect(try vault.projection().documents.map(\.reminderOffsets) == [[90, 14]])
     }
+}
 
+@Suite("VaultStore when locked, and limits")
+struct VaultStoreLimitTests {
     @Test func lockedStoreRefusesAccess() async throws {
         let vault = try TestVault()
         let store = vault.makeStore()
         await #expect(throws: VaultError.locked) { try await store.documents() }
         try await store.open()
-        let id = try await store.createDocument(type: .ktp, expiry: nil, pinned: false,
-                                                fields: Synthetic.ktpFields, pages: [Synthetic.page("k")])
+        let id = try await store.createDocument(
+            type: .ktp, expiry: nil, pinned: false,
+            fields: Synthetic.ktpFields, pages: [Synthetic.page("k")])
         await store.lock()
         await #expect(throws: VaultError.locked) { try await store.fields(of: id) }
         await #expect(throws: VaultError.locked) { try await store.pages(of: id) }
@@ -231,27 +249,31 @@ struct VaultStoreTests {
         let vault = try TestVault()
         let store = vault.makeStore()
         try await store.open()
-        let a = try await store.createDocument(type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields,
-                                               pages: [Synthetic.page("a")])
-        let b = try await store.createDocument(type: .sim, expiry: nil, pinned: false, fields: Synthetic.simFields,
-                                               pages: [Synthetic.page("b")])
-        try await store.delete(b)
-        let page = try await store.document(a).pageIDs[0]
+        let ktp = try await store.createDocument(
+            type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields,
+            pages: [Synthetic.page("a")])
+        let sim = try await store.createDocument(
+            type: .sim, expiry: nil, pinned: false, fields: Synthetic.simFields,
+            pages: [Synthetic.page("b")])
+        try await store.delete(sim)
+        let page = try await store.document(ktp).pageIDs[0]
         await store.lock()
-        vault.clock.advance(by: 40 * 86_400)  // b would be due for purge
+        vault.clock.advance(by: 40 * 86_400)  // the SIM would be due for purge
         let before = try TestVault.files(in: vault.base)
 
         await #expect(throws: VaultError.locked) {
             try await store.createDocument(type: .ktp, expiry: nil, pinned: false, fields: DocumentFields(), pages: [])
         }
         await #expect(throws: VaultError.locked) {
-            try await store.editDocument(a, type: .ktp, expiry: nil, pinned: true, fields: DocumentFields())
+            try await store.editDocument(ktp, type: .ktp, expiry: nil, pinned: true, fields: DocumentFields())
         }
-        await #expect(throws: VaultError.locked) { try await store.addPage(Synthetic.page("x"), to: a) }
-        await #expect(throws: VaultError.locked) { try await store.replacePage(page, of: a, with: Synthetic.page("x")) }
-        await #expect(throws: VaultError.locked) { try await store.delete(a) }
-        await #expect(throws: VaultError.locked) { try await store.restore(b) }
-        await #expect(throws: VaultError.locked) { try await store.deletePermanently(a) }
+        await #expect(throws: VaultError.locked) { try await store.addPage(Synthetic.page("x"), to: ktp) }
+        await #expect(throws: VaultError.locked) {
+            try await store.replacePage(page, of: ktp, with: Synthetic.page("x"))
+        }
+        await #expect(throws: VaultError.locked) { try await store.delete(ktp) }
+        await #expect(throws: VaultError.locked) { try await store.restore(sim) }
+        await #expect(throws: VaultError.locked) { try await store.deletePermanently(ktp) }
         await #expect(throws: VaultError.locked) { try await store.purgeExpired() }
         #expect(try TestVault.files(in: vault.base) == before)
     }
@@ -274,8 +296,9 @@ struct VaultStoreTests {
         try await store.open()
         let started = ContinuousClock.now
         let big = Synthetic.largePage(bytes: 15_000_000)
-        let id = try await store.createDocument(type: .passport, expiry: nil, pinned: false, fields: DocumentFields(),
-                                                pages: [big])
+        let id = try await store.createDocument(
+            type: .passport, expiry: nil, pinned: false, fields: DocumentFields(),
+            pages: [big])
         let pageID = try await store.document(id).pageIDs[0]
         #expect(try await store.page(pageID, of: id).data == big)
 
@@ -291,8 +314,9 @@ struct VaultStoreTests {
         let store = vault.makeStore()
         try await store.open()
         await #expect(throws: VaultError.documentNotFound) { try await store.fields(of: DocumentID()) }
-        let id = try await store.createDocument(type: .ktp, expiry: nil, pinned: false,
-                                                fields: Synthetic.ktpFields, pages: [Synthetic.page("k")])
+        let id = try await store.createDocument(
+            type: .ktp, expiry: nil, pinned: false,
+            fields: Synthetic.ktpFields, pages: [Synthetic.page("k")])
         await #expect(throws: VaultError.pageNotFound) { try await store.page(PageID(), of: id) }
     }
 
@@ -300,8 +324,9 @@ struct VaultStoreTests {
         let vault = try TestVault(clock: TestClock(Date(timeIntervalSince1970: 1_790_000_000.75)))
         let store = vault.makeStore()
         try await store.open()
-        let id = try await store.createDocument(type: .ktp, expiry: nil, pinned: false,
-                                                fields: Synthetic.ktpFields, pages: [])
+        let id = try await store.createDocument(
+            type: .ktp, expiry: nil, pinned: false,
+            fields: Synthetic.ktpFields, pages: [])
         #expect(try await store.document(id).createdAt == Date(timeIntervalSince1970: 1_790_000_000))
     }
 }

@@ -54,18 +54,19 @@ public enum VaultCrypto {
     }
 
     /// AES-256-GCM with a fresh random 12-byte nonce. Returns nonce || ciphertext || tag.
-    public static func seal(_ plaintext: Data, with key: SymmetricKey, as ad: AssociatedData) throws -> Data {
-        let box = try AES.GCM.seal(plaintext, using: key, authenticating: ad.bytes)
+    public static func seal(_ plaintext: Data, with key: SymmetricKey, as associatedData: AssociatedData) throws -> Data
+    {
+        let box = try AES.GCM.seal(plaintext, using: key, authenticating: associatedData.bytes)
         guard let combined = box.combined else { throw VaultError.corruptFile }
         return combined
     }
 
     /// Opens data from `seal`. Any failure (wrong key, wrong associated data, tampered or
     /// truncated bytes) is reported as `.authenticationFailed`.
-    public static func open(_ sealed: Data, with key: SymmetricKey, as ad: AssociatedData) throws -> Data {
+    public static func open(_ sealed: Data, with key: SymmetricKey, as associatedData: AssociatedData) throws -> Data {
         do {
             let box = try AES.GCM.SealedBox(combined: sealed)
-            return try AES.GCM.open(box, using: key, authenticating: ad.bytes)
+            return try AES.GCM.open(box, using: key, authenticating: associatedData.bytes)
         } catch {
             throw VaultError.authenticationFailed
         }
@@ -73,12 +74,16 @@ public enum VaultCrypto {
 
     /// Seals a document key with the wrap key using AES-GCM (not AES.KeyWrap, which
     /// cannot bind associated data) and "dk|v1|<docId>".
-    public static func sealDocumentKey(_ key: SymmetricKey, with wrapKey: SymmetricKey, documentID: DocumentID) throws -> Data {
+    public static func sealDocumentKey(_ key: SymmetricKey, with wrapKey: SymmetricKey, documentID: DocumentID) throws
+        -> Data
+    {
         let raw = key.withUnsafeBytes { Data($0) }
         return try seal(raw, with: wrapKey, as: .documentKey(documentID))
     }
 
-    public static func openDocumentKey(_ sealed: Data, with wrapKey: SymmetricKey, documentID: DocumentID) throws -> SymmetricKey {
+    public static func openDocumentKey(_ sealed: Data, with wrapKey: SymmetricKey, documentID: DocumentID) throws
+        -> SymmetricKey
+    {
         let raw = try open(sealed, with: wrapKey, as: .documentKey(documentID))
         guard raw.count == keyByteCount else { throw VaultError.corruptFile }
         return SymmetricKey(data: raw)

@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+
 @testable import VaultCore
 
 @Suite("Models and on-disk format")
@@ -19,7 +20,7 @@ struct ModelTests {
         #expect(DocumentID(string: "AAAAAAAA-2222-3333-4444-555555555555") == nil)
         #expect(DocumentID(string: "not-a-uuid") == nil)
         let encoded = try VaultJSON.encoder.encode([docID])
-        #expect(String(decoding: encoded, as: UTF8.self) == #"["11111111-2222-3333-4444-555555555555"]"#)
+        #expect(String(bytes: encoded, encoding: .utf8) == #"["11111111-2222-3333-4444-555555555555"]"#)
         #expect(try VaultJSON.decoder.decode([DocumentID].self, from: encoded) == [docID])
     }
 
@@ -28,7 +29,7 @@ struct ModelTests {
     @Test func calendarDateCodesAsISODay() throws {
         let date = try #require(CalendarDate(year: 2030, month: 8, day: 17))
         let encoded = try VaultJSON.encoder.encode([date])
-        #expect(String(decoding: encoded, as: UTF8.self) == #"["2030-08-17"]"#)
+        #expect(String(bytes: encoded, encoding: .utf8) == #"["2030-08-17"]"#)
         #expect(try VaultJSON.decoder.decode([CalendarDate].self, from: encoded) == [date])
         #expect(CalendarDate(year: 2030, month: 13, day: 1) == nil)
         #expect(CalendarDate(year: 2030, month: 2, day: 30) == nil)
@@ -81,8 +82,11 @@ struct ModelTests {
         #expect(object["schemaVersion"] as? Int == 1)
         #expect(object["generation"] as? Int == 7)
         let doc = try #require((object["documents"] as? [[String: Any]])?.first)
-        #expect(Set(doc.keys) == ["id", "type", "createdAt", "updatedAt", "expiry", "pinned",
-                                  "sealedKey", "sealedFields", "pageIds"])
+        #expect(
+            Set(doc.keys) == [
+                "id", "type", "createdAt", "updatedAt", "expiry", "pinned",
+                "sealedKey", "sealedFields", "pageIds",
+            ])
         #expect(doc["expiry"] as? String == "2030-08-17")
         #expect(doc["createdAt"] as? String == "2026-09-21T14:13:20Z")
         #expect(try VaultJSON.decoder.decode(VaultIndex.self, from: VaultJSON.encoder.encode(index)) == index)
@@ -125,8 +129,9 @@ struct ModelTests {
 
     @Test func projectionHoldsOnlyIdTypeExpiryAndOffsets() throws {
         let projection = Projection(documents: [
-            ProjectionEntry(id: docID, type: .sim, expiry: CalendarDate(year: 2030, month: 8, day: 17),
-                            reminderOffsets: [60, 30, 7]),
+            ProjectionEntry(
+                id: docID, type: .sim, expiry: CalendarDate(year: 2030, month: 8, day: 17),
+                reminderOffsets: [60, 30, 7])
         ])
         let object = try jsonObject(VaultJSON.encoder.encode(projection))
         #expect(Set(object.keys) == ["schemaVersion", "documents"])

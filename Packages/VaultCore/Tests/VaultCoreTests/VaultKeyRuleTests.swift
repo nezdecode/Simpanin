@@ -1,6 +1,7 @@
 import Crypto
 import Foundation
 import Testing
+
 @testable import VaultCore
 
 /// Required test 7: create a new vault key only when the key store reports the key does
@@ -41,8 +42,9 @@ struct VaultKeyRuleTests {
         let vault = try TestVault()
         let store = vault.makeStore()
         try await store.open()
-        let id = try await store.createDocument(type: .ktp, expiry: nil, pinned: false,
-                                                fields: Synthetic.ktpFields, pages: [Synthetic.page("k")])
+        let id = try await store.createDocument(
+            type: .ktp, expiry: nil, pinned: false,
+            fields: Synthetic.ktpFields, pages: [Synthetic.page("k")])
         let header = try vault.header()
         let key = try #require(await vault.keyStore.key(for: header.vaultId))
         let filesBefore = try vault.allFiles().map { try Data(contentsOf: $0) }
@@ -69,10 +71,11 @@ struct VaultKeyRuleTests {
         // .userPresence item fails. No vault may be created without its key.
         let vault = try TestVault()
         await vault.keyStore.setCreateFailure(failure)
-        let expected: VaultError = switch failure {
-        case .status(let status): .vaultKeyUnavailable(status: status)
-        case .alreadyExists: .vaultKeyUnavailable(status: nil)
-        }
+        let expected: VaultError =
+            switch failure {
+            case .status(let status): .vaultKeyUnavailable(status: status)
+            case .alreadyExists: .vaultKeyUnavailable(status: nil)
+            }
         await #expect(throws: expected) { try await vault.makeStore().open() }
         #expect(await vault.keyStore.createCount == 1)
         #expect(!FileManager.default.fileExists(atPath: vault.root.path))
@@ -83,8 +86,9 @@ struct VaultKeyRuleTests {
         let vault = try TestVault()
         let store = vault.makeStore()
         try await store.open()
-        _ = try await store.createDocument(type: .ktp, expiry: nil, pinned: false,
-                                           fields: Synthetic.ktpFields, pages: [Synthetic.page("k")])
+        _ = try await store.createDocument(
+            type: .ktp, expiry: nil, pinned: false,
+            fields: Synthetic.ktpFields, pages: [Synthetic.page("k")])
         let header = try vault.header()
         await vault.keyStore.setKey(nil, for: header.vaultId)
 

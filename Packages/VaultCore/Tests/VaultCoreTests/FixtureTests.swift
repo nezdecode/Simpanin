@@ -1,6 +1,7 @@
 import Crypto
 import Foundation
 import Testing
+
 @testable import VaultCore
 
 /// Required test 6: a committed v1 vault, built from synthetic data, still opens.
@@ -54,8 +55,9 @@ struct FixtureTests {
     func openableCopy() async throws -> TestVault {
         let vault = try TestVault(clock: TestClock(Self.t0 + 86_400))
         for item in ["Vault", "AppGroup"] {
-            try FileManager.default.copyItem(at: Self.fixtureURL.appending(path: item),
-                                             to: vault.base.appending(path: item))
+            try FileManager.default.copyItem(
+                at: Self.fixtureURL.appending(path: item),
+                to: vault.base.appending(path: item))
         }
         let keyText = try String(contentsOf: Self.fixtureURL.appending(path: Self.keyFileName), encoding: .utf8)
         let keyData = try #require(Data(base64Encoded: keyText.trimmingCharacters(in: .whitespacesAndNewlines)))
@@ -70,7 +72,10 @@ struct FixtureTests {
     func expectLiveDocuments(_ store: VaultStore, _ live: [Document]) async throws {
         #expect(live.map(\.type) == [.ktp, .sim, .npwp, Self.visa])
         try #require(live.count == 4)
-        let ktp = live[0], sim = live[1], npwp = live[2], visa = live[3]
+        let ktp = live[0]
+        let sim = live[1]
+        let npwp = live[2]
+        let visa = live[3]
 
         #expect(ktp.pinned)
         #expect(ktp.expiry == nil)
@@ -127,12 +132,14 @@ struct FixtureTests {
         #expect(try await store.fields(of: deleted[0].id).values == Self.passportFields)
         #expect(try await hashes(store, deleted[0].id) == [Self.passportPage])
 
-        #expect(try vault.projection().documents == [
-            ProjectionEntry(id: live[0].id, type: .ktp, expiry: nil, reminderOffsets: [60, 30, 7]),
-            ProjectionEntry(id: live[1].id, type: .sim, expiry: Self.simExpiry, reminderOffsets: [60, 30, 7]),
-            ProjectionEntry(id: live[2].id, type: .npwp, expiry: nil, reminderOffsets: [60, 30, 7]),
-            ProjectionEntry(id: live[3].id, type: Self.visa, expiry: Self.visaExpiry, reminderOffsets: [60, 30, 7]),
-        ])
+        #expect(
+            try vault.projection().documents == [
+                ProjectionEntry(id: live[0].id, type: .ktp, expiry: nil, reminderOffsets: [60, 30, 7]),
+                ProjectionEntry(id: live[1].id, type: .sim, expiry: Self.simExpiry, reminderOffsets: [60, 30, 7]),
+                ProjectionEntry(id: live[2].id, type: .npwp, expiry: nil, reminderOffsets: [60, 30, 7]),
+                ProjectionEntry(
+                    id: live[3].id, type: Self.visa, expiry: Self.visaExpiry, reminderOffsets: [60, 30, 7]),
+            ])
     }
 
     @Test func v1FixtureOpensFromThePreviousIndex() async throws {
@@ -163,9 +170,11 @@ struct FixtureTests {
     /// deleting it by hand, on purpose. Run with:
     /// SIMPANIN_WRITE_FIXTURES=1 swift test --filter writeV1Fixture
     @Test(.enabled(if: ProcessInfo.processInfo.environment["SIMPANIN_WRITE_FIXTURES"] == "1"))
+    // swiftlint:disable:next function_body_length - the nine generations read best as one sequence
     func writeV1Fixture() async throws {
         guard !FileManager.default.fileExists(atPath: Self.fixtureURL.path) else {
-            Issue.record("""
+            Issue.record(
+                """
                 Fixtures/Synthetic/VaultV1 already exists. The v1 fixture must stay as committed. \
                 To replace it on purpose, delete the folder by hand and run this again.
                 """)
@@ -174,40 +183,50 @@ struct FixtureTests {
         let clock = TestClock(Self.t0)
         let vault = try TestVault(clock: clock)
         let store = vault.makeStore()
-        try await store.open()                                                                 // generation 1
-        let ktp = try await store.createDocument(type: .ktp, expiry: nil, pinned: true,
-                                                 fields: DocumentFields(Self.ktpFields),
-                                                 pages: [Synthetic.page("fixture-ktp-front"),
-                                                         Synthetic.page("fixture-ktp-back")])    // 2
+        try await store.open()  // generation 1
+        let ktp = try await store.createDocument(
+            type: .ktp, expiry: nil, pinned: true,
+            fields: DocumentFields(Self.ktpFields),
+            pages: [
+                Synthetic.page("fixture-ktp-front"),
+                Synthetic.page("fixture-ktp-back"),
+            ])  // 2
         clock.set(Self.t0 + 60)
-        let sim = try await store.createDocument(type: .sim, expiry: nil, pinned: true, fields: DocumentFields(),
-                                                 pages: [Synthetic.page("fixture-sim")])          // 3
+        let sim = try await store.createDocument(
+            type: .sim, expiry: nil, pinned: true, fields: DocumentFields(),
+            pages: [Synthetic.page("fixture-sim")])  // 3
         clock.set(Self.t0 + 120)
-        try await store.editDocument(sim, type: .sim, expiry: Self.simExpiry, pinned: false,
-                                     fields: DocumentFields(Self.simFields))                      // 4
+        try await store.editDocument(
+            sim, type: .sim, expiry: Self.simExpiry, pinned: false,
+            fields: DocumentFields(Self.simFields))  // 4
         clock.set(Self.t0 + 180)
-        _ = try await store.replacePage(try await store.document(ktp).pageIDs[0], of: ktp,
-                                        with: Synthetic.page("fixture-ktp-front-rescan"))         // 5
+        _ = try await store.replacePage(
+            try await store.document(ktp).pageIDs[0], of: ktp,
+            with: Synthetic.page("fixture-ktp-front-rescan"))  // 5
         clock.set(Self.t0 + 240)
-        _ = try await store.createDocument(type: .npwp, expiry: nil, pinned: false,
-                                           fields: DocumentFields(Self.npwpFields), pages: [])    // 6
+        _ = try await store.createDocument(
+            type: .npwp, expiry: nil, pinned: false,
+            fields: DocumentFields(Self.npwpFields), pages: [])  // 6
         clock.set(Self.t0 + 300)
-        _ = try await store.createDocument(type: Self.visa, expiry: Self.visaExpiry, pinned: false,
-                                           fields: DocumentFields(Self.visaFields),
-                                           pages: [Synthetic.page("fixture-visa")])               // 7
+        _ = try await store.createDocument(
+            type: Self.visa, expiry: Self.visaExpiry, pinned: false,
+            fields: DocumentFields(Self.visaFields),
+            pages: [Synthetic.page("fixture-visa")])  // 7
         clock.set(Self.t0 + 360)
-        let passport = try await store.createDocument(type: .passport, expiry: Self.passportExpiry, pinned: false,
-                                                      fields: DocumentFields(Self.passportFields),
-                                                      pages: [Synthetic.page("fixture-passport")]) // 8
+        let passport = try await store.createDocument(
+            type: .passport, expiry: Self.passportExpiry, pinned: false,
+            fields: DocumentFields(Self.passportFields),
+            pages: [Synthetic.page("fixture-passport")])  // 8
         clock.set(Self.t0 + 420)
-        try await store.delete(passport)                                                       // 9
+        try await store.delete(passport)  // 9
 
         let header = try vault.header()
         let key = try #require(await vault.keyStore.key(for: header.vaultId))
-        let fm = FileManager.default
-        try fm.createDirectory(at: Self.fixtureURL, withIntermediateDirectories: true)
-        try fm.copyItem(at: vault.root, to: Self.fixtureURL.appending(path: "Vault"))
-        try fm.copyItem(at: vault.projectionURL.deletingLastPathComponent(), to: Self.fixtureURL.appending(path: "AppGroup"))
+        let fileManager = FileManager.default
+        try fileManager.createDirectory(at: Self.fixtureURL, withIntermediateDirectories: true)
+        try fileManager.copyItem(at: vault.root, to: Self.fixtureURL.appending(path: "Vault"))
+        try fileManager.copyItem(
+            at: vault.projectionURL.deletingLastPathComponent(), to: Self.fixtureURL.appending(path: "AppGroup"))
         try (bytes(key).base64EncodedString() + "\n")
             .write(to: Self.fixtureURL.appending(path: Self.keyFileName), atomically: true, encoding: .utf8)
     }

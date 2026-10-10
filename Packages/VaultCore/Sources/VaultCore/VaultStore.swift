@@ -89,16 +89,21 @@ public actor VaultStore {
     ///   - rootDirectory: the vault folder (Application Support/Vault in the app).
     ///   - projectionURL: projection.json (in the App Group container in the app).
     ///   - reminderOffsets: days before expiry written into the projection.
-    public init(rootDirectory: URL, projectionURL: URL, keyStore: any KeyStore, clock: any VaultClock = SystemClock(),
-                fileProtector: any FileProtector = NoFileProtection(), reminderOffsets: [Int] = [60, 30, 7]) {
-        self.init(rootDirectory: rootDirectory, projectionURL: projectionURL, keyStore: keyStore, clock: clock,
-                  fileProtector: fileProtector, reminderOffsets: reminderOffsets, crashHook: nil,
-                  flusher: FileSystemFlusher())
+    public init(
+        rootDirectory: URL, projectionURL: URL, keyStore: any KeyStore, clock: any VaultClock = SystemClock(),
+        fileProtector: any FileProtector = NoFileProtection(), reminderOffsets: [Int] = [60, 30, 7]
+    ) {
+        self.init(
+            rootDirectory: rootDirectory, projectionURL: projectionURL, keyStore: keyStore, clock: clock,
+            fileProtector: fileProtector, reminderOffsets: reminderOffsets, crashHook: nil,
+            flusher: FileSystemFlusher())
     }
 
-    init(rootDirectory: URL, projectionURL: URL, keyStore: any KeyStore, clock: any VaultClock,
-         fileProtector: any FileProtector = NoFileProtection(), reminderOffsets: [Int] = [60, 30, 7],
-         crashHook: (@Sendable (WriteStep) throws -> Void)?, flusher: any IndexFlusher = FileSystemFlusher()) {
+    init(
+        rootDirectory: URL, projectionURL: URL, keyStore: any KeyStore, clock: any VaultClock,
+        fileProtector: any FileProtector = NoFileProtection(), reminderOffsets: [Int] = [60, 30, 7],
+        crashHook: (@Sendable (WriteStep) throws -> Void)?, flusher: any IndexFlusher = FileSystemFlusher()
+    ) {
         root = rootDirectory
         self.projectionURL = projectionURL
         self.keyStore = keyStore
@@ -117,7 +122,7 @@ public actor VaultStore {
     private var pagesDirectory: URL { root.appending(path: "pages", directoryHint: .isDirectory) }
     private func pageURL(_ id: PageID) -> URL { pagesDirectory.appending(path: "\(id.string).enc") }
 
-        // MARK: - Open and lock
+    // MARK: - Open and lock
 
     /// Unlocks the vault: reads the vault key, opens the index (falling back to
     /// index.prev.enc, then to recovery from page headers), removes orphaned pages,
@@ -141,11 +146,11 @@ public actor VaultStore {
     private func performOpen() async throws -> OpenReport {
         if state != nil, let lastReport { return lastReport }
         var report = OpenReport()
-        let fm = FileManager.default
+        let fileManager = FileManager.default
 
         let header: VaultHeader
         let vaultKey: SymmetricKey
-        if fm.fileExists(atPath: headerURL.path) {
+        if fileManager.fileExists(atPath: headerURL.path) {
             header = try readHeader(at: headerURL)
             vaultKey = try await readExistingVaultKey(header.vaultId)
         } else {
@@ -153,23 +158,25 @@ public actor VaultStore {
             let vaultID = VaultID()
             vaultKey = try await readOrCreateNewVaultKey(vaultID)
             header = VaultHeader(vaultId: vaultID, keySlots: [KeySlot(kind: .device, createdAt: now())])
-            try fm.createDirectory(at: pagesDirectory, withIntermediateDirectories: true)
+            try fileManager.createDirectory(at: pagesDirectory, withIntermediateDirectories: true)
             try write(VaultJSON.encoder.encode(header), to: headerURL, protection: .complete)
             report.createdVault = true
         }
         guard vaultKey.bitCount == 256 else { throw VaultError.vaultUnreadable }
-        try fm.createDirectory(at: pagesDirectory, withIntermediateDirectories: true)
+        try fileManager.createDirectory(at: pagesDirectory, withIntermediateDirectories: true)
 
         let indexKey = VaultCrypto.indexKey(from: vaultKey, vaultID: header.vaultId)
         let wrapKey = VaultCrypto.wrapKey(from: vaultKey, vaultID: header.vaultId)
         let loaded = try loadIndex(vaultID: header.vaultId, indexKey: indexKey, wrapKey: wrapKey)
         report.indexSource = report.createdVault ? .new : loaded.source
         report.newestChangeMayBeLost = !report.createdVault && loaded.source == .previous
-        report.recoveredFromPages = !report.createdVault && loaded.source == .recovered
+        report.recoveredFromPages =
+            !report.createdVault && loaded.source == .recovered
             && !loaded.index.documents.isEmpty
         report.unreadablePages = loaded.unreadablePages
-        state = OpenState(header: header, indexKey: indexKey, wrapKey: wrapKey, index: loaded.index,
-                          indexFileIsCurrent: loaded.source == .current)
+        state = OpenState(
+            header: header, indexKey: indexKey, wrapKey: wrapKey, index: loaded.index,
+            indexFileIsCurrent: loaded.source == .current)
 
         do {
             if loaded.source != .current || loaded.previousHoldsRemovedDocuments {
@@ -200,11 +207,11 @@ public actor VaultStore {
     public func quarantineVault(to quarantineDirectory: URL) async throws -> URL? {
         if let openTask { _ = try? await openTask.value }
         lock()
-        let fm = FileManager.default
-        guard fm.fileExists(atPath: root.path) else { return nil }
-        try fm.createDirectory(at: quarantineDirectory, withIntermediateDirectories: true)
+        let fileManager = FileManager.default
+        guard fileManager.fileExists(atPath: root.path) else { return nil }
+        try fileManager.createDirectory(at: quarantineDirectory, withIntermediateDirectories: true)
         let destination = quarantineDestination(in: quarantineDirectory)
-        try fm.moveItem(at: root, to: destination)
+        try fileManager.moveItem(at: root, to: destination)
         return destination
     }
 
@@ -212,16 +219,20 @@ public actor VaultStore {
     /// read is reported in `unreadableFolders` and never touched. Works while locked.
     public func quarantinedVaults(in quarantineDirectory: URL) throws -> QuarantineListing {
         var listing = QuarantineListing(vaults: [], unreadableFolders: [])
-        let fm = FileManager.default
-        guard fm.fileExists(atPath: quarantineDirectory.path) else { return listing }
-        let folders = try fm.contentsOfDirectory(at: quarantineDirectory, includingPropertiesForKeys: [.isDirectoryKey],
-                                                 options: [.skipsHiddenFiles])
-            .filter { (try? $0.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true }
-            .sorted { $0.lastPathComponent < $1.lastPathComponent }
+        let fileManager = FileManager.default
+        guard fileManager.fileExists(atPath: quarantineDirectory.path) else { return listing }
+        let folders = try fileManager.contentsOfDirectory(
+            at: quarantineDirectory, includingPropertiesForKeys: [.isDirectoryKey],
+            options: [.skipsHiddenFiles]
+        )
+        .filter { (try? $0.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true }
+        .sorted { $0.lastPathComponent < $1.lastPathComponent }
         for folder in folders {
             if let header = try? readHeader(at: folder.appending(path: "vault.json")) {
-                listing.vaults.append(QuarantinedVault(vaultID: header.vaultId, folder: folder,
-                                                       sizeInBytes: try folderSize(folder)))
+                listing.vaults.append(
+                    QuarantinedVault(
+                        vaultID: header.vaultId, folder: folder,
+                        sizeInBytes: try folderSize(folder)))
             } else {
                 listing.unreadableFolders.append(folder)
             }
@@ -235,12 +246,14 @@ public actor VaultStore {
     /// deleting the key fails, the folder stays so the user can try again.
     public func deleteQuarantinedVault(_ vault: QuarantinedVault) async throws {
         guard let header = try? readHeader(at: vault.folder.appending(path: "vault.json")),
-              header.vaultId == vault.vaultID else {
+            header.vaultId == vault.vaultID
+        else {
             throw VaultError.quarantineUnreadable
         }
         let liveID = state?.header.vaultId ?? (try? readHeader(at: headerURL))?.vaultId
         guard liveID != vault.vaultID,
-              vault.folder.standardizedFileURL.path != root.standardizedFileURL.path else {
+            vault.folder.standardizedFileURL.path != root.standardizedFileURL.path
+        else {
             throw VaultError.quarantineInUse
         }
         do {
@@ -268,9 +281,10 @@ public actor VaultStore {
     private func quarantineDestination(in directory: URL) -> URL {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
-        let c = calendar.dateComponents([.year, .month, .day, .hour, .minute, .second], from: now())
-        let base = String(format: "%04d%02d%02d-%02d%02d%02d",
-                          c.year ?? 0, c.month ?? 0, c.day ?? 0, c.hour ?? 0, c.minute ?? 0, c.second ?? 0)
+        let time = calendar.dateComponents([.year, .month, .day, .hour, .minute, .second], from: now())
+        let base = String(
+            format: "%04d%02d%02d-%02d%02d%02d",
+            time.year ?? 0, time.month ?? 0, time.day ?? 0, time.hour ?? 0, time.minute ?? 0, time.second ?? 0)
         var name = base
         var suffix = 2
         while FileManager.default.fileExists(atPath: directory.appending(path: name).path) {
@@ -335,8 +349,10 @@ public actor VaultStore {
     // MARK: - Changes
 
     /// Creates a document with a new random key. Each page is sealed straight from memory.
-    public func createDocument(type: DocumentType, expiry: CalendarDate?, pinned: Bool,
-                               fields: DocumentFields, pages: [Data]) throws -> DocumentID {
+    public func createDocument(
+        type: DocumentType, expiry: CalendarDate?, pinned: Bool,
+        fields: DocumentFields, pages: [Data]
+    ) throws -> DocumentID {
         let state = try requireState()
         let id = DocumentID()
         let key = VaultCrypto.newKey()
@@ -344,22 +360,26 @@ public actor VaultStore {
         var newPages: [(PageID, Data)] = []
         for (position, data) in pages.enumerated() {
             let pageID = PageID()
-            newPages.append((pageID, try pageFile(data, pageID: pageID, position: position, documentID: id,
-                                                  key: key, sealedKey: sealedKey)))
+            let file = try pageFile(
+                data, pageID: pageID, position: position, documentID: id, key: key, sealedKey: sealedKey)
+            newPages.append((pageID, file))
         }
         let stamp = now()
-        let entry = IndexEntry(id: id, type: type, createdAt: stamp, updatedAt: stamp, expiry: expiry,
-                               pinned: pinned, deletedAt: nil, sealedKey: sealedKey,
-                               sealedFields: try sealFields(fields, key: key, documentID: id),
-                               pageIds: newPages.map(\.0))
+        let entry = IndexEntry(
+            id: id, type: type, createdAt: stamp, updatedAt: stamp, expiry: expiry,
+            pinned: pinned, deletedAt: nil, sealedKey: sealedKey,
+            sealedFields: try sealFields(fields, key: key, documentID: id),
+            pageIds: newPages.map(\.0))
         try commit(state.index.documents + [entry], newPages: newPages)
         return id
     }
 
     /// Replaces type, expiry, pinned and fields. Fields are resealed with the same document
     /// key and a fresh nonce. Throws `documentDeleted` while the document is in Recently deleted.
-    public func editDocument(_ id: DocumentID, type: DocumentType, expiry: CalendarDate?, pinned: Bool,
-                             fields: DocumentFields) throws {
+    public func editDocument(
+        _ id: DocumentID, type: DocumentType, expiry: CalendarDate?, pinned: Bool,
+        fields: DocumentFields
+    ) throws {
         try update(id, rejectDeleted: true) { entry, key in
             entry.type = type
             entry.expiry = expiry
@@ -374,8 +394,9 @@ public actor VaultStore {
     public func addPage(_ data: Data, to id: DocumentID) throws -> PageID {
         let pageID = PageID()
         try update(id, rejectDeleted: true) { entry, key in
-            let file = try self.pageFile(data, pageID: pageID, position: entry.pageIds.count, documentID: id,
-                                         key: key, sealedKey: entry.sealedKey)
+            let file = try self.pageFile(
+                data, pageID: pageID, position: entry.pageIds.count, documentID: id,
+                key: key, sealedKey: entry.sealedKey)
             entry.pageIds.append(pageID)
             entry.updatedAt = self.now()
             return ([(pageID, file)], [])
@@ -388,8 +409,9 @@ public actor VaultStore {
         let newID = PageID()
         try update(id, rejectDeleted: true) { entry, key in
             guard let position = entry.pageIds.firstIndex(of: pageID) else { throw VaultError.pageNotFound }
-            let file = try self.pageFile(data, pageID: newID, position: position, documentID: id,
-                                         key: key, sealedKey: entry.sealedKey)
+            let file = try self.pageFile(
+                data, pageID: newID, position: position, documentID: id,
+                key: key, sealedKey: entry.sealedKey)
             entry.pageIds[position] = newID
             entry.updatedAt = self.now()
             return ([(newID, file)], [pageID])
@@ -460,8 +482,10 @@ public actor VaultStore {
 
     // MARK: - The write order
 
-    private func commit(_ documents: [IndexEntry], newPages: [(PageID, Data)] = [],
-                        obsoletePages: [PageID] = [], writeIndexTwice: Bool = false) throws {
+    private func commit(
+        _ documents: [IndexEntry], newPages: [(PageID, Data)] = [],
+        obsoletePages: [PageID] = [], writeIndexTwice: Bool = false
+    ) throws {
         // 1. New page files.
         for (pageID, data) in newPages {
             try write(data, to: pageURL(pageID), protection: .complete)
@@ -476,9 +500,9 @@ public actor VaultStore {
         //    page files written in step 1 and the pages folder (a replaced page must never be
         //    deleted while its replacement is only in memory), then the new index, then the
         //    vault folder so the renames are durable too.
-        let fm = FileManager.default
+        let fileManager = FileManager.default
         var doomed: [PageID] = []
-        for pageID in obsoletePages where fm.fileExists(atPath: pageURL(pageID).path) {
+        for pageID in obsoletePages where fileManager.fileExists(atPath: pageURL(pageID).path) {
             doomed.append(pageID)
         }
         if !doomed.isEmpty {
@@ -497,7 +521,7 @@ public actor VaultStore {
             }
         }
         for pageID in doomed {
-            try fm.removeItem(at: pageURL(pageID))
+            try fileManager.removeItem(at: pageURL(pageID))
         }
         try step(.obsoletePagesDeleted)
 
@@ -509,12 +533,15 @@ public actor VaultStore {
     private func writeIndex(_ documents: [IndexEntry]) throws {
         var state = try requireState()
         let next = VaultIndex(generation: state.index.generation + 1, documents: documents)
-        let sealed = try VaultCrypto.seal(VaultJSON.encoder.encode(next), with: state.indexKey,
-                                          as: .index(state.header.vaultId))
-        let fm = FileManager.default
-        if state.indexFileIsCurrent, fm.fileExists(atPath: indexURL.path) {
-            if fm.fileExists(atPath: previousIndexURL.path) { try fm.removeItem(at: previousIndexURL) }
-            try fm.moveItem(at: indexURL, to: previousIndexURL)
+        let sealed = try VaultCrypto.seal(
+            VaultJSON.encoder.encode(next), with: state.indexKey,
+            as: .index(state.header.vaultId))
+        let fileManager = FileManager.default
+        if state.indexFileIsCurrent, fileManager.fileExists(atPath: indexURL.path) {
+            if fileManager.fileExists(atPath: previousIndexURL.path) {
+                try fileManager.removeItem(at: previousIndexURL)
+            }
+            try fileManager.moveItem(at: indexURL, to: previousIndexURL)
         }
         try step(.indexMovedToPrevious)
         try write(sealed, to: indexURL, protection: .complete)
@@ -525,13 +552,16 @@ public actor VaultStore {
     }
 
     private func writeProjection(_ documents: [IndexEntry]) throws {
-        let projection = Projection(documents: documents.filter { $0.deletedAt == nil }.map {
-            ProjectionEntry(id: $0.id, type: $0.type, expiry: $0.expiry, reminderOffsets: reminderOffsets)
-        })
-        try FileManager.default.createDirectory(at: projectionURL.deletingLastPathComponent(),
-                                                withIntermediateDirectories: true)
-        try write(VaultJSON.encoder.encode(projection), to: projectionURL,
-                  protection: .completeUntilFirstUserAuthentication)
+        let projection = Projection(
+            documents: documents.filter { $0.deletedAt == nil }.map {
+                ProjectionEntry(id: $0.id, type: $0.type, expiry: $0.expiry, reminderOffsets: reminderOffsets)
+            })
+        try FileManager.default.createDirectory(
+            at: projectionURL.deletingLastPathComponent(),
+            withIntermediateDirectories: true)
+        try write(
+            VaultJSON.encoder.encode(projection), to: projectionURL,
+            protection: .completeUntilFirstUserAuthentication)
     }
 
     private func write(_ data: Data, to url: URL, protection: FileProtectionClass) throws {
@@ -584,8 +614,9 @@ public actor VaultStore {
         switch (current, previous) {
         case (.readable(let cur), .readable(let prev)) where cur.generation > prev.generation:
             let removed = !Set(prev.documents.map(\.id)).isSubset(of: cur.documents.map(\.id))
-            return LoadedIndex(index: cur, source: .current, previousHoldsRemovedDocuments: removed,
-                               allowsOrphanCleanup: true)
+            return LoadedIndex(
+                index: cur, source: .current, previousHoldsRemovedDocuments: removed,
+                allowsOrphanCleanup: true)
         case (.readable(let cur), .missing), (.readable(let cur), .unreadable):
             return LoadedIndex(index: cur, source: .current, allowsOrphanCleanup: true)
         case (.missing, .readable(let prev)):
@@ -596,8 +627,9 @@ public actor VaultStore {
             // index.enc is unreadable or stale (older than index.prev.enc). Its newest
             // generation may have committed pages, so re-attach them instead of deleting.
             var loaded = LoadedIndex(index: prev, source: .previous)
-            loaded.index.documents = try reattachPages(to: prev.documents, wrapKey: wrapKey,
-                                                       unreadable: &loaded.unreadablePages)
+            loaded.index.documents = try reattachPages(
+                to: prev.documents, wrapKey: wrapKey,
+                unreadable: &loaded.unreadablePages)
             return loaded
         default:
             let indexFilesExist = !(current.isMissing && previous.isMissing)
@@ -621,12 +653,14 @@ public actor VaultStore {
     }
 
     private func listPageFiles() throws -> [PageFileInfo] {
-        let fm = FileManager.default
-        guard fm.fileExists(atPath: pagesDirectory.path) else { return [] }
-        let urls = try fm.contentsOfDirectory(at: pagesDirectory, includingPropertiesForKeys: [.contentModificationDateKey])
+        let fileManager = FileManager.default
+        guard fileManager.fileExists(atPath: pagesDirectory.path) else { return [] }
+        let urls = try fileManager.contentsOfDirectory(
+            at: pagesDirectory, includingPropertiesForKeys: [.contentModificationDateKey])
         return urls.compactMap { url in
             guard url.pathExtension == "enc",
-                  let id = PageID(string: url.deletingPathExtension().lastPathComponent) else { return nil }
+                let id = PageID(string: url.deletingPathExtension().lastPathComponent)
+            else { return nil }
             let modified = (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
             return PageFileInfo(url: url, id: id, modified: modified ?? .distantPast)
         }
@@ -636,12 +670,13 @@ public actor VaultStore {
     /// its own header. Returns the header if the page is intact, nil otherwise.
     private func verifiedHeader(_ info: PageFileInfo, wrapKey: SymmetricKey) -> PageHeader? {
         guard let data = try? Data(contentsOf: info.url),
-              let file = try? PageFile(decoding: data),
-              file.header.formatVersion == PageHeader.currentFormatVersion,
-              file.header.pageId == info.id,
-              let key = try? VaultCrypto.openDocumentKey(file.header.sealedKey, with: wrapKey,
-                                                         documentID: file.header.docId),
-              (try? VaultCrypto.open(file.sealedContent, with: key, as: .page(file.header.docId, info.id))) != nil
+            let file = try? PageFile(decoding: data),
+            file.header.formatVersion == PageHeader.currentFormatVersion,
+            file.header.pageId == info.id,
+            let key = try? VaultCrypto.openDocumentKey(
+                file.header.sealedKey, with: wrapKey,
+                documentID: file.header.docId),
+            (try? VaultCrypto.open(file.sealedContent, with: key, as: .page(file.header.docId, info.id))) != nil
         else { return nil }
         return file.header
     }
@@ -649,8 +684,10 @@ public actor VaultStore {
     /// Adds every intact page file that `documents` does not reference: to its document if
     /// it exists, else to a new "other" document with empty fields. Drops references to
     /// page files that no longer exist.
-    private func reattachPages(to documents: [IndexEntry], wrapKey: SymmetricKey,
-                               unreadable: inout Int) throws -> [IndexEntry] {
+    private func reattachPages(
+        to documents: [IndexEntry], wrapKey: SymmetricKey,
+        unreadable: inout Int
+    ) throws -> [IndexEntry] {
         let files = try listPageFiles().sorted { ($0.modified, $0.id.string) < ($1.modified, $1.id.string) }
         let existing = Set(files.map(\.id))
         var result = documents.map { entry in
@@ -673,11 +710,12 @@ public actor VaultStore {
                 result[position].pageIds.append(info.id)
             } else {
                 let key = try VaultCrypto.openDocumentKey(header.sealedKey, with: wrapKey, documentID: header.docId)
-                result.append(IndexEntry(
-                    id: header.docId, type: .other, createdAt: stamp, updatedAt: stamp, expiry: nil, pinned: false,
-                    deletedAt: nil, sealedKey: header.sealedKey,
-                    sealedFields: try sealFields(DocumentFields(), key: key, documentID: header.docId),
-                    pageIds: [info.id]))
+                result.append(
+                    IndexEntry(
+                        id: header.docId, type: .other, createdAt: stamp, updatedAt: stamp, expiry: nil, pinned: false,
+                        deletedAt: nil, sealedKey: header.sealedKey,
+                        sealedFields: try sealFields(DocumentFields(), key: key, documentID: header.docId),
+                        pageIds: [info.id]))
             }
         }
         // Put every document that gained pages back in page order, using the position each
@@ -717,8 +755,10 @@ public actor VaultStore {
     }
 
     private func vaultFilesExist() throws -> Bool {
-        let fm = FileManager.default
-        if fm.fileExists(atPath: indexURL.path) || fm.fileExists(atPath: previousIndexURL.path) { return true }
+        let fileManager = FileManager.default
+        if fileManager.fileExists(atPath: indexURL.path) || fileManager.fileExists(atPath: previousIndexURL.path) {
+            return true
+        }
         return try !listPageFiles().isEmpty
     }
 
@@ -727,7 +767,8 @@ public actor VaultStore {
     private func readHeader(at url: URL) throws -> VaultHeader {
         struct VersionProbe: Decodable { var formatVersion: Int }
         guard let data = try? Data(contentsOf: url),
-              let probe = try? VaultJSON.decoder.decode(VersionProbe.self, from: data) else {
+            let probe = try? VaultJSON.decoder.decode(VersionProbe.self, from: data)
+        else {
             throw VaultError.corruptFile
         }
         guard probe.formatVersion <= VaultHeader.currentFormatVersion else { throw VaultError.unsupportedVersion }
@@ -800,12 +841,16 @@ public actor VaultStore {
         try VaultCrypto.seal(VaultJSON.encoder.encode(fields), with: key, as: .fields(documentID))
     }
 
-    private func pageFile(_ data: Data, pageID: PageID, position: Int, documentID: DocumentID, key: SymmetricKey,
-                          sealedKey: Data) throws -> Data {
+    private func pageFile(
+        _ data: Data, pageID: PageID, position: Int, documentID: DocumentID, key: SymmetricKey,
+        sealedKey: Data
+    ) throws -> Data {
         let sealed = try VaultCrypto.seal(data, with: key, as: .page(documentID, pageID))
-        return try PageFile(header: PageHeader(docId: documentID, pageId: pageID, position: position,
-                                               sealedKey: sealedKey),
-                            sealedContent: sealed).encoded()
+        return try PageFile(
+            header: PageHeader(
+                docId: documentID, pageId: pageID, position: position,
+                sealedKey: sealedKey),
+            sealedContent: sealed
+        ).encoded()
     }
 }
-

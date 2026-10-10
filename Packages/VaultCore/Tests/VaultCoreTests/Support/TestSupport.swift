@@ -2,6 +2,7 @@ import Crypto
 import Foundation
 import Synchronization
 import Testing
+
 @testable import VaultCore
 
 // MARK: - Key store (tests only; never shipped)
@@ -103,8 +104,10 @@ final class RecordingFlusher: IndexFlusher {
     private let failOnlyAt: URL?
     private let pagesDirectory: URL
 
-    init(pagesDirectory: URL, method: @escaping @Sendable (URL) -> FlushMethod = { _ in .fullFsync },
-         failure: (any Error & Sendable)? = nil, failOnlyAt: URL? = nil) {
+    init(
+        pagesDirectory: URL, method: @escaping @Sendable (URL) -> FlushMethod = { _ in .fullFsync },
+        failure: (any Error & Sendable)? = nil, failOnlyAt: URL? = nil
+    ) {
         self.pagesDirectory = pagesDirectory
         self.method = method
         self.failure = failure
@@ -145,10 +148,10 @@ final class CrashSwitch: Sendable {
 
     var hook: @Sendable (WriteStep) throws -> Void {
         { step in
-            try self.state.withLock { s in
-                guard s.armed else { return }
-                s.steps.append(step)
-                if s.steps.count == s.crashAt { throw SimulatedCrash() }
+            try self.state.withLock { current in
+                guard current.armed else { return }
+                current.steps.append(step)
+                if current.steps.count == current.crashAt { throw SimulatedCrash() }
             }
         }
     }
@@ -181,8 +184,9 @@ final class TestVault {
     deinit { try? FileManager.default.removeItem(at: base) }
 
     func makeStore(crash: CrashSwitch? = nil, flusher: (any IndexFlusher)? = nil) -> VaultStore {
-        VaultStore(rootDirectory: root, projectionURL: projectionURL, keyStore: keyStore,
-                   clock: clock, crashHook: crash?.hook, flusher: flusher ?? FileSystemFlusher())
+        VaultStore(
+            rootDirectory: root, projectionURL: projectionURL, keyStore: keyStore,
+            clock: clock, crashHook: crash?.hook, flusher: flusher ?? FileSystemFlusher())
     }
 
     /// A copy of this vault (same key store contents, own clock) in a new directory.
@@ -213,8 +217,11 @@ final class TestVault {
     static func files(in directory: URL) throws -> [String: Data] {
         var result: [String: Data] = [:]
         let base = directory.standardizedFileURL.path + "/"
-        if let e = FileManager.default.enumerator(at: directory, includingPropertiesForKeys: [.isRegularFileKey]) {
-            for case let url as URL in e where (try? url.resourceValues(forKeys: [.isRegularFileKey]))?.isRegularFile == true {
+        if let enumerator = FileManager.default.enumerator(
+            at: directory, includingPropertiesForKeys: [.isRegularFileKey])
+        {
+            for case let url as URL in enumerator
+            where (try? url.resourceValues(forKeys: [.isRegularFileKey]))?.isRegularFile == true {
                 result[String(url.standardizedFileURL.path.dropFirst(base.count))] = try Data(contentsOf: url)
             }
         }
@@ -224,8 +231,9 @@ final class TestVault {
     /// Every regular file under the vault root and the projection.
     func allFiles() throws -> [URL] {
         var files: [URL] = []
-        if let e = FileManager.default.enumerator(at: base, includingPropertiesForKeys: [.isRegularFileKey]) {
-            for case let url as URL in e where (try? url.resourceValues(forKeys: [.isRegularFileKey]))?.isRegularFile == true {
+        if let enumerator = FileManager.default.enumerator(at: base, includingPropertiesForKeys: [.isRegularFileKey]) {
+            for case let url as URL in enumerator
+            where (try? url.resourceValues(forKeys: [.isRegularFileKey]))?.isRegularFile == true {
                 files.append(url)
             }
         }
@@ -262,11 +270,13 @@ enum Synthetic {
     static func largePage(bytes count: Int) -> Data {
         var data = Data(count: count)
         data.withUnsafeMutableBytes { raw in
-            var x: UInt64 = 0x9E37_79B9_7F4A_7C15
+            var random: UInt64 = 0x9E37_79B9_7F4A_7C15
             let words = raw.bindMemory(to: UInt64.self)
             for i in words.indices {
-                x ^= x << 13; x ^= x >> 7; x ^= x << 17
-                words[i] = x
+                random ^= random << 13
+                random ^= random >> 7
+                random ^= random << 17
+                words[i] = random
             }
         }
         return data
@@ -275,10 +285,10 @@ enum Synthetic {
     /// Stand-ins for image bytes. Not real images, so nothing to leak.
     static func page(_ label: String, size: Int = 2_000) -> Data {
         var data = Data("SYNTHETIC-PAGE-\(label)|".utf8)
-        var x = UInt32(truncatingIfNeeded: label.hashValueStable)
+        var random = UInt32(truncatingIfNeeded: label.hashValueStable)
         while data.count < size {
-            x = x &* 1_664_525 &+ 1_013_904_223
-            data.append(UInt8(truncatingIfNeeded: x >> 24))
+            random = random &* 1_664_525 &+ 1_013_904_223
+            data.append(UInt8(truncatingIfNeeded: random >> 24))
         }
         return data
     }
@@ -310,8 +320,8 @@ struct DocumentSnapshot: Hashable, Comparable {
     var fields: [String: String]
     var pages: [Data]
 
-    static func < (a: Self, b: Self) -> Bool {
-        (a.createdAt, a.type, a.pages.count) < (b.createdAt, b.type, b.pages.count)
+    static func < (lhs: Self, rhs: Self) -> Bool {
+        (lhs.createdAt, lhs.type, lhs.pages.count) < (rhs.createdAt, rhs.type, rhs.pages.count)
     }
 }
 

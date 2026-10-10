@@ -1,6 +1,7 @@
 import Crypto
 import Foundation
 import Testing
+
 @testable import VaultCore
 
 /// Required test 3: stop after each step of the write order, reopen, and find the last
@@ -13,8 +14,8 @@ struct CrashTests {
 
     struct Baseline {
         let vault: TestVault
-        let a: DocumentID  // live KTP, two pages
-        let b: DocumentID  // SIM in Recently deleted, one page
+        let ktp: DocumentID  // live KTP, two pages
+        let sim: DocumentID  // SIM in Recently deleted, one page
     }
 
     func makeBaseline() async throws -> Baseline {
@@ -22,34 +23,38 @@ struct CrashTests {
         let vault = try TestVault(clock: TestClock(start))
         let store = vault.makeStore()
         try await store.open()
-        let a = try await store.createDocument(type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields,
-                                               pages: [Synthetic.page("a1"), Synthetic.page("a2")])
-        let b = try await store.createDocument(type: .sim, expiry: Synthetic.simExpiry, pinned: false,
-                                               fields: Synthetic.simFields, pages: [Synthetic.page("b1")])
-        try await store.delete(b)
-        return Baseline(vault: vault, a: a, b: b)
+        let ktp = try await store.createDocument(
+            type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields,
+            pages: [Synthetic.page("a1"), Synthetic.page("a2")])
+        let sim = try await store.createDocument(
+            type: .sim, expiry: Synthetic.simExpiry, pinned: false,
+            fields: Synthetic.simFields, pages: [Synthetic.page("b1")])
+        try await store.delete(sim)
+        return Baseline(vault: vault, ktp: ktp, sim: sim)
     }
 
-    func perform(_ op: Operation, on store: VaultStore, _ base: Baseline) async throws {
-        switch op {
+    func perform(_ operation: Operation, on store: VaultStore, _ base: Baseline) async throws {
+        switch operation {
         case .create:
-            _ = try await store.createDocument(type: .passport, expiry: Synthetic.simExpiry, pinned: false,
-                                               fields: DocumentFields(["number": "X0000001"]),
-                                               pages: [Synthetic.page("n1"), Synthetic.page("n2")])
+            _ = try await store.createDocument(
+                type: .passport, expiry: Synthetic.simExpiry, pinned: false,
+                fields: DocumentFields(["number": "X0000001"]),
+                pages: [Synthetic.page("n1"), Synthetic.page("n2")])
         case .edit:
-            try await store.editDocument(base.a, type: .ktp, expiry: nil, pinned: true,
-                                         fields: DocumentFields(["nik": Synthetic.nik, "name": "ANI CONTOH"]))
+            try await store.editDocument(
+                base.ktp, type: .ktp, expiry: nil, pinned: true,
+                fields: DocumentFields(["nik": Synthetic.nik, "name": "ANI CONTOH"]))
         case .addPage:
-            _ = try await store.addPage(Synthetic.page("a3"), to: base.a)
+            _ = try await store.addPage(Synthetic.page("a3"), to: base.ktp)
         case .replacePage:
-            let first = try await store.document(base.a).pageIDs[0]
-            _ = try await store.replacePage(first, of: base.a, with: Synthetic.page("a1-rescan"))
+            let first = try await store.document(base.ktp).pageIDs[0]
+            _ = try await store.replacePage(first, of: base.ktp, with: Synthetic.page("a1-rescan"))
         case .softDelete:
-            try await store.delete(base.a)
+            try await store.delete(base.ktp)
         case .restore:
-            try await store.restore(base.b)
+            try await store.restore(base.sim)
         case .deletePermanently:
-            try await store.deletePermanently(base.a)
+            try await store.deletePermanently(base.ktp)
         }
     }
 
@@ -64,7 +69,7 @@ struct CrashTests {
     }
 
     @Test(arguments: Operation.allCases)
-    func crashAfterEachWriteStep(_ op: Operation) async throws {
+    func crashAfterEachWriteStep(_ operation: Operation) async throws {
         let base = try await makeBaseline()
         let before = try await base.vault.makeStore().snapshotAfterOpen()
 
@@ -74,32 +79,32 @@ struct CrashTests {
         let dryStore = dry.makeStore(crash: recorder)
         try await dryStore.open()
         recorder.arm()
-        try await perform(op, on: dryStore, base)
+        try await perform(operation, on: dryStore, base)
         let after = try await dryStore.snapshot()
         let steps = recorder.steps
         // The design doc's write order; a purge writes the index twice.
         let indexWrite: [WriteStep] = [.indexMovedToPrevious, .indexWritten]
-        let indexWrites = op == .deletePermanently ? indexWrite + indexWrite : indexWrite
+        let indexWrites = operation == .deletePermanently ? indexWrite + indexWrite : indexWrite
         #expect(steps == [.pagesWritten] + indexWrites + [.obsoletePagesDeleted, .projectionWritten])
         #expect(before != after)
 
-        for k in 1...steps.count {
-            let label = "\(op.rawValue), crash after step \(k) (\(steps[k - 1]))"
+        for crashStep in 1...steps.count {
+            let label = "\(operation.rawValue), crash after step \(crashStep) (\(steps[crashStep - 1]))"
             let run = try await base.vault.copy()
-            let crash = CrashSwitch(crashAt: k)
+            let crash = CrashSwitch(crashAt: crashStep)
             let store = run.makeStore(crash: crash)
             try await store.open()
             crash.arm()
-            await #expect(throws: SimulatedCrash.self, "\(label)") { try await perform(op, on: store, base) }
+            await #expect(throws: SimulatedCrash.self, "\(label)") { try await perform(operation, on: store, base) }
 
             run.clock.advance(by: 3600)  // old enough for orphan cleanup
             let reopened = run.makeStore()
             let report = try await reopened.open()
-            let expected = steps.prefix(k).contains(.indexWritten) ? after : before
+            let expected = steps.prefix(crashStep).contains(.indexWritten) ? after : before
             #expect(try await reopened.snapshot() == expected, "\(label)")
             // A crash right after index.enc was moved aside leaves it missing: the
             // newest change may be lost, and the app shows the no-number notice.
-            #expect(report.newestChangeMayBeLost == (steps[k - 1] == .indexMovedToPrevious), "\(label)")
+            #expect(report.newestChangeMayBeLost == (steps[crashStep - 1] == .indexMovedToPrevious), "\(label)")
             #expect(!report.recoveredFromPages, "\(label)")
             try await expectConsistent(run, reopened, label)
         }
@@ -108,8 +113,9 @@ struct CrashTests {
     @Test func crashDuringPurgeOnOpen() async throws {
         let base = try await makeBaseline()
         let purgeTime = base.vault.clock.now + 30 * 86_400 + 1
-        let sealedB = try #require(try await base.vault.readIndex(at: base.vault.indexURL)
-            .documents.first { $0.id == base.b }?.sealedKey)
+        let sealedB = try #require(
+            try await base.vault.readIndex(at: base.vault.indexURL)
+                .documents.first { $0.id == base.sim }?.sealedKey)
 
         let dry = try await base.vault.copy(clock: TestClock(purgeTime))
         let recorder = CrashSwitch()
@@ -120,10 +126,10 @@ struct CrashTests {
         let steps = recorder.steps
         #expect(steps.filter { $0 == .indexWritten }.count >= 2)
 
-        for k in 1...steps.count {
-            let label = "purge on open, crash after step \(k) (\(steps[k - 1]))"
+        for crashStep in 1...steps.count {
+            let label = "purge on open, crash after step \(crashStep) (\(steps[crashStep - 1]))"
             let run = try await base.vault.copy(clock: TestClock(purgeTime))
-            let crash = CrashSwitch(crashAt: k)
+            let crash = CrashSwitch(crashAt: crashStep)
             crash.arm()
             await #expect(throws: SimulatedCrash.self, "\(label)") { try await run.makeStore(crash: crash).open() }
 
@@ -131,7 +137,7 @@ struct CrashTests {
             let reopened = run.makeStore()
             let report = try await reopened.open()
             #expect(try await reopened.snapshot() == after, "\(label)")
-            #expect(report.newestChangeMayBeLost == (steps[k - 1] == .indexMovedToPrevious), "\(label)")
+            #expect(report.newestChangeMayBeLost == (steps[crashStep - 1] == .indexMovedToPrevious), "\(label)")
             try await expectConsistent(run, reopened, label)
             // Whatever step the crash hit, no index file keeps B's sealed key once reopened.
             for url in [run.indexURL, run.previousIndexURL] where FileManager.default.fileExists(atPath: url.path) {

@@ -1,0 +1,52 @@
+# SwiftLint checks naming, size and code smells. Layout (indentation, line breaks,
+# trailing commas) belongs to swift-format, configured in .swift-format.
+
+included:
+  - Packages/VaultCore/Sources
+  - Packages/VaultCore/Tests
+  - Simpanin
+  - SimpaninTests
+  - SimpaninUITests
+
+excluded:
+  - "**/.build"
+
+disabled_rules:  # layout rules that swift-format already decides
+  - trailing_comma  # swift-format adds trailing commas to multiline collections
+  - opening_brace   # swift-format puts the brace on its own line after a wrapped signature
+
+opt_in_rules:
+  - closure_spacing
+  - empty_count
+  - empty_string
+  - explicit_init
+  - first_where
+  - last_where
+  - redundant_nil_coalescing
+  - sorted_first_last
+  - toggle_bool
+  - unneeded_parentheses_in_closure_argument
+
+line_length:
+  warning: 120  # the same as swift-format's lineLength
+  ignores_urls: true
+
+large_tuple:
+  warning: 4  # (vault, store, ktp, sim) from a test helper reads fine
+  error: 5
+
+identifier_name:
+  excluded:  # short names that are clearer than a long one
+    - id
+    - i   # loop index
+    - dk  # document key, the design doc's term
+    - kk  # Kartu Keluarga, a document type
+    - t0  # a test's start time
+
+custom_rules:
+  vaultcore_imports:
+    name: VaultCore imports
+    message: "VaultCore imports only Foundation and Crypto."
+    included: "Packages/VaultCore/Sources/.*\\.swift"
+    regex: "^\\s*(@\\w+\\s+)?import\\s+(?!(Foundation|Crypto)\\b)\\w+"
+    severity: error

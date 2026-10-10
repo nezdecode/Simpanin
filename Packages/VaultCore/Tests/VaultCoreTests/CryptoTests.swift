@@ -1,6 +1,7 @@
 import Crypto
 import Foundation
 import Testing
+
 @testable import VaultCore
 
 @Suite("Crypto")
@@ -15,8 +16,9 @@ struct CryptoTests {
     @Test func associatedDataStringsMatchDesignDoc() {
         #expect(AssociatedData.index(vaultID).string == "index|v1|6f9619ff-8b86-d011-b42d-00c04fc964ff")
         #expect(AssociatedData.fields(docID).string == "fields|v1|11111111-2222-3333-4444-555555555555")
-        #expect(AssociatedData.page(docID, pageID).string
-            == "page|v1|11111111-2222-3333-4444-555555555555|99999999-8888-7777-6666-555555555555")
+        #expect(
+            AssociatedData.page(docID, pageID).string
+                == "page|v1|11111111-2222-3333-4444-555555555555|99999999-8888-7777-6666-555555555555")
         #expect(AssociatedData.documentKey(docID).string == "dk|v1|11111111-2222-3333-4444-555555555555")
     }
 
@@ -37,14 +39,16 @@ struct CryptoTests {
     @Test func derivedKeysDependOnVaultID() {
         let vaultKey = VaultCrypto.newKey()
         let other = VaultID()
-        #expect(bytes(VaultCrypto.indexKey(from: vaultKey, vaultID: vaultID))
-            != bytes(VaultCrypto.indexKey(from: vaultKey, vaultID: other)))
+        #expect(
+            bytes(VaultCrypto.indexKey(from: vaultKey, vaultID: vaultID))
+                != bytes(VaultCrypto.indexKey(from: vaultKey, vaultID: other)))
     }
 
     @Test func newKeysAre256BitAndRandom() {
-        let a = VaultCrypto.newKey(), b = VaultCrypto.newKey()
-        #expect(a.bitCount == 256)
-        #expect(bytes(a) != bytes(b))
+        let first = VaultCrypto.newKey()
+        let second = VaultCrypto.newKey()
+        #expect(first.bitCount == 256)
+        #expect(bytes(first) != bytes(second))
     }
 
     // MARK: Seal and open for every kind of associated data
@@ -85,9 +89,9 @@ struct CryptoTests {
 
     @Test func freshNonceForEverySeal() throws {
         let key = VaultCrypto.newKey()
-        let a = try VaultCrypto.seal(Data("same".utf8), with: key, as: .fields(docID))
-        let b = try VaultCrypto.seal(Data("same".utf8), with: key, as: .fields(docID))
-        #expect(a.prefix(12) != b.prefix(12))
+        let first = try VaultCrypto.seal(Data("same".utf8), with: key, as: .fields(docID))
+        let second = try VaultCrypto.seal(Data("same".utf8), with: key, as: .fields(docID))
+        #expect(first.prefix(12) != second.prefix(12))
     }
 
     @Test func wrongAssociatedDataFailsToOpen() throws {
@@ -136,7 +140,8 @@ struct CryptoTests {
     // MARK: Document keys are sealed with AES-GCM and "dk|v1|<docId>"
 
     @Test func documentKeyRoundTrip() throws {
-        let wrap = VaultCrypto.newKey(), dk = VaultCrypto.newKey()
+        let wrap = VaultCrypto.newKey()
+        let dk = VaultCrypto.newKey()
         let sealed = try VaultCrypto.sealDocumentKey(dk, with: wrap, documentID: docID)
         #expect(sealed.count == 12 + 32 + 16)
         // It is a plain AES-GCM seal with the dk associated data, not AES.KeyWrap.
@@ -159,7 +164,9 @@ func bytes(_ key: SymmetricKey) -> Data { key.withUnsafeBytes { Data($0) } }
 /// so a change of label, salt or algorithm in VaultCrypto is caught.
 func referenceHKDF(ikm: Data, salt: Data, info: Data, length: Int = 32) -> Data {
     let prk = Data(HMAC<SHA256>.authenticationCode(for: ikm, using: SymmetricKey(data: salt)))
-    var okm = Data(), block = Data(), counter: UInt8 = 1
+    var okm = Data()
+    var block = Data()
+    var counter: UInt8 = 1
     while okm.count < length {
         block = Data(HMAC<SHA256>.authenticationCode(for: block + info + [counter], using: SymmetricKey(data: prk)))
         okm += block

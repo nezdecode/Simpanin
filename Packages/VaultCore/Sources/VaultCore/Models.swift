@@ -39,8 +39,8 @@ public struct CalendarDate: Hashable, Sendable, Comparable {
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
         let components = DateComponents(year: year, month: month, day: day)
         guard (1...9999).contains(year), (1...12).contains(month),
-              let date = calendar.date(from: components),
-              calendar.dateComponents([.year, .month, .day], from: date) == components
+            let date = calendar.date(from: components),
+            calendar.dateComponents([.year, .month, .day], from: date) == components
         else { return nil }
         self.year = year
         self.month = month
@@ -50,17 +50,17 @@ public struct CalendarDate: Hashable, Sendable, Comparable {
     public init?(_ text: String) {
         let parts = text.split(separator: "-", omittingEmptySubsequences: false)
         guard parts.count == 3, parts[0].count == 4, parts[1].count == 2, parts[2].count == 2,
-              let y = Int(parts[0]), let m = Int(parts[1]), let d = Int(parts[2])
+            let year = Int(parts[0]), let month = Int(parts[1]), let day = Int(parts[2])
         else { return nil }
-        self.init(year: y, month: m, day: d)
+        self.init(year: year, month: month, day: day)
     }
 
     public var string: String {
         String(format: "%04d-%02d-%02d", year, month, day)
     }
 
-    public static func < (a: CalendarDate, b: CalendarDate) -> Bool {
-        (a.year, a.month, a.day) < (b.year, b.month, b.day)
+    public static func < (lhs: CalendarDate, rhs: CalendarDate) -> Bool {
+        (lhs.year, lhs.month, lhs.day) < (rhs.year, rhs.month, rhs.day)
     }
 }
 
@@ -172,8 +172,9 @@ struct IndexEntry: Hashable, Sendable, Codable {
     var pageIds: [PageID]
 
     var document: Document {
-        Document(id: id, type: type, createdAt: createdAt, updatedAt: updatedAt, expiry: expiry,
-                 pinned: pinned, deletedAt: deletedAt, pageIDs: pageIds)
+        Document(
+            id: id, type: type, createdAt: createdAt, updatedAt: updatedAt, expiry: expiry,
+            pinned: pinned, deletedAt: deletedAt, pageIDs: pageIds)
     }
 }
 
@@ -246,8 +247,10 @@ struct PageFile {
     func encoded() throws -> Data {
         let headerData = try VaultJSON.encoder.encode(header)
         let length = UInt32(headerData.count)
-        var out = Data([UInt8(length >> 24 & 0xFF), UInt8(length >> 16 & 0xFF),
-                        UInt8(length >> 8 & 0xFF), UInt8(length & 0xFF)])
+        var out = Data([
+            UInt8(length >> 24 & 0xFF), UInt8(length >> 16 & 0xFF),
+            UInt8(length >> 8 & 0xFF), UInt8(length & 0xFF),
+        ])
         out += headerData
         out += sealedContent
         return out

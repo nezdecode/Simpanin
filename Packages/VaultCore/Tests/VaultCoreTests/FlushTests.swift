@@ -1,6 +1,7 @@
 import Crypto
 import Foundation
 import Testing
+
 @testable import VaultCore
 
 /// Design doc, write order step 2: "If step 3 will delete any file, first flush the new index
@@ -23,7 +24,8 @@ struct FlushTests {
     /// The flushes of one commit, in order: each new page file, the pages folder, the new
     /// index file, the vault folder.
     func expectFlushOrder(_ events: [RecordingFlusher.Event], _ vault: TestVault, newPages: [PageID]) {
-        let expected = newPages.map { path(vault.pageURL($0)) }
+        let expected =
+            newPages.map { path(vault.pageURL($0)) }
             + [path(vault.pagesDirectory), path(vault.indexURL), path(vault.root)]
         #expect(events.map { path($0.url) } == expected)
     }
@@ -31,8 +33,9 @@ struct FlushTests {
     func generation(of sealedIndex: Data, in vault: TestVault) async throws -> VaultIndex {
         let header = try vault.header()
         let key = try #require(await vault.keyStore.key(for: header.vaultId))
-        let plain = try VaultCrypto.open(sealedIndex, with: VaultCrypto.indexKey(from: key, vaultID: header.vaultId),
-                                         as: .index(header.vaultId))
+        let plain = try VaultCrypto.open(
+            sealedIndex, with: VaultCrypto.indexKey(from: key, vaultID: header.vaultId),
+            as: .index(header.vaultId))
         return try VaultJSON.decoder.decode(VaultIndex.self, from: plain)
     }
 
@@ -40,8 +43,9 @@ struct FlushTests {
         let vault = try TestVault()
         let flusher = RecordingFlusher(pagesDirectory: vault.pagesDirectory)
         let store = try await makeStore(vault, flusher)
-        let id = try await store.createDocument(type: .ktp, expiry: nil, pinned: false,
-                                                fields: Synthetic.ktpFields, pages: [Synthetic.page("k")])
+        let id = try await store.createDocument(
+            type: .ktp, expiry: nil, pinned: false,
+            fields: Synthetic.ktpFields, pages: [Synthetic.page("k")])
         try await store.editDocument(id, type: .ktp, expiry: nil, pinned: true, fields: Synthetic.ktpFields)
         _ = try await store.addPage(Synthetic.page("k2"), to: id)
         try await store.delete(id)
@@ -54,8 +58,9 @@ struct FlushTests {
         let vault = try TestVault()
         let flusher = RecordingFlusher(pagesDirectory: vault.pagesDirectory)
         let store = try await makeStore(vault, flusher)
-        let id = try await store.createDocument(type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields,
-                                                pages: [Synthetic.page("front"), Synthetic.page("back")])
+        let id = try await store.createDocument(
+            type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields,
+            pages: [Synthetic.page("front"), Synthetic.page("back")])
         let generationBefore = try await vault.readIndex(at: vault.indexURL).generation
         let old = try await store.document(id).pageIDs[0]
         let new = try await store.replacePage(old, of: id, with: Synthetic.page("front-rescan"))
@@ -80,8 +85,9 @@ struct FlushTests {
         let vault = try TestVault()
         let flusher = RecordingFlusher(pagesDirectory: vault.pagesDirectory)
         let store = try await makeStore(vault, flusher)
-        let id = try await store.createDocument(type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields,
-                                                pages: [Synthetic.page("p1"), Synthetic.page("p2")])
+        let id = try await store.createDocument(
+            type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields,
+            pages: [Synthetic.page("p1"), Synthetic.page("p2")])
         let pages = try await store.document(id).pageIDs
         let generationBefore = try await vault.readIndex(at: vault.indexURL).generation
         try await store.deletePermanently(id)
@@ -99,8 +105,9 @@ struct FlushTests {
         let vault = try TestVault()
         let flusher = RecordingFlusher(pagesDirectory: vault.pagesDirectory)
         let store = try await makeStore(vault, flusher)
-        let id = try await store.createDocument(type: .npwp, expiry: nil, pinned: false,
-                                                fields: DocumentFields(["number": "00.000.000.0-000.000"]), pages: [])
+        let id = try await store.createDocument(
+            type: .npwp, expiry: nil, pinned: false,
+            fields: DocumentFields(["number": "00.000.000.0-000.000"]), pages: [])
         try await store.deletePermanently(id)
         #expect(flusher.recorded.isEmpty)
     }
@@ -109,8 +116,9 @@ struct FlushTests {
         let vault = try TestVault()
         let flusher = RecordingFlusher(pagesDirectory: vault.pagesDirectory)
         let store = try await makeStore(vault, flusher)
-        let id = try await store.createDocument(type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields,
-                                                pages: [Synthetic.page("front")])
+        let id = try await store.createDocument(
+            type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields,
+            pages: [Synthetic.page("front")])
         let old = try await store.document(id).pageIDs[0]
         try FileManager.default.removeItem(at: vault.pageURL(old))
         _ = try await store.replacePage(old, of: id, with: Synthetic.page("front-rescan"))
@@ -121,8 +129,9 @@ struct FlushTests {
         let vault = try TestVault()
         let flusher = RecordingFlusher(pagesDirectory: vault.pagesDirectory, failure: FlushError())
         let store = try await makeStore(vault, flusher)
-        let id = try await store.createDocument(type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields,
-                                                pages: [Synthetic.page("front")])
+        let id = try await store.createDocument(
+            type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields,
+            pages: [Synthetic.page("front")])
         let old = try await store.document(id).pageIDs[0]
         await #expect(throws: VaultError.flushFailed) {
             try await store.replacePage(old, of: id, with: Synthetic.page("front-rescan"))
@@ -139,11 +148,13 @@ struct FlushTests {
 
     @Test func failedDirectoryFlushDeletesNothing() async throws {
         let vault = try TestVault()
-        let flusher = RecordingFlusher(pagesDirectory: vault.pagesDirectory, failure: FlushError(),
-                                       failOnlyAt: vault.root)
+        let flusher = RecordingFlusher(
+            pagesDirectory: vault.pagesDirectory, failure: FlushError(),
+            failOnlyAt: vault.root)
         let store = try await makeStore(vault, flusher)
-        let id = try await store.createDocument(type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields,
-                                                pages: [Synthetic.page("front")])
+        let id = try await store.createDocument(
+            type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields,
+            pages: [Synthetic.page("front")])
         let old = try await store.document(id).pageIDs[0]
         await #expect(throws: VaultError.flushFailed) {
             try await store.replacePage(old, of: id, with: Synthetic.page("front-rescan"))
@@ -155,11 +166,13 @@ struct FlushTests {
 
     @Test func failedPagesFolderFlushStopsBeforeTheIndex() async throws {
         let vault = try TestVault()
-        let flusher = RecordingFlusher(pagesDirectory: vault.pagesDirectory, failure: FlushError(),
-                                       failOnlyAt: vault.pagesDirectory)
+        let flusher = RecordingFlusher(
+            pagesDirectory: vault.pagesDirectory, failure: FlushError(),
+            failOnlyAt: vault.pagesDirectory)
         let store = try await makeStore(vault, flusher)
-        let id = try await store.createDocument(type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields,
-                                                pages: [Synthetic.page("front")])
+        let id = try await store.createDocument(
+            type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields,
+            pages: [Synthetic.page("front")])
         let old = try await store.document(id).pageIDs[0]
         await #expect(throws: VaultError.flushFailed) {
             try await store.replacePage(old, of: id, with: Synthetic.page("front-rescan"))
@@ -174,11 +187,13 @@ struct FlushTests {
         // as its weakest flush, so that is what is recorded.
         let vault = try TestVault()
         let root = vault.root.standardizedFileURL.path
-        let flusher = RecordingFlusher(pagesDirectory: vault.pagesDirectory,
-                                       method: { $0.standardizedFileURL.path == root ? .fsync : .fullFsync })
+        let flusher = RecordingFlusher(
+            pagesDirectory: vault.pagesDirectory,
+            method: { $0.standardizedFileURL.path == root ? .fsync : .fullFsync })
         let store = try await makeStore(vault, flusher)
-        let id = try await store.createDocument(type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields,
-                                                pages: [Synthetic.page("front")])
+        let id = try await store.createDocument(
+            type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields,
+            pages: [Synthetic.page("front")])
         _ = try await store.replacePage(try await store.document(id).pageIDs[0], of: id, with: Synthetic.page("x"))
         #expect(await store.lastFlushMethod == .fsync)
     }
@@ -187,8 +202,9 @@ struct FlushTests {
         let vault = try TestVault()
         let flusher = RecordingFlusher(pagesDirectory: vault.pagesDirectory, method: { _ in .fsync })
         let store = try await makeStore(vault, flusher)
-        let id = try await store.createDocument(type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields,
-                                                pages: [Synthetic.page("front")])
+        let id = try await store.createDocument(
+            type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields,
+            pages: [Synthetic.page("front")])
         _ = try await store.replacePage(try await store.document(id).pageIDs[0], of: id, with: Synthetic.page("x"))
         #expect(await store.lastFlushMethod == .fsync)
     }
@@ -220,9 +236,9 @@ struct FlushTests {
         let method = try FileSystemFlusher().flush(directory)
         print("DIRECTORY FLUSH METHOD ON THIS MACHINE: \(method)")
         #if canImport(Darwin)
-        #expect(method == .fullFsync)
+            #expect(method == .fullFsync)
         #else
-        #expect(method == .fsync)
+            #expect(method == .fsync)
         #endif
     }
 
@@ -232,9 +248,9 @@ struct FlushTests {
         let method = try FileSystemFlusher().flush(url)
         print("FLUSH METHOD ON THIS MACHINE: \(method)")
         #if canImport(Darwin)
-        #expect(method == .fullFsync)
+            #expect(method == .fullFsync)
         #else
-        #expect(method == .fsync)
+            #expect(method == .fsync)
         #endif
     }
 }

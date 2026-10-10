@@ -1,6 +1,7 @@
 import Crypto
 import Foundation
 import Testing
+
 @testable import VaultCore
 
 /// Review M1: "schema and format versions on every file". A file written by a newer app
@@ -12,8 +13,9 @@ struct VersionTests {
         let vault = try TestVault()
         let store = vault.makeStore()
         try await store.open()
-        let id = try await store.createDocument(type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields,
-                                                pages: [Synthetic.page("front")])
+        let id = try await store.createDocument(
+            type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields,
+            pages: [Synthetic.page("front")])
         try await store.editDocument(id, type: .ktp, expiry: nil, pinned: true, fields: Synthetic.ktpFields)
         return (vault, id)
     }
@@ -77,8 +79,9 @@ struct VersionTests {
         // A page a newer version wrote but this vault's index does not reference.
         let store = vault.makeStore()
         try await store.open()
-        let other = try await store.createDocument(type: .sim, expiry: nil, pinned: false, fields: Synthetic.simFields,
-                                                   pages: [Synthetic.page("sim")])
+        let other = try await store.createDocument(
+            type: .sim, expiry: nil, pinned: false, fields: Synthetic.simFields,
+            pages: [Synthetic.page("sim")])
         let orphan = vault.pageURL(try await store.document(other).pageIDs[0])
         let entryless = try await vault.readIndex(at: vault.previousIndexURL)  // before the SIM existed
         let header = try vault.header()
