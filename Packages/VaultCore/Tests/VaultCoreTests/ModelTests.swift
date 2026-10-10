@@ -119,6 +119,18 @@ struct ModelTests {
         #expect(try VaultJSON.decoder.decode(VaultIndex.self, from: VaultJSON.encoder.encode(index)) == index)
     }
 
+    @Test func deletedEntryWritesDeletedAt() throws {
+        let entry = IndexEntry(
+            id: docID, type: .ktp,
+            createdAt: Date(timeIntervalSince1970: 1_790_000_000),
+            updatedAt: Date(timeIntervalSince1970: 1_790_000_000), expiry: nil, pinned: false,
+            deletedAt: Date(timeIntervalSince1970: 1_790_000_200),
+            sealedKey: Data([1]), sealedFields: Data([2]), pageIds: [])
+        let object = try jsonObject(VaultJSON.encoder.encode(VaultIndex(generation: 1, documents: [entry])))
+        let doc = try #require((object["documents"] as? [[String: Any]])?.first)
+        #expect(doc["deletedAt"] as? String == "2026-09-21T14:16:40Z")
+    }
+
     // MARK: pages/<pageId>.enc
 
     @Test func pageFileLayoutIsLengthPrefixedHeaderThenSealedBytes() throws {
@@ -150,6 +162,20 @@ struct ModelTests {
         var huge = encoded
         huge.replaceSubrange(0..<4, with: [0xFF, 0xFF, 0xFF, 0xFF])
         #expect(throws: VaultError.corruptFile) { try PageFile(decoding: huge) }
+        var empty = encoded
+        empty.replaceSubrange(0..<4, with: [0, 0, 0, 0])
+        #expect(throws: VaultError.corruptFile) { try PageFile(decoding: empty) }
+    }
+
+    @Test func pageFileDecodesFromASlice() throws {
+        let file = PageFile(
+            header: PageHeader(docId: docID, pageId: pageID, position: 2, sealedKey: Data([1, 2])),
+            sealedContent: Data(repeating: 9, count: 30))
+        // A slice keeps its parent's indices, so it starts at 3 here, not 0.
+        let slice = (Data([0xAA, 0xBB, 0xCC]) + (try file.encoded())).dropFirst(3)
+        let decoded = try PageFile(decoding: slice)
+        #expect(decoded.header == file.header)
+        #expect(decoded.sealedContent == file.sealedContent)
     }
 
     // MARK: projection.json
@@ -162,6 +188,7 @@ struct ModelTests {
         ])
         let object = try jsonObject(VaultJSON.encoder.encode(projection))
         #expect(Set(object.keys) == ["schemaVersion", "documents"])
+        #expect(object["schemaVersion"] as? Int == 1)
         let entry = try #require((object["documents"] as? [[String: Any]])?.first)
         #expect(Set(entry.keys) == ["id", "type", "expiry", "reminderOffsets"])
         #expect(try VaultJSON.decoder.decode(Projection.self, from: VaultJSON.encoder.encode(projection)) == projection)
