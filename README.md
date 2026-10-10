@@ -10,10 +10,16 @@ Simpanin is a privacy-first iOS app for keeping personal documents such as KTP, 
 
 ## Development
 
-Install the pre-commit hook once per clone. It rejects images and PDFs outside `Fixtures/Synthetic/`:
+Install the pre-commit hook once per clone. It rejects images and PDFs outside `Fixtures/Synthetic/`, and staged Swift files that fail swift-format or SwiftLint:
 
 ```sh
 git config core.hooksPath scripts/hooks
+```
+
+Code style: swift-format (bundled with Xcode) owns layout, configured in `.swift-format`; SwiftLint (`brew install swiftlint`) owns naming and size, configured in `.swiftlint.yml`. Format and lint everything with:
+
+```sh
+swift format format -i -r Packages/VaultCore && swiftlint lint --strict
 ```
 
 Run the core tests on a Mac (no simulator needed):

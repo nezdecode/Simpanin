@@ -1,6 +1,7 @@
 #!/bin/sh
 # Rejects any staged image or PDF outside Fixtures/Synthetic/, and the
-# private docs/ folder and CLAUDE.md.
+# private docs/ folder and CLAUDE.md. Checks staged Swift files with swift-format
+# and SwiftLint.
 # Real document scans must never be committed; see .gitignore.
 # Install once per clone: git config core.hooksPath scripts/hooks
 
@@ -24,5 +25,24 @@ if [ -n "$private" ]; then
   echo "$private" | sed 's/^/  /' >&2
   echo "Unstage them with: git rm --cached <file>" >&2
   exit 1
+fi
+
+# Staged Swift files must pass swift-format (layout) and SwiftLint (naming, size,
+# VaultCore imports). The working-tree copy is checked, so stage whole files.
+PATH="$PATH:/opt/homebrew/bin:/usr/local/bin"
+swift_files=$(git diff --cached --name-only --diff-filter=ACMR -- '*.swift')
+if [ -n "$swift_files" ]; then
+  if ! command -v swiftlint >/dev/null 2>&1; then
+    echo "pre-commit: SwiftLint is not installed. Install it with: brew install swiftlint" >&2
+    exit 1
+  fi
+  if ! printf '%s\n' "$swift_files" | tr '\n' '\0' | xargs -0 swift format lint --strict; then
+    echo "pre-commit: swift-format found layout problems. Fix them with: swift format format -i <file>" >&2
+    exit 1
+  fi
+  if ! printf '%s\n' "$swift_files" | tr '\n' '\0' | xargs -0 swiftlint lint --strict --quiet; then
+    echo "pre-commit: SwiftLint found problems (see above)." >&2
+    exit 1
+  fi
 fi
 exit 0

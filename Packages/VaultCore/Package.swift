@@ -11,12 +11,12 @@ let package = Package(
         .macOS(.v26),
     ],
     products: [
-        .library(name: "VaultCore", targets: ["VaultCore"]),
+        .library(name: "VaultCore", targets: ["VaultCore"])
     ],
     dependencies: [
         // The only third-party dependency allowed. On Apple platforms it re-exports
         // CryptoKit. Never add the CryptoExtras product: it bundles BoringSSL.
-        .package(url: "https://github.com/apple/swift-crypto.git", from: "5.0.0"),
+        .package(url: "https://github.com/apple/swift-crypto.git", from: "5.0.0")
     ],
     targets: [
         .target(
