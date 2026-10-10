@@ -16,7 +16,7 @@ import Testing
 @testable import VaultCore
 
 /// Before step 3 deletes anything, the new pages, the pages folder, the index and the vault
-/// folder are flushed, in that order (design doc, write order).
+/// folder are flushed, in that order.
 @Suite("Index flush before deleting pages")
 struct FlushTests {
     struct FlushError: Error {}
@@ -29,8 +29,8 @@ struct FlushTests {
 
     func path(_ url: URL) -> String { url.standardizedFileURL.path }
 
-    /// The flushes of one commit, in order: each new page file, the pages folder, the new
-    /// index file, the vault folder.
+    /// The flushes of one commit, in order. Each new page file, then the pages folder, the new
+    /// index file and the vault folder.
     func expectFlushOrder(_ events: [RecordingFlusher.Event], _ vault: TestVault, newPages: [PageID]) {
         let expected =
             newPages.map { path(vault.pageURL($0)) }
@@ -145,7 +145,7 @@ struct FlushTests {
         }
         #expect(FileManager.default.fileExists(atPath: vault.pageURL(old).path))
 
-        // The new index was written; the next open uses it and cleans up the old page later.
+        // The new index was written. The next open uses it and cleans up the old page later.
         vault.clock.advance(by: 3600)
         let reopened = vault.makeStore()
         try await reopened.open()
@@ -190,7 +190,7 @@ struct FlushTests {
     }
 
     @Test func recordsTheWeakerMethodWhenTheTwoFlushesDiffer() async throws {
-        // The index got F_FULLFSYNC but the folder only fsync: the weakest flush is recorded.
+        // The index got F_FULLFSYNC but the folder only fsync, so the weaker one is recorded.
         let vault = try TestVault()
         let root = vault.root.standardizedFileURL.path
         let flusher = RecordingFlusher(

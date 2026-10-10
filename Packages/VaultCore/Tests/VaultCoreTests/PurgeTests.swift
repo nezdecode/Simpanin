@@ -65,8 +65,8 @@ struct PurgeTests {
             #expect(!index.documents.contains { $0.id == setup.purged }, "\(url.lastPathComponent)")
             #expect(!index.documents.contains { $0.sealedKey == setup.sealedKey }, "\(url.lastPathComponent)")
         }
-        // Decode the headers rather than byte-scan: JSON escapes "/" in the base64 key, so a
-        // byte search would miss it.
+        // Decode the headers instead of searching the bytes. JSON escapes "/" in the base64
+        // key, so a byte search would miss it.
         for file in try setup.vault.pageFiles() {
             let header = try PageFile(decoding: Data(contentsOf: file)).header
             #expect(header.sealedKey != setup.sealedKey, "sealed key in \(file.lastPathComponent)")

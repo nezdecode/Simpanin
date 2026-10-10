@@ -61,7 +61,7 @@ struct RecoveryTests {
         #expect(!report.newestChangeMayBeLost)
         #expect(report.unreadablePages == 0)
         #expect(try await recoveredPages(store) == fixture.pagesByDocument)
-        // Fields lived only in the index, so they are gone; the documents are not.
+        // Fields lived only in the index, so they're gone, but the documents aren't.
         for doc in try await store.documents() {
             #expect(doc.type == .other)
             #expect(try await store.fields(of: doc.id) == DocumentFields())
@@ -118,7 +118,7 @@ struct RecoveryTests {
         }
     }
 
-    // MARK: Page order (design doc: the header stores each page's position)
+    // MARK: Page order, from the position each page header stores
 
     func makeRescannedKTP() async throws -> (TestVault, DocumentID) {
         let vault = try TestVault()
@@ -145,8 +145,8 @@ struct RecoveryTests {
     }
 
     @Test func fallbackKeepsPageOrderAfterAReplace() async throws {
-        // index.enc lost: index.prev.enc still lists the old front, whose file is gone; the
-        // rescanned front is re-attached at its stored position.
+        // index.enc is lost and index.prev.enc still lists the old front, whose file is gone.
+        // The rescanned front is re-attached at its stored position.
         let (vault, id) = try await makeRescannedKTP()
         try Data("x".utf8).write(to: vault.indexURL)
         let store = vault.makeStore()

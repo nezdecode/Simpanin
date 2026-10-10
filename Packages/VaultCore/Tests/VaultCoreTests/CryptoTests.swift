@@ -126,7 +126,7 @@ struct CryptoTests {
     }
 
     @Test func vaultIDAloneIsBound() throws {
-        // Same key, different vault id: only the associated data differs.
+        // Same key and a different vault id, so only the associated data differs.
         let key = VaultCrypto.newKey()
         let otherVault = VaultID(UUID(uuidString: "6F9619FF-8B86-D011-B42D-000000000000")!)
         let sealed = try VaultCrypto.seal(Data("index".utf8), with: key, as: .index(vaultID))

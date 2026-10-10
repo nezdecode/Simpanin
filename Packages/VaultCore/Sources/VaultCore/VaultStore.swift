@@ -18,13 +18,13 @@ public enum IndexSource: Sendable, Equatable {
     case new
     /// index.enc opened normally.
     case current
-    /// index.enc was missing, unreadable or older than index.prev.enc; index.prev.enc was used.
+    /// index.enc was missing, unreadable or older, so index.prev.enc was used.
     case previous
-    /// Neither index file was usable; documents were rebuilt from page headers. Fields are lost.
+    /// Neither index file worked, so documents were rebuilt from page headers. Fields are lost.
     case recovered
 }
 
-/// What `open()` did. Holds only counts, never ids or contents, so the app may log it.
+/// What `open()` did. It only holds counts, never ids or contents, so the app may log it.
 public struct OpenReport: Sendable, Equatable {
     public var createdVault = false
     public var indexSource = IndexSource.current
@@ -34,7 +34,7 @@ public struct OpenReport: Sendable, Equatable {
     public var unreadablePages = 0
     /// Opened from index.prev.enc, so the newest change may be lost.
     public var newestChangeMayBeLost = false
-    /// Rebuilt from page images: fields are empty and deleted documents may be back.
+    /// Rebuilt from page images. Fields are empty and deleted documents may be back.
     public var recoveredFromPages = false
 }
 
@@ -43,8 +43,8 @@ enum WriteStep: Sendable, Equatable {
     case pagesWritten, indexMovedToPrevious, indexWritten, obsoletePagesDeleted, projectionWritten
 }
 
-/// The encrypted document store. Every change follows the design doc's write order (see
-/// `commit`). The code is split by topic across the VaultStore+*.swift files.
+/// The encrypted document store. Every change goes through the write order in `commit`.
+/// The code is split by topic across the VaultStore+*.swift files.
 public actor VaultStore {
     /// Documents in Recently deleted are purged this long after `deletedAt`.
     public static let purgeDelay: TimeInterval = 30 * 86_400
@@ -59,7 +59,7 @@ public actor VaultStore {
     let reminderOffsets: [Int]
     let crashHook: (@Sendable (WriteStep) throws -> Void)?
     let flusher: any IndexFlusher
-    /// How the last flushing commit flushed: `.fsync` if any of its flushes fell back.
+    /// How the last commit that flushed did it. `.fsync` if any of its flushes fell back.
     var lastFlushMethod: FlushMethod?
 
     struct OpenState {
@@ -76,8 +76,8 @@ public actor VaultStore {
     var openTask: Task<OpenReport, any Error>?
 
     /// - Parameters:
-    ///   - rootDirectory: the vault folder (Application Support/Vault in the app).
-    ///   - projectionURL: projection.json (in the App Group container in the app).
+    ///   - rootDirectory: the vault folder, Application Support/Vault in the app.
+    ///   - projectionURL: projection.json, in the App Group container in the app.
     ///   - reminderOffsets: days before expiry written into the projection.
     public init(
         rootDirectory: URL, projectionURL: URL, keyStore: any KeyStore, clock: any VaultClock = SystemClock(),

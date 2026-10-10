@@ -40,7 +40,7 @@ extension VaultStore {
         }
     }
 
-    /// For a new vault: create a key only when the key store reports it does not exist.
+    /// For a new vault. Only create a key when the key store says there isn't one.
     func readOrCreateNewVaultKey(_ vaultID: VaultID) async throws -> SymmetricKey {
         do {
             return try await keyStore.readVaultKey(for: vaultID)
@@ -55,7 +55,7 @@ extension VaultStore {
         }
     }
 
-    /// Keeps the Keychain status so the app can tell "passcode turned off" (-25293) apart.
+    /// Keeps the Keychain status so the app can recognise "passcode turned off" (-25293).
     static func unavailable(_ error: any Error) -> VaultError {
         if case KeyStoreError.unavailable(let status) = error {
             return .vaultKeyUnavailable(status: status)

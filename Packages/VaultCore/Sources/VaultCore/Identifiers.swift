@@ -11,8 +11,8 @@
 
 import Foundation
 
-/// A UUID-based identifier. Its text form is the lowercase UUID string, used the same
-/// way everywhere: in JSON, in associated data, in file names and as the HKDF salt.
+/// A UUID-based identifier. Its text form is the lowercase UUID string, and that same text
+/// goes into JSON, associated data, file names and the HKDF salt.
 public struct Identifier<Kind>: Hashable, Sendable {
     public let uuid: UUID
 

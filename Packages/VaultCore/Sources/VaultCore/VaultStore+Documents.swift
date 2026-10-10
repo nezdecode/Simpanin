@@ -43,7 +43,7 @@ extension VaultStore {
         try entry(id).pageIds.map { try page($0, of: id) }
     }
 
-    /// The page file's header must name this document and page, or it fails to open.
+    /// Fails to open unless the page file's header names this document and page.
     public func page(_ pageID: PageID, of id: DocumentID) throws -> Page {
         let entry = try entry(id)
         guard entry.pageIds.contains(pageID) else { throw VaultError.pageNotFound }

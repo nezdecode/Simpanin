@@ -28,9 +28,9 @@ extension VaultStore {
         var index: VaultIndex
         var source: IndexSource
         var unreadablePages = 0
-        /// index.prev.enc still lists documents that index.enc dropped (an interrupted purge).
+        /// index.prev.enc still lists documents that index.enc dropped, after an interrupted purge.
         var previousHoldsRemovedDocuments = false
-        /// Unreferenced pages are uncommitted leftovers and may be deleted.
+        /// Unreferenced pages are leftovers from changes that never committed, so they can go.
         var allowsOrphanCleanup = false
     }
 
@@ -41,7 +41,7 @@ extension VaultStore {
         guard let plain = try? VaultCrypto.open(sealed, with: indexKey, as: .index(vaultID)) else { return .unreadable }
         struct VersionProbe: Decodable { var schemaVersion: Int }
         guard let probe = try? VaultJSON.decoder.decode(VersionProbe.self, from: plain) else { return .unreadable }
-        // A newer build wrote this vault: stop rather than fall back and overwrite it.
+        // A newer build wrote this vault. Stop, rather than fall back and overwrite it.
         guard probe.schemaVersion <= VaultIndex.currentSchemaVersion else { throw VaultError.unsupportedVersion }
         guard let index = try? VaultJSON.decoder.decode(VaultIndex.self, from: plain) else { return .unreadable }
         return .readable(index)
@@ -63,7 +63,7 @@ extension VaultStore {
             // A crash between the two index writes: the newer change never committed.
             return LoadedIndex(index: prev, source: .previous, allowsOrphanCleanup: true)
         case (_, .readable(let prev)):
-            // index.enc is bad or stale, but its pages may be committed: keep them.
+            // index.enc is bad or stale, but its pages may be committed, so keep them.
             var loaded = LoadedIndex(index: prev, source: .previous)
             loaded.index.documents = try reattachPages(
                 to: prev.documents, wrapKey: wrapKey,
@@ -75,7 +75,8 @@ extension VaultStore {
             loaded.index.documents = try reattachPages(to: [], wrapKey: wrapKey, unreadable: &loaded.unreadablePages)
             let recoveredPages = loaded.index.documents.reduce(0) { $0 + $1.pageIds.count }
             if recoveredPages == 0, indexFilesExist || loaded.unreadablePages > 0 {
-                // Nothing opens with this key. Most likely the wrong key: change nothing.
+                // Nothing opens with this key, which most likely means it's the wrong one.
+                // Change nothing.
                 throw VaultError.vaultUnreadable
             }
             return loaded
@@ -154,7 +155,7 @@ extension VaultStore {
                         pageIds: [info.id]))
             }
         }
-        // Restore page order from the header positions; ties keep file-time order.
+        // Restore page order from the header positions. Ties keep file-time order.
         for index in result.indices where touched.contains(result[index].id) {
             let ordered = result[index].pageIds.enumerated().map { offset, pageID in
                 (pageID, positions[pageID] ?? storedPosition(of: pageID) ?? Int.max, offset)

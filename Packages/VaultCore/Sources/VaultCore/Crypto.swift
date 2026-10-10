@@ -12,8 +12,8 @@
 import Crypto
 import Foundation
 
-/// Associated data bound to every seal. The strings are part of the v1 on-disk format
-/// (design doc, "On-disk format"); changing one makes existing vaults unreadable.
+/// Associated data bound to every seal. These strings are part of the v1 file format, so
+/// changing one makes every existing vault unreadable.
 public enum AssociatedData: Sendable, Equatable {
     /// index.enc and index.prev.enc: "index|v1|<vaultId>"
     case index(VaultID)
@@ -72,7 +72,7 @@ public enum VaultCrypto {
         return combined
     }
 
-    /// Any failure (wrong key or associated data, tampered bytes) is `.authenticationFailed`.
+    /// Every failure throws `.authenticationFailed`, whatever the cause.
     public static func open(_ sealed: Data, with key: SymmetricKey, as associatedData: AssociatedData) throws -> Data {
         do {
             let box = try AES.GCM.SealedBox(combined: sealed)
@@ -82,8 +82,8 @@ public enum VaultCrypto {
         }
     }
 
-    /// Seals a document key with the wrap key using AES-GCM (not AES.KeyWrap, which
-    /// cannot bind associated data) and "dk|v1|<docId>".
+    /// Seals a document key with the wrap key. This uses AES-GCM rather than AES.KeyWrap,
+    /// because KeyWrap can't bind associated data.
     public static func sealDocumentKey(_ key: SymmetricKey, with wrapKey: SymmetricKey, documentID: DocumentID) throws
         -> Data
     {

@@ -12,27 +12,26 @@
 /// Errors from VaultCore. Cases carry no ids, field values or file contents, so they
 /// are safe to log.
 public enum VaultError: Error, Equatable, Sendable {
-    /// Sealed data failed to open: wrong key, wrong associated data, or tampered bytes.
+    /// Sealed data didn't open. The key or associated data was wrong, or the bytes were changed.
     case authenticationFailed
-    /// A file could not be decoded (bad JSON, bad header, wrong key length).
+    /// A file couldn't be decoded, for example bad JSON, a bad header or a key of the wrong length.
     case corruptFile
     /// A file has a format or schema version newer than this build understands.
     case unsupportedVersion
-    /// The vault key exists but cannot be read now (locked, passcode off, cancelled), so the
-    /// vault must not be recreated. `status` is the Keychain status, when there is one.
+    /// The vault key exists but can't be read right now, so don't recreate the vault. `status`
+    /// is the Keychain status code, if there was one.
     case vaultKeyUnavailable(status: Int32?)
-    /// vault.json exists but its key is gone. Never answered with a new key: that would
-    /// orphan every document.
+    /// vault.json is there but its key isn't. Don't make a new key, or every document is lost.
     case vaultKeyMissing
-    /// Vault files exist but vault.json does not; refuse to create a new vault over them.
+    /// There are vault files but no vault.json, so don't create a new vault on top of them.
     case vaultHeaderMissing
     /// Neither index file nor any page file could be opened with this vault key.
     case vaultUnreadable
-    /// The vault is locked; call `open()` first.
+    /// The vault is locked. Call `open()` first.
     case locked
     case documentNotFound
     case pageNotFound
-    /// The document is in Recently deleted; restore it before editing or changing pages.
+    /// The document is in Recently deleted. Restore it before editing it or its pages.
     case documentDeleted
     /// A quarantine folder's vault.json is unreadable or names another vault.
     case quarantineUnreadable

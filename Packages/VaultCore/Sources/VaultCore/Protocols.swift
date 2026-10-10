@@ -19,20 +19,21 @@ public enum KeyStoreError: Error, Equatable, Sendable {
     /// The item definitely does not exist (Keychain errSecItemNotFound, -25300).
     /// This is the only error that allows creating a new vault key.
     case itemNotFound
-    /// An item for this vault already exists; it was not overwritten.
+    /// An item for this vault already exists. It was left as it was.
     case itemAlreadyExists
-    /// Any other failure (locked, passcode off, cancelled): the key exists but can't be read now.
+    /// Any other failure, like a locked device or a cancelled prompt. The key exists but
+    /// can't be read right now.
     case unavailable(status: Int32)
 }
 
-/// Holds the vault key. The app implements it with the Keychain; tests use an in-memory store.
+/// Holds the vault key. The app uses the Keychain, and tests use an in-memory store.
 public protocol KeyStore: Sendable {
-    /// Returns the vault key. Throws `KeyStoreError.itemNotFound` only when the item
-    /// does not exist; every other failure must be a different error.
+    /// Returns the vault key. Throw `KeyStoreError.itemNotFound` only when the item doesn't
+    /// exist, and a different error for every other failure.
     func readVaultKey(for vaultID: VaultID) async throws -> SymmetricKey
 
-    /// Generates and stores a new random 256-bit vault key. Must fail with
-    /// `.itemAlreadyExists` rather than overwrite an existing item.
+    /// Generates and stores a new random 256-bit vault key. If an item already exists, fail
+    /// with `.itemAlreadyExists` instead of overwriting it.
     func createVaultKey(for vaultID: VaultID) async throws -> SymmetricKey
 
     func deleteVaultKey(for vaultID: VaultID) async throws
@@ -53,9 +54,9 @@ public struct SystemClock: VaultClock {
 // MARK: - File protection seam
 
 public enum FileProtectionClass: Sendable {
-    /// NSFileProtectionComplete: vault.json, index files, page files.
+    /// NSFileProtectionComplete, for vault.json, the index files and page files.
     case complete
-    /// completeUntilFirstUserAuthentication: projection.json, read by background tasks.
+    /// completeUntilFirstUserAuthentication, for projection.json, which background tasks read.
     case completeUntilFirstUserAuthentication
 }
 

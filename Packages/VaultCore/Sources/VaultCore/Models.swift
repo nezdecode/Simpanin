@@ -90,7 +90,8 @@ extension CalendarDate: Codable {
     }
 }
 
-/// A document's fields (number, name, dates...). Never in the projection, never logged.
+/// A document's fields, like number, name and dates. They never go in the projection and
+/// are never logged.
 public struct DocumentFields: Hashable, Sendable, Codable {
     public var values: [String: String]
     public init(_ values: [String: String] = [:]) { self.values = values }
@@ -131,7 +132,7 @@ public struct KeySlotKind: RawRepresentable, Hashable, Sendable, Codable {
         try container.encode(rawValue)
     }
 
-    /// The MVP slot: the vault key is the Keychain item itself, so nothing is sealed here.
+    /// The MVP slot. The vault key is the Keychain item itself, so nothing is sealed here.
     public static let device = KeySlotKind(rawValue: "device")
 }
 
@@ -148,7 +149,7 @@ public struct KeySlot: Hashable, Sendable, Codable {
     }
 }
 
-/// vault.json: plaintext, holds no secret.
+/// vault.json. It's plaintext and holds no secret.
 public struct VaultHeader: Hashable, Sendable, Codable {
     public static let currentFormatVersion = 1
 
@@ -224,8 +225,8 @@ struct PageHeader: Hashable, Sendable, Codable {
     }
 }
 
-/// Layout: 4-byte big-endian header length, header JSON, then the content sealed with
-/// the document key and "page|v1|<docId>|<pageId>".
+/// A page file is a 4-byte big-endian header length, the header JSON, then the content
+/// sealed with the document key and "page|v1|<docId>|<pageId>".
 struct PageFile {
     static let maxHeaderLength = 64 * 1024
 
@@ -267,7 +268,7 @@ struct PageFile {
 
 // MARK: - projection.json
 
-/// What reminders and widgets may see without Face ID: no title, number, name or page.
+/// What reminders and widgets can see without Face ID. No title, number, name or page.
 public struct ProjectionEntry: Hashable, Sendable, Codable {
     public var id: DocumentID
     public var type: DocumentType
@@ -282,7 +283,7 @@ public struct ProjectionEntry: Hashable, Sendable, Codable {
     }
 }
 
-/// projection.json: plaintext, one entry per live (not deleted) document.
+/// projection.json, in plaintext, with one entry per live document.
 public struct Projection: Hashable, Sendable, Codable {
     public static let currentSchemaVersion = 1
 

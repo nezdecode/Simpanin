@@ -11,7 +11,7 @@
 
 import Foundation
 
-/// A vault that "Mulai vault baru" moved aside, as listed for "Data lama" in Settings.
+/// A vault moved aside by "Mulai vault baru", as listed under "Data lama" in Settings.
 public struct QuarantinedVault: Sendable, Equatable {
     public let vaultID: VaultID
     public let folder: URL
@@ -25,8 +25,8 @@ public struct QuarantineListing: Sendable, Equatable {
 }
 
 extension VaultStore {
-    /// Locks the store and moves the vault folder, unchanged, into `quarantineDirectory` as
-    /// `yyyyMMdd-HHmmss` in UTC (-2, -3 if taken). Deletes nothing; nil if there was no vault.
+    /// Locks the store and moves the vault folder, unchanged, into `quarantineDirectory`, named
+    /// `yyyyMMdd-HHmmss` in UTC with -2, -3 if taken. Returns nil if there was no vault.
     @discardableResult
     public func quarantineVault(to quarantineDirectory: URL) async throws -> URL? {
         if let openTask { _ = try? await openTask.value }
@@ -63,8 +63,8 @@ extension VaultStore {
         return listing
     }
 
-    /// Deletes the Keychain item, then the folder. Refuses a mismatched or in-use vault; if
-    /// the key can't be deleted, the folder stays so the user can try again.
+    /// Deletes the Keychain item, then the folder. Refuses a mismatched vault or the one in use.
+    /// If the key can't be deleted, the folder stays so the user can try again.
     public func deleteQuarantinedVault(_ vault: QuarantinedVault) async throws {
         guard let header = try? readHeader(at: vault.folder.appending(path: "vault.json")),
             header.vaultId == vault.vaultID
@@ -80,7 +80,7 @@ extension VaultStore {
         do {
             try await keyStore.deleteVaultKey(for: vault.vaultID)
         } catch KeyStoreError.itemNotFound {
-            // Already gone: nothing left to delete in the key store.
+            // Already gone, so there's nothing to delete in the key store.
         } catch {
             throw Self.unavailable(error)
         }

@@ -20,7 +20,7 @@ import Testing
 
 actor InMemoryKeyStore: KeyStore {
     enum ReadFailure: Sendable {
-        /// Like errSecAuthFailed (-25293): passcode removed, Face ID failed.
+        /// Like errSecAuthFailed (-25293), after the passcode is removed or Face ID fails.
         case locked
         /// Like errSecInteractionNotAllowed (-25308).
         case interactionNotAllowed
@@ -31,7 +31,7 @@ actor InMemoryKeyStore: KeyStore {
     struct UnexpectedError: Error {}
 
     enum CreateFailure: Sendable {
-        /// Adding the item fails with this Keychain status (for example: no device passcode).
+        /// Adding the item fails with this Keychain status, for example with no device passcode.
         case status(Int32)
         /// Another process created the item between our read and our create.
         case alreadyExists
@@ -110,7 +110,7 @@ final class RecordingFlusher: IndexFlusher {
     private let events = Mutex<[Event]>([])
     private let method: @Sendable (URL) -> FlushMethod
     private let failure: (any Error & Sendable)?
-    /// Fail only when flushing this path (nil: fail every flush, if `failure` is set).
+    /// Fail only when flushing this path. With nil, every flush fails if `failure` is set.
     private let failOnlyAt: URL?
     private let pagesDirectory: URL
 

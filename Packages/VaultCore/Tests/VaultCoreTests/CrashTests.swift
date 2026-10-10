@@ -92,7 +92,7 @@ struct CrashTests {
         try await perform(operation, on: dryStore, base)
         let after = try await dryStore.snapshot()
         let steps = recorder.steps
-        // The design doc's write order; a purge writes the index twice.
+        // The write order. A purge writes the index twice.
         let indexWrite: [WriteStep] = [.indexMovedToPrevious, .indexWritten]
         let indexWrites = operation == .deletePermanently ? indexWrite + indexWrite : indexWrite
         #expect(steps == [.pagesWritten] + indexWrites + [.obsoletePagesDeleted, .projectionWritten])
@@ -112,7 +112,7 @@ struct CrashTests {
             let report = try await reopened.open()
             let expected = steps.prefix(crashStep).contains(.indexWritten) ? after : before
             #expect(try await reopened.snapshot() == expected, "\(label)")
-            // A crash right after index.enc was moved aside: the newest change may be lost.
+            // After a crash right after index.enc was moved aside, the newest change may be lost.
             #expect(report.newestChangeMayBeLost == (steps[crashStep - 1] == .indexMovedToPrevious), "\(label)")
             #expect(!report.recoveredFromPages, "\(label)")
             try await expectConsistent(run, reopened, label)

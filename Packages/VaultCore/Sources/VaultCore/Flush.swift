@@ -13,18 +13,18 @@ import Foundation
 
 /// How the flushes before a deletion were done.
 public enum FlushMethod: Sendable, Equatable {
-    /// fcntl(F_FULLFSYNC): asks the drive to write its cache to permanent storage.
+    /// fcntl(F_FULLFSYNC), which asks the drive to write its cache to permanent storage.
     case fullFsync
     /// fsync, used where F_FULLFSYNC is unavailable or rejected.
     case fsync
 }
 
-/// Flushes a file or folder to permanent storage. A protocol so tests can record flushes.
+/// Flushes a file or folder to permanent storage. It's a protocol so tests can record flushes.
 protocol IndexFlusher: Sendable {
     func flush(_ url: URL) throws -> FlushMethod
 }
 
-/// F_FULLFSYNC, falling back to fsync where it fails or does not exist.
+/// Uses F_FULLFSYNC, and falls back to fsync where that fails or isn't available.
 struct FileSystemFlusher: IndexFlusher {
     /// The F_FULLFSYNC call, replaceable so tests can make it fail.
     var fullSync: @Sendable (Int32) -> Int32 = Self.fullFsync

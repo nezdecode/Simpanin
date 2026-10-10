@@ -69,7 +69,7 @@ struct TamperTests {
         #expect(report.newestChangeMayBeLost)
         #expect(!report.recoveredFromPages)
         // index.prev.enc is one generation older and lacks the SIM. Its page was committed, so
-        // it is re-attached from the page header; only its fields are lost.
+        // it's re-attached from the page header, and only its fields are lost.
         #expect(try await reopened.documents().map(\.id) == [ktp, sim])
         #expect(try await reopened.fields(of: ktp) == Synthetic.ktpFields)
         #expect(try await reopened.document(sim).type == .other)
@@ -106,8 +106,8 @@ struct TamperTests {
     }
 
     @Test func pageSwappedWithinTheSameDocumentFailsToOpen() async throws {
-        // Same document, same key, same sealed key in the header: only the page id in the
-        // associated data ("page|v1|<docId>|<pageId>") can tell page 1 from page 2.
+        // Same document, same key and same sealed key in the header. Only the page id in the
+        // associated data can tell page 1 from page 2.
         let vault = try TestVault()
         let store = vault.makeStore()
         try await store.open()
@@ -137,7 +137,7 @@ struct TamperTests {
         let report = try await reopened.open()
         #expect(report.indexSource == .previous)
         #expect(report.newestChangeMayBeLost)
-        // The stale copy is not used: the vault shows index.prev.enc's newer generation.
+        // The stale copy isn't used. The vault shows index.prev.enc's newer generation.
         #expect(try await reopened.recentlyDeleted().map(\.id) == [ktp])
         #expect(try await vault.readIndex(at: vault.indexURL).generation > previous.generation)
     }

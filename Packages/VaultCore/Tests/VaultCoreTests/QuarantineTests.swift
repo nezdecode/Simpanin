@@ -15,8 +15,8 @@ import Testing
 
 @testable import VaultCore
 
-/// "Mulai vault baru": `quarantineVault(to:)` moves the vault folder aside unchanged, then
-/// `open()` creates a new vault. Also listing and deleting quarantined vaults.
+/// "Mulai vault baru". `quarantineVault(to:)` moves the vault folder aside unchanged, then
+/// `open()` creates a new vault. Also covers listing and deleting quarantined vaults.
 @Suite("Quarantine")
 struct QuarantineTests {
     /// 2026-10-04 13:05:09 UTC
@@ -45,7 +45,7 @@ struct QuarantineTests {
             oldFiles: try TestVault.files(in: vault.root), documentID: id)
     }
 
-    /// The old files are intact at `quarantined`; opening created an empty vault with a new id.
+    /// The old files are intact at `quarantined`, and opening created an empty vault with a new id.
     func expectFreshVault(_ setup: Setup, _ store: VaultStore, quarantined: URL?) async throws {
         let moved = try #require(quarantined)
         #expect(try TestVault.files(in: moved) == setup.oldFiles)
@@ -170,7 +170,7 @@ struct QuarantineTests {
         let secondID: VaultID
     }
 
-    /// Two quarantined vaults (the first one's key present), and a new live vault.
+    /// Two quarantined vaults, the first one still with its key, and a new live vault.
     func makeTwoQuarantines() async throws -> TwoQuarantines {
         let setup = try await makeVault()
         let store = setup.vault.makeStore()

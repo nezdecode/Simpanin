@@ -9,6 +9,5 @@
 //  file, You can obtain one at https://mozilla.org/MPL/2.0/.
 //
 
-// VaultCore: encrypted document storage for Simpanin.
-// Depends only on Foundation and swift-crypto (`import Crypto`). Never import
-// UIKit, SwiftUI, Vision, Security, LocalAuthentication, CloudKit or Photos here.
+// VaultCore is Simpanin's encrypted document storage. It only depends on Foundation and
+// swift-crypto, so keep platform frameworks like UIKit and Security out of it.

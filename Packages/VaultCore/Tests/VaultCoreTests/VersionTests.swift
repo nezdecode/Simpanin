@@ -57,7 +57,7 @@ struct VersionTests {
         try VaultCrypto.seal(newer, with: indexKey, as: .index(header.vaultId)).write(to: vault.indexURL)
         let before = try TestVault.files(in: vault.base)
 
-        // index.prev.enc is still a readable v1 index; the store must not fall back to it.
+        // index.prev.enc is still a readable v1 index, but the store must not fall back to it.
         await #expect(throws: VaultError.unsupportedVersion) { try await vault.makeStore().open() }
         #expect(try TestVault.files(in: vault.base) == before)
     }
@@ -77,8 +77,8 @@ struct VersionTests {
         let before = try TestVault.files(in: vault.base)
 
         await #expect(throws: VaultError.unsupportedVersion) { try await store.page(pageID, of: id) }
-        // Reopening, an hour later, keeps the file: it is referenced, and a newer page is
-        // never deleted.
+        // Reopening an hour later keeps the file. It's referenced, and a newer page is never
+        // deleted anyway.
         vault.clock.advance(by: 3600)
         try await vault.makeStore().open()
         #expect(try TestVault.files(in: vault.base) == before)

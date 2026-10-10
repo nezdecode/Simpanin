@@ -15,7 +15,7 @@ import Testing
 
 @testable import VaultCore
 
-/// The committed v1 vault must always open. Never replace it; add later versions beside it.
+/// The committed v1 vault must always open. Never replace it, add later versions beside it.
 /// Expected values are frozen literals and hashes, independent of the `Synthetic` helpers.
 @Suite("v1 fixture")
 struct FixtureTests {
@@ -150,7 +150,7 @@ struct FixtureTests {
     }
 
     @Test func v1FixtureOpensFromThePreviousIndex() async throws {
-        // Without index.enc, index.prev.enc (generation 8) is used: the passport is not deleted yet.
+        // Without index.enc, generation 8 in index.prev.enc is used, where the passport isn't deleted yet.
         let vault = try await openableCopy()
         try FileManager.default.removeItem(at: vault.indexURL)
         #expect(try await vault.readIndex(at: vault.previousIndexURL).generation == 8)
@@ -173,8 +173,8 @@ struct FixtureTests {
 
     // MARK: Writing the fixture
 
-    /// Writes the fixture. Refuses if it already exists: the v1 fixture is replaced only by
-    /// deleting it by hand, on purpose. Run with:
+    /// Writes the fixture, but not over an existing one. To replace it, delete the folder by
+    /// hand first. Run with:
     /// SIMPANIN_WRITE_FIXTURES=1 swift test --filter writeV1Fixture
     @Test(.enabled(if: ProcessInfo.processInfo.environment["SIMPANIN_WRITE_FIXTURES"] == "1"))
     // swiftlint:disable:next function_body_length - the nine generations read best as one sequence
