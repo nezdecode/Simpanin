@@ -15,13 +15,23 @@ struct ModelTests {
     // MARK: Identifiers
 
     @Test func identifiersUseOneLowercaseSpelling() throws {
-        #expect(docID.string == "11111111-2222-3333-4444-555555555555")
-        #expect(DocumentID(string: "11111111-2222-3333-4444-555555555555") == docID)
-        #expect(DocumentID(string: "AAAAAAAA-2222-3333-4444-555555555555") == nil)
+        // Hex letters in the id, so an uppercase spelling would show.
+        let lowercase = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
+        let id = DocumentID(try #require(UUID(uuidString: lowercase.uppercased())))
+        #expect(id.string == lowercase)
+        #expect(DocumentID(string: lowercase) == id)
+        #expect(DocumentID(string: lowercase.uppercased()) == nil)
+        #expect(DocumentID(string: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeeE") == nil)
         #expect(DocumentID(string: "not-a-uuid") == nil)
-        let encoded = try VaultJSON.encoder.encode([docID])
-        #expect(String(bytes: encoded, encoding: .utf8) == #"["11111111-2222-3333-4444-555555555555"]"#)
-        #expect(try VaultJSON.decoder.decode([DocumentID].self, from: encoded) == [docID])
+        let encoded = try VaultJSON.encoder.encode([id])
+        #expect(String(bytes: encoded, encoding: .utf8) == #"["\#(lowercase)"]"#)
+        #expect(try VaultJSON.decoder.decode([DocumentID].self, from: encoded) == [id])
+        #expect(throws: DecodingError.self) {
+            try VaultJSON.decoder.decode([DocumentID].self, from: Data(#"["\#(lowercase.uppercased())"]"#.utf8))
+        }
+        // A new random id is lowercase too.
+        let random = PageID()
+        #expect(random.string == random.uuid.uuidString.lowercased())
     }
 
     // MARK: Calendar dates (expiry has no time of day or time zone)
