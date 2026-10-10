@@ -61,6 +61,7 @@ public struct CalendarDate: Hashable, Sendable, Comparable {
     public init?(_ text: String) {
         let parts = text.split(separator: "-", omittingEmptySubsequences: false)
         guard parts.count == 3, parts[0].count == 4, parts[1].count == 2, parts[2].count == 2,
+            text.allSatisfy({ $0 == "-" || ("0"..."9").contains($0) }),
             let year = Int(parts[0]), let month = Int(parts[1]), let day = Int(parts[2])
         else { return nil }
         self.init(year: year, month: month, day: day)

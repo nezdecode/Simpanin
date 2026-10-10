@@ -60,6 +60,12 @@ struct ModelTests {
         #expect(CalendarDate(year: 2030, month: 8, day: 17)! < CalendarDate(year: 2031, month: 1, day: 1)!)
     }
 
+    @Test(arguments: ["+030-08-17", "2030-+8-17", "2030-08-+7"])
+    func calendarDateAcceptsDigitsOnly(_ text: String) {
+        // Int("+030") parses, so a sign used to slip through as a valid year, month or day.
+        #expect(CalendarDate(text) == nil)
+    }
+
     // MARK: Document types are open strings, so a newer type still decodes
 
     @Test func documentTypesKeepUnknownValues() throws {
