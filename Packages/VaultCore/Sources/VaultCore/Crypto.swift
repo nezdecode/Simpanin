@@ -14,7 +14,7 @@ import Foundation
 
 /// Associated data bound to every seal. These strings are part of the v1 file format, so
 /// changing one makes every existing vault unreadable.
-public enum AssociatedData: Sendable, Equatable {
+enum AssociatedData: Sendable, Equatable {
     /// index.enc and index.prev.enc: "index|v1|<vaultId>"
     case index(VaultID)
     /// A document's sealed fields: "fields|v1|<docId>"
@@ -24,7 +24,7 @@ public enum AssociatedData: Sendable, Equatable {
     /// A document key sealed with the wrap key: "dk|v1|<docId>"
     case documentKey(DocumentID)
 
-    public var string: String {
+    var string: String {
         switch self {
         case .index(let vault): "index|v1|\(vault.string)"
         case .fields(let doc): "fields|v1|\(doc.string)"
@@ -37,21 +37,21 @@ public enum AssociatedData: Sendable, Equatable {
 }
 
 /// Key derivation and AES-256-GCM sealing for the vault.
-public enum VaultCrypto {
+enum VaultCrypto {
     static let indexKeyInfo = "vault.index.v1"
     static let wrapKeyInfo = "vault.wrap.v1"
     static let keyByteCount = 32
 
     /// A new random 256-bit key (vault key or document key).
-    public static func newKey() -> SymmetricKey { SymmetricKey(size: .bits256) }
+    static func newKey() -> SymmetricKey { SymmetricKey(size: .bits256) }
 
     /// HKDF-SHA256 from the vault key, info "vault.index.v1", salt = vault id.
-    public static func indexKey(from vaultKey: SymmetricKey, vaultID: VaultID) -> SymmetricKey {
+    static func indexKey(from vaultKey: SymmetricKey, vaultID: VaultID) -> SymmetricKey {
         derive(from: vaultKey, vaultID: vaultID, info: indexKeyInfo)
     }
 
     /// HKDF-SHA256 from the vault key, info "vault.wrap.v1", salt = vault id.
-    public static func wrapKey(from vaultKey: SymmetricKey, vaultID: VaultID) -> SymmetricKey {
+    static func wrapKey(from vaultKey: SymmetricKey, vaultID: VaultID) -> SymmetricKey {
         derive(from: vaultKey, vaultID: vaultID, info: wrapKeyInfo)
     }
 
@@ -65,15 +65,14 @@ public enum VaultCrypto {
     }
 
     /// AES-256-GCM with a fresh random 12-byte nonce. Returns nonce || ciphertext || tag.
-    public static func seal(_ plaintext: Data, with key: SymmetricKey, as associatedData: AssociatedData) throws -> Data
-    {
+    static func seal(_ plaintext: Data, with key: SymmetricKey, as associatedData: AssociatedData) throws -> Data {
         let box = try AES.GCM.seal(plaintext, using: key, authenticating: associatedData.bytes)
         guard let combined = box.combined else { throw VaultError.corruptFile }
         return combined
     }
 
     /// Every failure throws `.authenticationFailed`, whatever the cause.
-    public static func open(_ sealed: Data, with key: SymmetricKey, as associatedData: AssociatedData) throws -> Data {
+    static func open(_ sealed: Data, with key: SymmetricKey, as associatedData: AssociatedData) throws -> Data {
         do {
             let box = try AES.GCM.SealedBox(combined: sealed)
             return try AES.GCM.open(box, using: key, authenticating: associatedData.bytes)
@@ -84,14 +83,14 @@ public enum VaultCrypto {
 
     /// Seals a document key with the wrap key. This uses AES-GCM rather than AES.KeyWrap,
     /// because KeyWrap can't bind associated data.
-    public static func sealDocumentKey(_ key: SymmetricKey, with wrapKey: SymmetricKey, documentID: DocumentID) throws
+    static func sealDocumentKey(_ key: SymmetricKey, with wrapKey: SymmetricKey, documentID: DocumentID) throws
         -> Data
     {
         let raw = key.withUnsafeBytes { Data($0) }
         return try seal(raw, with: wrapKey, as: .documentKey(documentID))
     }
 
-    public static func openDocumentKey(_ sealed: Data, with wrapKey: SymmetricKey, documentID: DocumentID) throws
+    static func openDocumentKey(_ sealed: Data, with wrapKey: SymmetricKey, documentID: DocumentID) throws
         -> SymmetricKey
     {
         let raw = try open(sealed, with: wrapKey, as: .documentKey(documentID))
