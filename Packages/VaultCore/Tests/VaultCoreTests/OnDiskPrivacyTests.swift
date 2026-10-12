@@ -68,4 +68,38 @@ struct OnDiskPrivacyTests {
         #expect(!onDisk(bytes(wrapKey)), "wrap key")
         #expect(!onDisk(bytes(documentKey)), "document key")
     }
+
+    @Test func savingTheSameDocumentTwiceKeepsTwoUnlinkedCopies() async throws {
+        let vault = try TestVault()
+        let store = vault.makeStore()
+        try await store.open()
+        let pages = [Synthetic.page("ktp-front")]
+        let first = try await store.createDocument(
+            type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields, pages: pages)
+        let second = try await store.createDocument(
+            type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields, pages: pages)
+
+        #expect(first != second)
+        #expect(try await store.snapshot().count == 2)
+        for id in [first, second] {
+            #expect(try await store.fields(of: id) == Synthetic.ktpFields)
+            #expect(try await store.pages(of: id).map(\.data) == pages)
+        }
+
+        // Nothing on disk should show the two are the same, so each copy has its own key.
+        let header = try vault.header()
+        let vaultKey = try #require(await vault.keyStore.key(for: header.vaultId))
+        let wrapKey = VaultCrypto.wrapKey(from: vaultKey, vaultID: header.vaultId)
+        let entries = try await vault.readIndex(at: vault.indexURL).documents
+        try #require(entries.count == 2)
+        let keys = try entries.map {
+            try bytes(VaultCrypto.openDocumentKey($0.sealedKey, with: wrapKey, documentID: $0.id))
+        }
+        #expect(keys[0] != keys[1])
+        #expect(entries[0].sealedFields != entries[1].sealedFields)
+        let pageContents = try entries.map { entry in
+            try PageFile(decoding: Data(contentsOf: vault.pageURL(entry.pageIds[0]))).sealedContent
+        }
+        #expect(pageContents[0] != pageContents[1])
+    }
 }
