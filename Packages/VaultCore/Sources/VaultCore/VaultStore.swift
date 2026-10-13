@@ -36,6 +36,9 @@ public struct OpenReport: Sendable, Equatable {
     public var newestChangeMayBeLost = false
     /// Rebuilt from page images. Fields are empty and deleted documents may be back.
     public var recoveredFromPages = false
+    /// The disk was full, so a repair or purge couldn't be written. The vault is open with what
+    /// was loaded; the next save writes the repair, and a later open retries the purge.
+    public var repairWaitingForSpace = false
 }
 
 /// A step of the write order, reported to the crash-simulation hook in tests.
@@ -198,22 +201,37 @@ public actor VaultStore {
             indexFileIsCurrent: loaded.source == .current)
 
         do {
-            if loaded.source != .current || loaded.previousHoldsRemovedDocuments {
-                // Replace a bad or stale index.enc, or finish an interrupted purge.
-                try commit(loaded.index.documents)
-            }
-            try removeLeftoverTempFiles()
-            if loaded.allowsOrphanCleanup {
-                report.removedOrphanPages = try removeOrphanPages(unreadable: &report.unreadablePages)
-            }
-            report.purgedDocuments = try purgeExpired()
-            try afterSave { try writeProjection(try requireState().index.documents) }
+            try repairAndCleanUp(loaded, &report)
         } catch {
             state = nil
             throw error
         }
         lastReport = report
         return report
+    }
+
+    /// Repairs the index, removes leftovers and purges, once the vault is unlocked. A full disk
+    /// must not lock the user out: the vault opens with what was loaded, and a bad index.enc is
+    /// replaced by the next save, never moved to index.prev.enc.
+    private func repairAndCleanUp(_ loaded: LoadedIndex, _ report: inout OpenReport) throws {
+        if loaded.source != .current || loaded.previousHoldsRemovedDocuments {
+            // Replace a bad or stale index.enc, or finish an interrupted purge.
+            do {
+                try commit(loaded.index.documents)
+            } catch VaultError.storageFull {
+                report.repairWaitingForSpace = true
+            }
+        }
+        try removeLeftoverTempFiles()
+        if loaded.allowsOrphanCleanup {
+            report.removedOrphanPages = try removeOrphanPages(unreadable: &report.unreadablePages)
+        }
+        do {
+            report.purgedDocuments = try purgeExpired()
+        } catch VaultError.storageFull {
+            report.repairWaitingForSpace = true
+        }
+        try afterSave { try writeProjection(try requireState().index.documents) }
     }
 
     // MARK: - Helpers
