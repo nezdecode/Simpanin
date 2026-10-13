@@ -95,6 +95,17 @@ final class TestClock: VaultClock {
     func advance(by seconds: TimeInterval) { date.withLock { $0 += seconds } }
 }
 
+// MARK: - File protection
+
+/// Records which class each file was given, so tests on a Mac can check it.
+final class RecordingProtector: FileProtector {
+    private let log = Mutex<[(url: URL, protection: FileProtectionClass)]>([])
+    var calls: [(url: URL, protection: FileProtectionClass)] { log.withLock { $0 } }
+    func protect(_ url: URL, as protection: FileProtectionClass) throws {
+        log.withLock { $0.append((url, protection)) }
+    }
+}
+
 // MARK: - Flush
 
 /// Records every flush and what was on disk at that moment.
