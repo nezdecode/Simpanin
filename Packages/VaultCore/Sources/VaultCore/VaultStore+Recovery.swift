@@ -71,7 +71,7 @@ extension VaultStore {
             let indexFilesExist = !(current.isMissing && previous.isMissing)
             var loaded = LoadedIndex(index: VaultIndex(generation: 0, documents: []), source: .recovered)
             loaded.index.documents = try reattachPages(to: [], wrapKey: wrapKey, unreadable: &loaded.unreadablePages)
-            let recoveredPages = loaded.index.documents.reduce(0) { $0 + $1.pageIds.count }
+            let recoveredPages = loaded.index.documents.reduce(0) { $0 + $1.pageIDs.count }
             if recoveredPages == 0, indexFilesExist || loaded.unreadablePages > 0 {
                 // Nothing opens with this key, which most likely means it's the wrong one.
                 // Change nothing.
@@ -108,11 +108,11 @@ extension VaultStore {
         guard let data = try readFile(at: info.url),
             let file = try? PageFile(decoding: data),
             file.header.formatVersion == PageHeader.currentFormatVersion,
-            file.header.pageId == info.id,
+            file.header.pageID == info.id,
             let key = try? VaultCrypto.openDocumentKey(
                 file.header.sealedKey, with: wrapKey,
-                documentID: file.header.docId),
-            (try? VaultCrypto.open(file.sealedContent, with: key, as: .page(file.header.docId, info.id))) != nil
+                documentID: file.header.documentID),
+            (try? VaultCrypto.open(file.sealedContent, with: key, as: .page(file.header.documentID, info.id))) != nil
         else { return nil }
         return file.header
     }
@@ -127,10 +127,10 @@ extension VaultStore {
         let existing = Set(files.map(\.id))
         var result = documents.map { entry in
             var entry = entry
-            entry.pageIds = entry.pageIds.filter(existing.contains)
+            entry.pageIDs = entry.pageIDs.filter(existing.contains)
             return entry
         }
-        let referenced = Set(result.flatMap(\.pageIds))
+        let referenced = Set(result.flatMap(\.pageIDs))
         let stamp = now()
         var positions: [PageID: Int] = [:]
         var touched: Set<DocumentID> = []
@@ -140,25 +140,27 @@ extension VaultStore {
                 continue
             }
             positions[info.id] = header.position
-            touched.insert(header.docId)
-            if let position = result.firstIndex(where: { $0.id == header.docId }) {
-                result[position].pageIds.append(info.id)
+            touched.insert(header.documentID)
+            if let position = result.firstIndex(where: { $0.id == header.documentID }) {
+                result[position].pageIDs.append(info.id)
             } else {
-                let key = try VaultCrypto.openDocumentKey(header.sealedKey, with: wrapKey, documentID: header.docId)
+                let key = try VaultCrypto.openDocumentKey(
+                    header.sealedKey, with: wrapKey, documentID: header.documentID)
                 result.append(
                     IndexEntry(
-                        id: header.docId, type: .other, createdAt: stamp, updatedAt: stamp, expiry: nil, pinned: false,
+                        id: header.documentID, type: .other, createdAt: stamp, updatedAt: stamp, expiry: nil,
+                        pinned: false,
                         deletedAt: nil, sealedKey: header.sealedKey,
-                        sealedFields: try sealFields(DocumentFields(), key: key, documentID: header.docId),
-                        pageIds: [info.id]))
+                        sealedFields: try sealFields(DocumentFields(), key: key, documentID: header.documentID),
+                        pageIDs: [info.id]))
             }
         }
         // Restore page order from the header positions. Ties keep file-time order.
         for index in result.indices where touched.contains(result[index].id) {
-            let ordered = result[index].pageIds.enumerated().map { offset, pageID in
+            let ordered = result[index].pageIDs.enumerated().map { offset, pageID in
                 (pageID, positions[pageID] ?? storedPosition(of: pageID) ?? Int.max, offset)
             }
-            result[index].pageIds = ordered.sorted { ($0.1, $0.2) < ($1.1, $1.2) }.map(\.0)
+            result[index].pageIDs = ordered.sorted { ($0.1, $0.2) < ($1.1, $1.2) }.map(\.0)
         }
         return result
     }
@@ -173,7 +175,7 @@ extension VaultStore {
     /// key. Unreadable files are always kept.
     func removeOrphanPages(unreadable: inout Int) throws -> Int {
         let state = try requireState()
-        let referenced = Set(state.index.documents.flatMap(\.pageIds))
+        let referenced = Set(state.index.documents.flatMap(\.pageIDs))
         let now = clock.now
         var removed = 0
         for info in try listPageFiles() where !referenced.contains(info.id) {

@@ -50,7 +50,7 @@ struct TamperTests {
         let pageID = try await store.document(ktp).pageIDs[0]
         let url = vault.pageURL(pageID)
         let original = try Data(contentsOf: url)
-        // Change one character of the docId inside the plaintext header.
+        // Change one character of the documentID inside the plaintext header.
         let docText = Data(ktp.string.utf8)
         let index = try #require(original.range(of: docText)).lowerBound + 2
         var data = original

@@ -40,10 +40,10 @@ struct FlushTests {
 
     func generation(of sealedIndex: Data, in vault: TestVault) async throws -> VaultIndex {
         let header = try vault.header()
-        let key = try #require(await vault.keyStore.key(for: header.vaultId))
+        let key = try #require(await vault.keyStore.key(for: header.vaultID))
         let plain = try VaultCrypto.open(
-            sealedIndex, with: VaultCrypto.indexKey(from: key, vaultID: header.vaultId),
-            as: .index(header.vaultId))
+            sealedIndex, with: VaultCrypto.indexKey(from: key, vaultID: header.vaultID),
+            as: .index(header.vaultID))
         return try VaultJSON.decoder.decode(VaultIndex.self, from: plain)
     }
 
@@ -81,7 +81,7 @@ struct FlushTests {
         // The index flushed is the new generation, pointing at the new page...
         let flushed = try await generation(of: events[2].contents, in: vault)
         #expect(flushed.generation == generationBefore + 1)
-        #expect(flushed.documents.first?.pageIds.first == new)
+        #expect(flushed.documents.first?.pageIDs.first == new)
         // ...and the old page still existed at every flush.
         for event in events { #expect(event.pageFiles.contains("\(old.string).enc")) }
         #expect(!FileManager.default.fileExists(atPath: vault.pageURL(old).path))

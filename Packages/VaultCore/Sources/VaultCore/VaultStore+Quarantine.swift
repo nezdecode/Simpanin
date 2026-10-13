@@ -54,7 +54,7 @@ extension VaultStore {
             if let header = try? readHeader(at: folder.appending(path: "vault.json")) {
                 listing.vaults.append(
                     QuarantinedVault(
-                        vaultID: header.vaultId, folder: folder,
+                        vaultID: header.vaultID, folder: folder,
                         sizeInBytes: try folderSize(folder)))
             } else {
                 listing.unreadableFolders.append(folder)
@@ -67,14 +67,14 @@ extension VaultStore {
     /// If the key can't be deleted, the folder stays so the user can try again.
     public func deleteQuarantinedVault(_ vault: QuarantinedVault) async throws {
         guard let header = try? readHeader(at: vault.folder.appending(path: "vault.json")),
-            header.vaultId == vault.vaultID
+            header.vaultID == vault.vaultID
         else {
             throw VaultError.quarantineUnreadable
         }
-        var liveID = state?.header.vaultId
+        var liveID = state?.header.vaultID
         if liveID == nil, FileManager.default.fileExists(atPath: headerURL.path) {
             // Throws if the live vault.json can't be read, rather than guess it's another vault.
-            liveID = try readHeader(at: headerURL).vaultId
+            liveID = try readHeader(at: headerURL).vaultID
         }
         guard liveID != vault.vaultID,
             vault.folder.standardizedFileURL.path != root.standardizedFileURL.path

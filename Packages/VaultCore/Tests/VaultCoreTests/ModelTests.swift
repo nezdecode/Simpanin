@@ -80,7 +80,7 @@ struct ModelTests {
     @Test func vaultHeaderHoldsKeySlotsAsAList() throws {
         let vaultID = VaultID()
         let created = Date(timeIntervalSince1970: 1_790_000_000)
-        let header = VaultHeader(vaultId: vaultID, keySlots: [KeySlot(kind: .device, createdAt: created)])
+        let header = VaultHeader(vaultID: vaultID, keySlots: [KeySlot(kind: .device, createdAt: created)])
         let object = try jsonObject(VaultJSON.encoder.encode(header))
         #expect(Set(object.keys) == ["formatVersion", "vaultId", "keySlots"])
         #expect(object["formatVersion"] as? Int == 1)
@@ -101,7 +101,7 @@ struct ModelTests {
             createdAt: Date(timeIntervalSince1970: 1_790_000_000),
             updatedAt: Date(timeIntervalSince1970: 1_790_000_100),
             expiry: CalendarDate(year: 2030, month: 8, day: 17), pinned: true, deletedAt: nil,
-            sealedKey: Data([1, 2, 3]), sealedFields: Data([4, 5, 6]), pageIds: [pageID]
+            sealedKey: Data([1, 2, 3]), sealedFields: Data([4, 5, 6]), pageIDs: [pageID]
         )
         let index = VaultIndex(generation: 7, documents: [entry])
         let object = try jsonObject(VaultJSON.encoder.encode(index))
@@ -125,7 +125,7 @@ struct ModelTests {
             createdAt: Date(timeIntervalSince1970: 1_790_000_000),
             updatedAt: Date(timeIntervalSince1970: 1_790_000_000), expiry: nil, pinned: false,
             deletedAt: Date(timeIntervalSince1970: 1_790_000_200),
-            sealedKey: Data([1]), sealedFields: Data([2]), pageIds: [])
+            sealedKey: Data([1]), sealedFields: Data([2]), pageIDs: [])
         let object = try jsonObject(VaultJSON.encoder.encode(VaultIndex(generation: 1, documents: [entry])))
         let doc = try #require((object["documents"] as? [[String: Any]])?.first)
         #expect(doc["deletedAt"] as? String == "2026-09-21T14:16:40Z")
@@ -134,7 +134,8 @@ struct ModelTests {
     // MARK: pages/<pageId>.enc
 
     @Test func pageFileLayoutIsLengthPrefixedHeaderThenSealedBytes() throws {
-        let header = PageHeader(docId: docID, pageId: pageID, position: 1, sealedKey: Data(repeating: 7, count: 60))
+        let header = PageHeader(
+            documentID: docID, pageID: pageID, position: 1, sealedKey: Data(repeating: 7, count: 60))
         let sealed = Data(repeating: 9, count: 40)
         let encoded = try PageFile(header: header, sealedContent: sealed).encoded()
 
@@ -152,7 +153,7 @@ struct ModelTests {
 
     @Test func truncatedPageFileIsCorrupt() throws {
         let encoded = try PageFile(
-            header: PageHeader(docId: docID, pageId: pageID, position: 0, sealedKey: Data([1])),
+            header: PageHeader(documentID: docID, pageID: pageID, position: 0, sealedKey: Data([1])),
             sealedContent: Data([2])
         ).encoded()
         try #require(encoded.count > 10)
@@ -169,7 +170,7 @@ struct ModelTests {
 
     @Test func pageFileDecodesFromASlice() throws {
         let file = PageFile(
-            header: PageHeader(docId: docID, pageId: pageID, position: 2, sealedKey: Data([1, 2])),
+            header: PageHeader(documentID: docID, pageID: pageID, position: 2, sealedKey: Data([1, 2])),
             sealedContent: Data(repeating: 9, count: 30))
         // A slice keeps its parent's indices, so it starts at 3 here, not 0.
         let slice = (Data([0xAA, 0xBB, 0xCC]) + (try file.encoded())).dropFirst(3)

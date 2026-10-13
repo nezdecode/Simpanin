@@ -44,11 +44,11 @@ struct PurgeTests {
 
         let entry = try #require(try await vault.readIndex(at: vault.indexURL).documents.first { $0.id == purged })
         let header = try vault.header()
-        let vaultKey = try #require(await vault.keyStore.key(for: header.vaultId))
-        let wrapKey = VaultCrypto.wrapKey(from: vaultKey, vaultID: header.vaultId)
+        let vaultKey = try #require(await vault.keyStore.key(for: header.vaultID))
+        let wrapKey = VaultCrypto.wrapKey(from: vaultKey, vaultID: header.vaultID)
         let rawKey = bytes(try VaultCrypto.openDocumentKey(entry.sealedKey, with: wrapKey, documentID: purged))
         return Setup(
-            vault: vault, store: store, purged: purged, kept: kept, purgedPages: entry.pageIds,
+            vault: vault, store: store, purged: purged, kept: kept, purgedPages: entry.pageIDs,
             sealedKey: entry.sealedKey, rawKey: rawKey, deletedAt: try #require(entry.deletedAt))
     }
 
@@ -70,7 +70,7 @@ struct PurgeTests {
         for file in try setup.vault.pageFiles() {
             let header = try PageFile(decoding: Data(contentsOf: file)).header
             #expect(header.sealedKey != setup.sealedKey, "sealed key in \(file.lastPathComponent)")
-            #expect(header.docId != setup.purged, "page of the purged document: \(file.lastPathComponent)")
+            #expect(header.documentID != setup.purged, "page of the purged document: \(file.lastPathComponent)")
         }
         // The document id appears as plain text in page headers, so a byte scan does work for it.
         for file in try setup.vault.allFiles() {

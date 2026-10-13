@@ -38,7 +38,7 @@ struct QuarantineTests {
             type: .ktp, expiry: nil, pinned: false,
             fields: Synthetic.ktpFields, pages: [Synthetic.page("ktp")])
         let header = try vault.header()
-        let key = try #require(await vault.keyStore.key(for: header.vaultId))
+        let key = try #require(await vault.keyStore.key(for: header.vaultID))
         vault.clock.set(Self.resetTime)
         return Setup(
             vault: vault, oldHeader: header, oldKey: key,
@@ -50,18 +50,18 @@ struct QuarantineTests {
         let moved = try #require(quarantined)
         #expect(try TestVault.files(in: moved) == setup.oldFiles)
         let header = try setup.vault.header()
-        #expect(header.vaultId != setup.oldHeader.vaultId)
+        #expect(header.vaultID != setup.oldHeader.vaultID)
         #expect(try await store.documents().isEmpty)
         #expect(try await store.recentlyDeleted().isEmpty)
         #expect(try setup.vault.projection().documents.isEmpty)
-        #expect(await setup.vault.keyStore.key(for: header.vaultId) != nil)
+        #expect(await setup.vault.keyStore.key(for: header.vaultID) != nil)
     }
 
     // MARK: Moving the vault aside
 
     @Test func quarantineThenOpenAfterMissingKey() async throws {
         let setup = try await makeVault()
-        await setup.vault.keyStore.setKey(nil, for: setup.oldHeader.vaultId)
+        await setup.vault.keyStore.setKey(nil, for: setup.oldHeader.vaultID)
         let store = setup.vault.makeStore()
         await #expect(throws: VaultError.vaultKeyMissing) { try await store.open() }
 
@@ -77,7 +77,7 @@ struct QuarantineTests {
     @Test func quarantineKeepsOldKeyAndFilesRecoverable() async throws {
         let setup = try await makeVault()
         let wrongKey = VaultCrypto.newKey()
-        await setup.vault.keyStore.setKey(wrongKey, for: setup.oldHeader.vaultId)
+        await setup.vault.keyStore.setKey(wrongKey, for: setup.oldHeader.vaultID)
         let store = setup.vault.makeStore()
         await #expect(throws: VaultError.vaultUnreadable) { try await store.open() }
 
@@ -85,12 +85,12 @@ struct QuarantineTests {
         try await store.open()
         try await expectFreshVault(setup, store, quarantined: moved)
         // The old Keychain item is left exactly as it was.
-        #expect(bytes(try #require(await setup.vault.keyStore.key(for: setup.oldHeader.vaultId))) == bytes(wrongKey))
+        #expect(bytes(try #require(await setup.vault.keyStore.key(for: setup.oldHeader.vaultID))) == bytes(wrongKey))
 
         // With the right key, the quarantined vault still opens with its documents.
         let later = try TestVault(clock: TestClock(Self.resetTime))
         try FileManager.default.copyItem(at: moved, to: later.root)
-        await later.keyStore.setKey(setup.oldKey, for: setup.oldHeader.vaultId)
+        await later.keyStore.setKey(setup.oldKey, for: setup.oldHeader.vaultID)
         let restored = later.makeStore()
         try await restored.open()
         #expect(try await restored.fields(of: setup.documentID) == Synthetic.ktpFields)
@@ -179,7 +179,7 @@ struct QuarantineTests {
         _ = try await store.createDocument(
             type: .sim, expiry: nil, pinned: false,
             fields: Synthetic.simFields, pages: [Synthetic.page("sim")])
-        let secondID = try setup.vault.header().vaultId
+        let secondID = try setup.vault.header().vaultID
         setup.vault.clock.advance(by: 60)
         let second = try #require(try await store.quarantineVault(to: setup.vault.quarantineURL))
         try await store.open()
@@ -204,7 +204,7 @@ struct QuarantineTests {
         let before = try TestVault.files(in: quarantines.setup.vault.quarantineURL)
 
         let listing = try await quarantines.store.quarantinedVaults(in: quarantines.setup.vault.quarantineURL)
-        #expect(listing.vaults.map(\.vaultID) == [quarantines.setup.oldHeader.vaultId, quarantines.secondID])
+        #expect(listing.vaults.map(\.vaultID) == [quarantines.setup.oldHeader.vaultID, quarantines.secondID])
         #expect(
             listing.vaults.map { $0.folder.standardizedFileURL }
                 == [quarantines.first, quarantines.second].map(\.standardizedFileURL))
@@ -229,7 +229,7 @@ struct QuarantineTests {
 
         try await quarantines.store.deleteQuarantinedVault(listing.vaults[0])
         #expect(!FileManager.default.fileExists(atPath: quarantines.first.path))
-        #expect(await quarantines.setup.vault.keyStore.key(for: quarantines.setup.oldHeader.vaultId) == nil)
+        #expect(await quarantines.setup.vault.keyStore.key(for: quarantines.setup.oldHeader.vaultID) == nil)
         // The other quarantine, its key and the live vault are untouched.
         #expect(try TestVault.files(in: quarantines.second) == secondFiles)
         #expect(await quarantines.setup.vault.keyStore.key(for: quarantines.secondID) != nil)
@@ -241,7 +241,7 @@ struct QuarantineTests {
 
     @Test func deletingWhenTheKeyIsAlreadyGoneStillRemovesTheFolder() async throws {
         let quarantines = try await makeTwoQuarantines()
-        await quarantines.setup.vault.keyStore.setKey(nil, for: quarantines.setup.oldHeader.vaultId)
+        await quarantines.setup.vault.keyStore.setKey(nil, for: quarantines.setup.oldHeader.vaultID)
         let listing = try await quarantines.store.quarantinedVaults(in: quarantines.setup.vault.quarantineURL)
         try await quarantines.store.deleteQuarantinedVault(listing.vaults[0])
         #expect(!FileManager.default.fileExists(atPath: quarantines.first.path))
@@ -267,7 +267,7 @@ struct QuarantineTests {
             try await quarantines.store.deleteQuarantinedVault(listing.vaults[0])
         }
         #expect(try TestVault.files(in: quarantines.first) == files)
-        #expect(await quarantines.setup.vault.keyStore.key(for: quarantines.setup.oldHeader.vaultId) != nil)
+        #expect(await quarantines.setup.vault.keyStore.key(for: quarantines.setup.oldHeader.vaultID) != nil)
         #expect(await quarantines.setup.vault.keyStore.deleteCount == 0)
     }
 
@@ -287,7 +287,7 @@ struct QuarantineTests {
     @Test func refusesTheVaultInUse() async throws {
         // A copy of the live vault inside Quarantine/ must never cost the live vault its key.
         let quarantines = try await makeTwoQuarantines()
-        let liveID = try quarantines.setup.vault.header().vaultId
+        let liveID = try quarantines.setup.vault.header().vaultID
         let copy = quarantines.setup.vault.quarantineURL.appending(path: "20261004-160000", directoryHint: .isDirectory)
         try FileManager.default.copyItem(at: quarantines.setup.vault.root, to: copy)
         let entry = try #require(

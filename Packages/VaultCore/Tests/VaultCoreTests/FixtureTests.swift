@@ -68,7 +68,7 @@ struct FixtureTests {
         }
         let keyText = try String(contentsOf: Self.fixtureURL.appending(path: Self.keyFileName), encoding: .utf8)
         let keyData = try #require(Data(base64Encoded: keyText.trimmingCharacters(in: .whitespacesAndNewlines)))
-        await vault.keyStore.setKey(SymmetricKey(data: keyData), for: try vault.header().vaultId)
+        await vault.keyStore.setKey(SymmetricKey(data: keyData), for: try vault.header().vaultID)
         return vault
     }
 
@@ -228,7 +228,7 @@ struct FixtureTests {
         try await store.delete(passport)  // 9
 
         let header = try vault.header()
-        let key = try #require(await vault.keyStore.key(for: header.vaultId))
+        let key = try #require(await vault.keyStore.key(for: header.vaultID))
         let fileManager = FileManager.default
         try fileManager.createDirectory(at: Self.fixtureURL, withIntermediateDirectories: true)
         try fileManager.copyItem(at: vault.root, to: Self.fixtureURL.appending(path: "Vault"))

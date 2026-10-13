@@ -66,7 +66,7 @@ extension VaultStore {
         let next = VaultIndex(generation: state.index.generation + 1, documents: documents)
         let sealed = try VaultCrypto.seal(
             VaultJSON.encoder.encode(next), with: state.indexKey,
-            as: .index(state.header.vaultId))
+            as: .index(state.header.vaultID))
         let fileManager = FileManager.default
         if state.indexFileIsCurrent, fileManager.fileExists(atPath: indexURL.path) {
             if fileManager.fileExists(atPath: previousIndexURL.path) {

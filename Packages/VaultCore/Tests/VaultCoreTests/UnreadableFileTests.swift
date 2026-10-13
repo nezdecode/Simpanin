@@ -81,7 +81,7 @@ struct UnreadableFileTests {
         // A copy of the live vault in Quarantine/. If the live vault.json can't be read,
         // deleting the copy must not go ahead, because it would delete the live key.
         let (vault, _) = try await makeEditedKTP()
-        let liveID = try vault.header().vaultId
+        let liveID = try vault.header().vaultID
         let copy = vault.quarantineURL.appending(path: "20261013-090000", directoryHint: .isDirectory)
         try FileManager.default.createDirectory(at: vault.quarantineURL, withIntermediateDirectories: true)
         try FileManager.default.copyItem(at: vault.root, to: copy)

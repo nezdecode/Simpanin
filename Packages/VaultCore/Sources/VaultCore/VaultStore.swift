@@ -153,12 +153,12 @@ public actor VaultStore {
         let vaultKey: SymmetricKey
         if fileManager.fileExists(atPath: headerURL.path) {
             header = try readHeader(at: headerURL)
-            vaultKey = try await readExistingVaultKey(header.vaultId)
+            vaultKey = try await readExistingVaultKey(header.vaultID)
         } else {
             guard try !vaultFilesExist() else { throw VaultError.vaultHeaderMissing }
             let vaultID = VaultID()
             vaultKey = try await readOrCreateNewVaultKey(vaultID)
-            header = VaultHeader(vaultId: vaultID, keySlots: [KeySlot(kind: .device, createdAt: now())])
+            header = VaultHeader(vaultID: vaultID, keySlots: [KeySlot(kind: .device, createdAt: now())])
             try fileManager.createDirectory(at: pagesDirectory, withIntermediateDirectories: true)
             try write(VaultJSON.encoder.encode(header), to: headerURL, protection: .complete)
             report.createdVault = true
@@ -166,9 +166,9 @@ public actor VaultStore {
         guard vaultKey.bitCount == 256 else { throw VaultError.vaultUnreadable }
         try fileManager.createDirectory(at: pagesDirectory, withIntermediateDirectories: true)
 
-        let indexKey = VaultCrypto.indexKey(from: vaultKey, vaultID: header.vaultId)
-        let wrapKey = VaultCrypto.wrapKey(from: vaultKey, vaultID: header.vaultId)
-        let loaded = try loadIndex(vaultID: header.vaultId, indexKey: indexKey, wrapKey: wrapKey)
+        let indexKey = VaultCrypto.indexKey(from: vaultKey, vaultID: header.vaultID)
+        let wrapKey = VaultCrypto.wrapKey(from: vaultKey, vaultID: header.vaultID)
+        let loaded = try loadIndex(vaultID: header.vaultID, indexKey: indexKey, wrapKey: wrapKey)
         report.indexSource = report.createdVault ? .new : loaded.source
         report.newestChangeMayBeLost = !report.createdVault && loaded.source == .previous
         report.recoveredFromPages =

@@ -228,8 +228,8 @@ final class TestVault {
         let copy = try TestVault(keyStore: InMemoryKeyStore(), clock: clock ?? TestClock(self.clock.now))
         try FileManager.default.removeItem(at: copy.base)
         try FileManager.default.copyItem(at: base, to: copy.base)
-        if let header = try? header(), let key = await keyStore.key(for: header.vaultId) {
-            await copy.keyStore.setKey(key, for: header.vaultId)
+        if let header = try? header(), let key = await keyStore.key(for: header.vaultID) {
+            await copy.keyStore.setKey(key, for: header.vaultID)
         }
         return copy
     }
@@ -277,9 +277,9 @@ final class TestVault {
     /// Opens an index file with the vault's real index key, for inspection.
     func readIndex(at url: URL) async throws -> VaultIndex {
         let header = try header()
-        let key = try #require(await keyStore.key(for: header.vaultId))
-        let indexKey = VaultCrypto.indexKey(from: key, vaultID: header.vaultId)
-        let plain = try VaultCrypto.open(Data(contentsOf: url), with: indexKey, as: .index(header.vaultId))
+        let key = try #require(await keyStore.key(for: header.vaultID))
+        let indexKey = VaultCrypto.indexKey(from: key, vaultID: header.vaultID)
+        let plain = try VaultCrypto.open(Data(contentsOf: url), with: indexKey, as: .index(header.vaultID))
         return try VaultJSON.decoder.decode(VaultIndex.self, from: plain)
     }
 

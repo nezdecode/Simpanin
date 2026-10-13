@@ -38,7 +38,7 @@ struct VaultKeyRuleTests {
         let report = try await vault.makeStore().open()
         #expect(report.createdVault)
         #expect(await vault.keyStore.createCount == 1)
-        #expect(await vault.keyStore.key(for: try vault.header().vaultId) != nil)
+        #expect(await vault.keyStore.key(for: try vault.header().vaultID) != nil)
     }
 
     @Test(arguments: lockedFailures)
@@ -59,13 +59,13 @@ struct VaultKeyRuleTests {
             type: .ktp, expiry: nil, pinned: false,
             fields: Synthetic.ktpFields, pages: [Synthetic.page("k")])
         let header = try vault.header()
-        let key = try #require(await vault.keyStore.key(for: header.vaultId))
+        let key = try #require(await vault.keyStore.key(for: header.vaultID))
         let filesBefore = try vault.allFiles().map { try Data(contentsOf: $0) }
 
         await vault.keyStore.setReadFailure(failure)
         await #expect(throws: Self.expectedError(failure)) { try await vault.makeStore().open() }
         #expect(await vault.keyStore.createCount == 1)
-        #expect(bytes(try #require(await vault.keyStore.key(for: header.vaultId))) == bytes(key))
+        #expect(bytes(try #require(await vault.keyStore.key(for: header.vaultID))) == bytes(key))
         #expect(try vault.header() == header)
         #expect(try vault.allFiles().map { try Data(contentsOf: $0) } == filesBefore)
 
@@ -103,11 +103,11 @@ struct VaultKeyRuleTests {
             type: .ktp, expiry: nil, pinned: false,
             fields: Synthetic.ktpFields, pages: [Synthetic.page("k")])
         let header = try vault.header()
-        await vault.keyStore.setKey(nil, for: header.vaultId)
+        await vault.keyStore.setKey(nil, for: header.vaultID)
 
         await #expect(throws: VaultError.vaultKeyMissing) { try await vault.makeStore().open() }
         #expect(await vault.keyStore.createCount == 1)
-        #expect(await vault.keyStore.key(for: header.vaultId) == nil)
+        #expect(await vault.keyStore.key(for: header.vaultID) == nil)
         #expect(try vault.header() == header)
     }
 }

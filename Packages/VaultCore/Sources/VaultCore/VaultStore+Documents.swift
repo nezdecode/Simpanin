@@ -40,17 +40,18 @@ extension VaultStore {
     }
 
     public func pages(of id: DocumentID) throws -> [Page] {
-        try entry(id).pageIds.map { try page($0, of: id) }
+        try entry(id).pageIDs.map { try page($0, of: id) }
     }
 
     /// Fails to open unless the page file's header names this document and page.
     public func page(_ pageID: PageID, of id: DocumentID) throws -> Page {
         let entry = try entry(id)
-        guard entry.pageIds.contains(pageID) else { throw VaultError.pageNotFound }
+        guard entry.pageIDs.contains(pageID) else { throw VaultError.pageNotFound }
         guard let raw = try readFile(at: pageURL(pageID)) else { throw VaultError.pageNotFound }
         let file = try PageFile(decoding: raw)
         guard file.header.formatVersion <= PageHeader.currentFormatVersion else { throw VaultError.unsupportedVersion }
-        guard file.header.docId == id, file.header.pageId == pageID, file.header.sealedKey == entry.sealedKey else {
+        guard file.header.documentID == id, file.header.pageID == pageID, file.header.sealedKey == entry.sealedKey
+        else {
             throw VaultError.authenticationFailed
         }
         let key = try documentKey(entry)
@@ -81,7 +82,7 @@ extension VaultStore {
             id: id, type: type, createdAt: stamp, updatedAt: stamp, expiry: expiry,
             pinned: pinned, deletedAt: nil, sealedKey: sealedKey,
             sealedFields: try sealFields(fields, key: key, documentID: id),
-            pageIds: newPages.map(\.0))
+            pageIDs: newPages.map(\.0))
         try commit(state.index.documents + [entry], newPages: newPages)
         return id
     }
@@ -105,9 +106,9 @@ extension VaultStore {
         let pageID = PageID()
         try update(id, rejectDeleted: true) { entry, key in
             let file = try self.pageFile(
-                data, pageID: pageID, position: entry.pageIds.count, documentID: id,
+                data, pageID: pageID, position: entry.pageIDs.count, documentID: id,
                 key: key, sealedKey: entry.sealedKey)
-            entry.pageIds.append(pageID)
+            entry.pageIDs.append(pageID)
             entry.updatedAt = self.now()
             return ([(pageID, file)], [])
         }
@@ -118,11 +119,11 @@ extension VaultStore {
     public func replacePage(_ pageID: PageID, of id: DocumentID, with data: Data) throws -> PageID {
         let newID = PageID()
         try update(id, rejectDeleted: true) { entry, key in
-            guard let position = entry.pageIds.firstIndex(of: pageID) else { throw VaultError.pageNotFound }
+            guard let position = entry.pageIDs.firstIndex(of: pageID) else { throw VaultError.pageNotFound }
             let file = try self.pageFile(
                 data, pageID: newID, position: position, documentID: id,
                 key: key, sealedKey: entry.sealedKey)
-            entry.pageIds[position] = newID
+            entry.pageIDs[position] = newID
             entry.updatedAt = self.now()
             return ([(newID, file)], [pageID])
         }
@@ -171,7 +172,7 @@ extension VaultStore {
     private func purge(_ entries: [IndexEntry]) throws {
         let ids = Set(entries.map(\.id))
         let remaining = try requireState().index.documents.filter { !ids.contains($0.id) }
-        try commit(remaining, obsoletePages: entries.flatMap(\.pageIds), writeIndexTwice: true)
+        try commit(remaining, obsoletePages: entries.flatMap(\.pageIDs), writeIndexTwice: true)
     }
 
     /// - Parameter rejectDeleted: throw `documentDeleted` for a document in Recently deleted.
@@ -207,7 +208,7 @@ extension VaultStore {
         let sealed = try VaultCrypto.seal(data, with: key, as: .page(documentID, pageID))
         return try PageFile(
             header: PageHeader(
-                docId: documentID, pageId: pageID, position: position,
+                documentID: documentID, pageID: pageID, position: position,
                 sealedKey: sealedKey),
             sealedContent: sealed
         ).encoded()

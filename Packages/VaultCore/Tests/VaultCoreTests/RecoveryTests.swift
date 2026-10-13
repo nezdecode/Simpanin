@@ -108,7 +108,7 @@ struct RecoveryTests {
         let fixture = try await makeVault()
         let header = try fixture.vault.header()
         let before = try fixture.vault.allFiles().map { ($0.path, try Data(contentsOf: $0)) }
-        await fixture.vault.keyStore.setKey(VaultCrypto.newKey(), for: header.vaultId)
+        await fixture.vault.keyStore.setKey(VaultCrypto.newKey(), for: header.vaultID)
 
         await #expect(throws: VaultError.vaultUnreadable) { try await fixture.vault.makeStore().open() }
         let afterFiles = try fixture.vault.allFiles().map { ($0.path, try Data(contentsOf: $0)) }

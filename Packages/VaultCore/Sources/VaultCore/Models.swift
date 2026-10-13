@@ -155,12 +155,18 @@ public struct VaultHeader: Hashable, Sendable, Codable {
     public static let currentFormatVersion = 1
 
     public var formatVersion: Int
-    public var vaultId: VaultID
+    public var vaultID: VaultID
     public var keySlots: [KeySlot]
 
-    public init(vaultId: VaultID, keySlots: [KeySlot]) {
+    // The JSON keys are part of the v1 format, so they keep their original spelling.
+    enum CodingKeys: String, CodingKey {
+        case formatVersion, keySlots
+        case vaultID = "vaultId"
+    }
+
+    public init(vaultID: VaultID, keySlots: [KeySlot]) {
         formatVersion = Self.currentFormatVersion
-        self.vaultId = vaultId
+        self.vaultID = vaultID
         self.keySlots = keySlots
     }
 }
@@ -179,12 +185,17 @@ struct IndexEntry: Hashable, Sendable, Codable {
     var sealedKey: Data
     /// DocumentFields JSON sealed with the document key and "fields|v1|<docId>".
     var sealedFields: Data
-    var pageIds: [PageID]
+    var pageIDs: [PageID]
+
+    enum CodingKeys: String, CodingKey {
+        case id, type, createdAt, updatedAt, expiry, pinned, deletedAt, sealedKey, sealedFields
+        case pageIDs = "pageIds"
+    }
 
     var document: Document {
         Document(
             id: id, type: type, createdAt: createdAt, updatedAt: updatedAt, expiry: expiry,
-            pinned: pinned, deletedAt: deletedAt, pageIDs: pageIds)
+            pinned: pinned, deletedAt: deletedAt, pageIDs: pageIDs)
     }
 }
 
@@ -211,16 +222,22 @@ struct PageHeader: Hashable, Sendable, Codable {
     static let currentFormatVersion = 1
 
     var formatVersion: Int
-    var docId: DocumentID
-    var pageId: PageID
+    var documentID: DocumentID
+    var pageID: PageID
     /// The page's index in its document, so recovery restores the page order.
     var position: Int
     var sealedKey: Data
 
-    init(docId: DocumentID, pageId: PageID, position: Int, sealedKey: Data) {
+    enum CodingKeys: String, CodingKey {
+        case formatVersion, position, sealedKey
+        case documentID = "docId"
+        case pageID = "pageId"
+    }
+
+    init(documentID: DocumentID, pageID: PageID, position: Int, sealedKey: Data) {
         formatVersion = Self.currentFormatVersion
-        self.docId = docId
-        self.pageId = pageId
+        self.documentID = documentID
+        self.pageID = pageID
         self.position = position
         self.sealedKey = sealedKey
     }

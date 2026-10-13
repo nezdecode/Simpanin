@@ -50,11 +50,11 @@ struct VersionTests {
     @Test func indexFromANewerVersionStopsOpen() async throws {
         let (vault, _) = try await makeVault()
         let header = try vault.header()
-        let key = try #require(await vault.keyStore.key(for: header.vaultId))
-        let indexKey = VaultCrypto.indexKey(from: key, vaultID: header.vaultId)
-        let plain = try VaultCrypto.open(Data(contentsOf: vault.indexURL), with: indexKey, as: .index(header.vaultId))
+        let key = try #require(await vault.keyStore.key(for: header.vaultID))
+        let indexKey = VaultCrypto.indexKey(from: key, vaultID: header.vaultID)
+        let plain = try VaultCrypto.open(Data(contentsOf: vault.indexURL), with: indexKey, as: .index(header.vaultID))
         let newer = try setting("schemaVersion", to: 2, in: plain)
-        try VaultCrypto.seal(newer, with: indexKey, as: .index(header.vaultId)).write(to: vault.indexURL)
+        try VaultCrypto.seal(newer, with: indexKey, as: .index(header.vaultID)).write(to: vault.indexURL)
         let before = try TestVault.files(in: vault.base)
 
         // index.prev.enc is still a readable v1 index, but the store must not fall back to it.
@@ -95,11 +95,11 @@ struct VersionTests {
         let orphan = vault.pageURL(try await store.document(other).pageIDs[0])
         let entryless = try await vault.readIndex(at: vault.previousIndexURL)  // before the SIM existed
         let header = try vault.header()
-        let key = try #require(await vault.keyStore.key(for: header.vaultId))
-        let indexKey = VaultCrypto.indexKey(from: key, vaultID: header.vaultId)
+        let key = try #require(await vault.keyStore.key(for: header.vaultID))
+        let indexKey = VaultCrypto.indexKey(from: key, vaultID: header.vaultID)
         var rolledBack = entryless
         rolledBack.generation += 10
-        try VaultCrypto.seal(VaultJSON.encoder.encode(rolledBack), with: indexKey, as: .index(header.vaultId))
+        try VaultCrypto.seal(VaultJSON.encoder.encode(rolledBack), with: indexKey, as: .index(header.vaultID))
             .write(to: vault.indexURL)
         try rewritePageHeaderVersion(at: orphan)
 
