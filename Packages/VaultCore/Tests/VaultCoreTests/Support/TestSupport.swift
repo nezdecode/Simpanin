@@ -24,6 +24,8 @@ actor InMemoryKeyStore: KeyStore {
         case locked
         /// Like errSecInteractionNotAllowed (-25308).
         case interactionNotAllowed
+        /// Like errSecUserCanceled (-128), when the user cancels the Face ID prompt.
+        case userCanceled
         /// Any error that is not a KeyStoreError at all.
         case unexpected
     }
@@ -57,6 +59,7 @@ actor InMemoryKeyStore: KeyStore {
         switch readFailure {
         case .locked: throw KeyStoreError.unavailable(status: -25293)
         case .interactionNotAllowed: throw KeyStoreError.unavailable(status: -25308)
+        case .userCanceled: throw KeyStoreError.unavailable(status: -128)
         case .unexpected: throw UnexpectedError()
         case nil: break
         }

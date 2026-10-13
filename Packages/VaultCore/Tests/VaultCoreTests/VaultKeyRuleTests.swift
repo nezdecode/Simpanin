@@ -19,13 +19,16 @@ import Testing
 /// other error means it exists but is locked, so report it and create nothing.
 @Suite("Vault key rule")
 struct VaultKeyRuleTests {
-    static let lockedFailures: [InMemoryKeyStore.ReadFailure] = [.locked, .interactionNotAllowed, .unexpected]
+    static let lockedFailures: [InMemoryKeyStore.ReadFailure] = [
+        .locked, .interactionNotAllowed, .userCanceled, .unexpected,
+    ]
 
     /// The Keychain status the app needs, or nil for errors that aren't Keychain errors.
     static func expectedError(_ failure: InMemoryKeyStore.ReadFailure) -> VaultError {
         switch failure {
         case .locked: .vaultKeyUnavailable(status: -25293)
         case .interactionNotAllowed: .vaultKeyUnavailable(status: -25308)
+        case .userCanceled: .vaultKeyUnavailable(status: -128)
         case .unexpected: .vaultKeyUnavailable(status: nil)
         }
     }
