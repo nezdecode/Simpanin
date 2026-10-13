@@ -1,0 +1,132 @@
+//
+//  DeviceChecksView.swift
+//  Simpanin
+//
+//  Created by Inez Amanda on 14/10/26.
+//
+//  This Source Code Form is subject to the terms of the Mozilla Public
+//  License, v. 2.0. If a copy of the MPL was not distributed with this
+//  file, You can obtain one at https://mozilla.org/MPL/2.0/.
+//
+
+#if DEBUG
+    import LocalAuthentication
+    import SwiftUI
+    import UIKit
+
+    /// DEBUG only. Runs the open device checks and shows a report to copy and send back.
+    struct DeviceChecksView: View {
+        let vault: AppVault?
+        @State private var lines: [DeviceCheckLine] = []
+        @State private var running = false
+
+        private var accessGroup: String? { AppConfiguration.keychainAccessGroup }
+
+        private var deviceLines: [String] {
+            let context = LAContext()
+            _ = context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: nil)
+            let biometry =
+                switch context.biometryType {
+                case .faceID: "Face ID"
+                case .touchID: "Touch ID"
+                case .opticID: "Optic ID"
+                default: "none"
+                }
+            return [
+                "iOS \(UIDevice.current.systemVersion)", "biometry: \(biometry)",
+                "passcode: \(PasscodeState.current())",
+            ]
+        }
+
+        private var report: String { DeviceChecks.report(device: deviceLines, lines: lines) }
+
+        var body: some View {
+            Form {
+                Section("1–3. Data Protection") {
+                    Button("Check protection classes") { run(checkFiles) }
+                }
+                Section {
+                    Button("Add test item") { runKeychain { DeviceChecks.addTestItem(accessGroup: $0) } }
+                } header: {
+                    Text("4. SecItemAdd")
+                } footer: {
+                    Text(
+                        "Tap once with the passcode on. Then turn the passcode off in Settings, "
+                            + "come back and tap again."
+                    )
+                }
+                Section {
+                    Button("Read: let it succeed") { read("succeeded") }
+                    Button("Read: tap Batal") { read("tapped Batal") }
+                    Button("Read: go to the home screen during the prompt") { read("sent to background") }
+                    Button("Delete test item") { runKeychain { DeviceChecks.deleteTestItem(accessGroup: $0) } }
+                } header: {
+                    Text("5–6. Prompt and cancel")
+                } footer: {
+                    Text("Add the test item first, with the passcode on. After \"let it succeed\", answer below.")
+                }
+                Section("6. After the successful read") {
+                    Button("I saw one prompt") { note("prompts seen", "1") }
+                    Button("I saw two or more prompts") { note("prompts seen", "2 or more") }
+                    Button("It showed \"\(KeychainKeyStore.promptReason)\"") { note("reason text shown", "yes") }
+                    Button("It didn't show that text") { note("reason text shown", "no") }
+                }
+                Section("Report") {
+                    Text(report).font(.caption.monospaced()).textSelection(.enabled)
+                    Button("Copy report") { UIPasteboard.general.string = report }
+                    Button("Clear", role: .destructive) { lines = [] }
+                }
+            }
+            .navigationTitle("Device checks")
+            .disabled(running)
+        }
+
+        private func note(_ label: String, _ result: String) {
+            lines.append(DeviceCheckLine(label: label, result: result))
+        }
+
+        private func run(_ work: @escaping () async throws -> [DeviceCheckLine]) {
+            running = true
+            Task {
+                do {
+                    lines += try await work()
+                } catch {
+                    note("error", String(describing: type(of: error)))
+                }
+                running = false
+            }
+        }
+
+        private func checkFiles() async throws -> [DeviceCheckLine] {
+            let support = try FileManager.default.url(
+                for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
+            guard let group = AppConfiguration.appGroup,
+                let container = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: group)
+            else { return [DeviceCheckLine(label: "app group", result: "missing")] }
+            var result = try await DeviceChecks.scratchVaultProtection(
+                applicationSupport: support, appGroup: container)
+            if let vault, FileManager.default.fileExists(atPath: vault.locations.root.path) {
+                result += try DeviceChecks.vaultClasses(
+                    root: vault.locations.root, projection: vault.locations.projection
+                )
+                .map { DeviceCheckLine(label: "real \($0.label)", result: $0.result) }
+            }
+            result += try DeviceChecks.renameKeepsClass(in: support)
+            result += try DeviceChecks.newFileTakesFolderClass(in: support)
+            return result
+        }
+
+        private func read(_ scenario: String) {
+            runKeychain { DeviceChecks.readTestItem(accessGroup: $0, scenario: scenario) }
+        }
+
+        /// Keychain calls block while a prompt is up, so they run off the main actor.
+        private func runKeychain(_ check: @escaping @Sendable (String) -> DeviceCheckLine) {
+            guard let accessGroup else {
+                note("keychain access group", "missing")
+                return
+            }
+            run { [await Task.detached { check(accessGroup) }.value] }
+        }
+    }
+#endif

@@ -16,13 +16,19 @@ struct ContentView: View {
     let vault: AppVault?
 
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        NavigationStack {
+            VStack {
+                Image(systemName: "globe")
+                    .imageScale(.large)
+                    .foregroundStyle(.tint)
+                Text("Hello, world!")
+                #if DEBUG
+                    NavigationLink("Device checks") { DeviceChecksView(vault: vault) }
+                        .padding(.top)
+                #endif
+            }
+            .padding()
         }
-        .padding()
     }
 }
 
