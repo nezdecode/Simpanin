@@ -49,6 +49,11 @@
 			path = SimpaninUITests;
 			sourceTree = "<group>";
 		};
+		7A4E5D8E5E15503FE636B12D /* Config */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Config;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -83,6 +88,7 @@
 				358873DF3071696D00707845 /* Simpanin */,
 				358873ED3071696F00707845 /* SimpaninTests */,
 				358873F73071696F00707845 /* SimpaninUITests */,
+				7A4E5D8E5E15503FE636B12D /* Config */,
 				358873DE3071696D00707845 /* Products */,
 			);
 			sourceTree = "<group>";
