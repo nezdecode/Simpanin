@@ -28,6 +28,8 @@ protocol IndexFlusher: Sendable {
 struct FileSystemFlusher: IndexFlusher {
     /// The F_FULLFSYNC call, replaceable so tests can make it fail.
     var fullSync: @Sendable (Int32) -> Int32 = Self.fullFsync
+    /// The fsync fallback, replaceable so tests can make it fail too.
+    var fileSync: @Sendable (Int32) -> Int32 = { fsync($0) }
 
     static let fullFsync: @Sendable (Int32) -> Int32 = { descriptor in
         #if canImport(Darwin)
@@ -42,7 +44,7 @@ struct FileSystemFlusher: IndexFlusher {
         guard descriptor >= 0 else { throw VaultError.flushFailed }
         defer { close(descriptor) }
         if fullSync(descriptor) != -1 { return .fullFsync }
-        guard fsync(descriptor) == 0 else { throw VaultError.flushFailed }
+        guard fileSync(descriptor) == 0 else { throw VaultError.flushFailed }
         return .fsync
     }
 }

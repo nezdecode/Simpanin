@@ -230,6 +230,13 @@ struct FlushTests {
         #expect(try flusher.flush(url) == .fsync)
     }
 
+    @Test func failsWhenTheFallbackFailsToo() throws {
+        let url = try tempFile()
+        defer { try? FileManager.default.removeItem(at: url) }
+        let flusher = FileSystemFlusher(fullSync: { _ in -1 }, fileSync: { _ in -1 })
+        #expect(throws: VaultError.flushFailed) { try flusher.flush(url) }
+    }
+
     @Test func missingFileFailsToFlush() {
         let url = FileManager.default.temporaryDirectory.appending(path: "missing-\(UUID().uuidString).bin")
         #expect(throws: VaultError.flushFailed) { try FileSystemFlusher().flush(url) }
