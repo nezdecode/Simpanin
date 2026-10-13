@@ -106,6 +106,17 @@ final class RecordingProtector: FileProtector {
     }
 }
 
+/// While armed, fails for any path that contains `target`, like a class that can't be set.
+final class FailingProtector: FileProtector {
+    let target: String
+    private let armed = Mutex(false)
+    init(failingOn target: String) { self.target = target }
+    func arm(_ isArmed: Bool) { armed.withLock { $0 = isArmed } }
+    func protect(_ url: URL, as protection: FileProtectionClass) throws {
+        if armed.withLock({ $0 }), url.path.contains(target) { throw CocoaError(.fileWriteNoPermission) }
+    }
+}
+
 // MARK: - Flush
 
 /// Records every flush and what was on disk at that moment.

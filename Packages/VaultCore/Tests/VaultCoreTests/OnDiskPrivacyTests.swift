@@ -121,7 +121,15 @@ struct OnDiskPrivacyTests {
         try await store.deletePermanently(sim)
 
         // Background tasks read the projection, so only it may stay readable after first unlock.
-        func name(_ url: URL) -> String { url.path.components(separatedBy: vault.base.lastPathComponent).last ?? "" }
+        // The class is set on ".<name>.tmp", before the rename to <name> that keeps it.
+        func name(_ url: URL) -> String {
+            var url = url
+            if url.pathExtension == "tmp", url.lastPathComponent.hasPrefix(".") {
+                url = url.deletingLastPathComponent().appending(
+                    path: String(url.deletingPathExtension().lastPathComponent.dropFirst()))
+            }
+            return url.path.components(separatedBy: vault.base.lastPathComponent).last ?? ""
+        }
         let projection = name(vault.projectionURL)
         for call in protector.calls {
             let expected: FileProtectionClass =

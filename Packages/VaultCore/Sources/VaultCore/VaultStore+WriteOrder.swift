@@ -95,9 +95,37 @@ extension VaultStore {
             protection: .completeUntilFirstUserAuthentication)
     }
 
+    /// Writes a temp file, sets its class, then renames it over `url`, which keeps the class.
+    /// If any step fails, `url` is left as it was.
     func write(_ data: Data, to url: URL, protection: FileProtectionClass) throws {
-        try data.write(to: url, options: .atomic)
-        try fileProtector.protect(url, as: protection)
+        let temp = Self.tempURL(for: url)
+        do {
+            try data.write(to: temp)
+            try fileProtector.protect(temp, as: protection)
+            guard rename(temp.path, url.path) == 0 else {
+                throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO)
+            }
+        } catch {
+            try? FileManager.default.removeItem(at: temp)
+            throw error
+        }
+    }
+
+    static func tempURL(for url: URL) -> URL {
+        url.deletingLastPathComponent().appending(path: ".\(url.lastPathComponent).tmp")
+    }
+
+    /// A crash before the rename leaves a temp file. It was never part of a save, so it can go.
+    func removeLeftoverTempFiles() throws {
+        let fileManager = FileManager.default
+        var leftovers = [Self.tempURL(for: projectionURL)]
+        for directory in [root, pagesDirectory] where fileManager.fileExists(atPath: directory.path) {
+            leftovers += try fileManager.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
+                .filter { $0.lastPathComponent.hasPrefix(".") && $0.pathExtension == "tmp" }
+        }
+        for url in leftovers where fileManager.fileExists(atPath: url.path) {
+            try fileManager.removeItem(at: url)
+        }
     }
 
     private func step(_ step: WriteStep) throws {

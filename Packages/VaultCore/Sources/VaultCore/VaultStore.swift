@@ -184,6 +184,7 @@ public actor VaultStore {
                 // Replace a bad or stale index.enc, or finish an interrupted purge.
                 try commit(loaded.index.documents)
             }
+            try removeLeftoverTempFiles()
             if loaded.allowsOrphanCleanup {
                 report.removedOrphanPages = try removeOrphanPages(unreadable: &report.unreadablePages)
             }

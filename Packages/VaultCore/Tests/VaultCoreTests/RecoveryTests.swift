@@ -207,6 +207,27 @@ struct RecoveryTests {
         #expect(FileManager.default.fileExists(atPath: stray.path))
     }
 
+    @Test func leftoverTempFilesAreRemovedOnOpen() async throws {
+        // A crash between writing a temp file and renaming it leaves one behind.
+        let vault = try TestVault()
+        try await vault.makeStore().open()
+        let appGroup = vault.projectionURL.deletingLastPathComponent()
+        let leftovers = [
+            vault.root.appending(path: ".index.enc.tmp"),
+            vault.pagesDirectory.appending(path: ".\(PageID().string).enc.tmp"),
+            appGroup.appending(path: ".projection.json.tmp"),
+        ]
+        for url in leftovers { try Data("partial".utf8).write(to: url) }
+        let unrelated = appGroup.appending(path: ".widget.tmp")
+        try Data("not ours".utf8).write(to: unrelated)
+
+        try await vault.makeStore().open()
+        for url in leftovers {
+            #expect(!FileManager.default.fileExists(atPath: url.path), "\(url.lastPathComponent)")
+        }
+        #expect(FileManager.default.fileExists(atPath: unrelated.path))  // only the projection's temp file
+    }
+
     @Test func missingHeaderWithVaultFilesIsRefused() async throws {
         let fixture = try await makeVault()
         try FileManager.default.removeItem(at: fixture.vault.headerURL)

@@ -155,6 +155,47 @@ struct CrashTests {
             }
         }
     }
+
+    // MARK: A write that fails while the app keeps running
+
+    /// index.enc fails during an edit, a page file while adding a page.
+    @Test(arguments: ["index.enc", "/pages/"])
+    func failedProtectionKeepsTheLastSave(failingOn target: String) async throws {
+        let vault = try TestVault()
+        let protector = FailingProtector(failingOn: target)
+        let store = VaultStore(
+            rootDirectory: vault.root, projectionURL: vault.projectionURL, keyStore: vault.keyStore,
+            clock: vault.clock, fileProtector: protector)
+        try await store.open()
+        let ktp = try await store.createDocument(
+            type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields, pages: [Synthetic.page("front")])
+        let pagesBefore = try vault.pageFiles()
+
+        protector.arm(true)
+        await #expect(throws: CocoaError.self) {
+            if target == "index.enc" {
+                try await store.editDocument(ktp, type: .ktp, expiry: nil, pinned: true, fields: Synthetic.ktpFields)
+            } else {
+                _ = try await store.addPage(Synthetic.page("back"), to: ktp)
+            }
+        }
+        protector.arm(false)
+        // Nothing half-written is left, and the failed change isn't in memory.
+        #expect(try vault.pageFiles() == pagesBefore)
+        #expect(try vault.allFiles().allSatisfy { !$0.lastPathComponent.hasSuffix(".tmp") })
+        let failed = try await store.document(ktp)
+        #expect(!failed.pinned && failed.pageIDs.count == 1)
+
+        // The next save succeeds, and a reopen shows it, not the failed one.
+        let sim = try await store.createDocument(
+            type: .sim, expiry: nil, pinned: false, fields: Synthetic.simFields, pages: [])
+        let reopened = vault.makeStore()
+        let report = try await reopened.open()
+        #expect(report.indexSource == .current)
+        #expect(try await reopened.document(sim).type == .sim)
+        let ktpAfter = try await reopened.document(ktp)
+        #expect(!ktpAfter.pinned && ktpAfter.pageIDs.count == 1)
+    }
 }
 
 extension VaultStore {
