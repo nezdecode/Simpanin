@@ -107,8 +107,16 @@ extension VaultStore {
             }
         } catch {
             try? FileManager.default.removeItem(at: temp)
-            throw error
+            throw Self.isOutOfSpace(error) ? VaultError.storageFull : error
         }
+    }
+
+    /// Foundation reports a full disk as CocoaError 640 with ENOSPC underneath; rename gives ENOSPC.
+    static func isOutOfSpace(_ error: any Error) -> Bool {
+        let error = error as NSError
+        let underlying = error.userInfo[NSUnderlyingErrorKey] as? NSError
+        return (error.domain == NSCocoaErrorDomain && error.code == CocoaError.fileWriteOutOfSpace.rawValue)
+            || [error, underlying].contains { $0?.domain == NSPOSIXErrorDomain && $0?.code == Int(ENOSPC) }
     }
 
     static func tempURL(for url: URL) -> URL {

@@ -196,6 +196,29 @@ struct CrashTests {
         let ktpAfter = try await reopened.document(ktp)
         #expect(!ktpAfter.pinned && ktpAfter.pageIDs.count == 1)
     }
+
+    /// A real full disk throws CocoaError 640 with ENOSPC underneath (checked once on a 2 MB
+    /// disk image). The rename can fail with ENOSPC on its own.
+    @Test(arguments: [CocoaError(.fileWriteOutOfSpace), POSIXError(.ENOSPC)] as [any Error])
+    func fullDiskIsStorageFullAndKeepsTheLastSave(_ diskFull: any Error) async throws {
+        let vault = try TestVault()
+        let protector = FailingProtector(failingOn: "/pages/", with: diskFull)
+        let store = VaultStore(
+            rootDirectory: vault.root, projectionURL: vault.projectionURL, keyStore: vault.keyStore,
+            clock: vault.clock, fileProtector: protector)
+        try await store.open()
+        _ = try await store.createDocument(
+            type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields, pages: [Synthetic.page("front")])
+        let before = try TestVault.files(in: vault.base)
+
+        protector.arm(true)
+        await #expect(throws: VaultError.storageFull) {
+            _ = try await store.createDocument(
+                type: .passport, expiry: nil, pinned: false, fields: DocumentFields(),
+                pages: [Synthetic.page("p1"), Synthetic.page("p2")])
+        }
+        #expect(try TestVault.files(in: vault.base) == before)
+    }
 }
 
 extension VaultStore {

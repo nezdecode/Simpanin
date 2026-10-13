@@ -19,6 +19,8 @@ public enum VaultError: Error, Equatable, Sendable {
     /// A file is there but can't be read right now, for example while the phone is locked.
     /// Nothing was changed, so try again later.
     case fileUnavailable
+    /// The device is out of space. Nothing was saved, and what was saved before is untouched.
+    case storageFull
     /// A file has a format or schema version newer than this build understands.
     case unsupportedVersion
     /// The vault key exists but can't be read right now, so don't recreate the vault. `status`
