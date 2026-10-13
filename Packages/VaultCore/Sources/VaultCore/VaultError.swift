@@ -10,7 +10,7 @@
 //
 
 /// Errors from VaultCore. Cases carry no ids, field values or file contents, so they
-/// are safe to log.
+/// are safe to log. File system errors, like a full disk, are passed through as they are.
 public enum VaultError: Error, Equatable, Sendable {
     /// Sealed data didn't open. The key or associated data was wrong, or the bytes were changed.
     case authenticationFailed
