@@ -78,10 +78,11 @@ public actor VaultStore {
     /// - Parameters:
     ///   - rootDirectory: the vault folder, Application Support/Vault in the app.
     ///   - projectionURL: projection.json, in the App Group container in the app.
+    ///   - fileProtector: sets the Data Protection class. No default, so the app can't forget it.
     ///   - reminderOffsets: days before expiry written into the projection.
     public init(
         rootDirectory: URL, projectionURL: URL, keyStore: any KeyStore, clock: any VaultClock = SystemClock(),
-        fileProtector: any FileProtector = NoFileProtection(), reminderOffsets: [Int] = [60, 30, 7]
+        fileProtector: any FileProtector, reminderOffsets: [Int] = [60, 30, 7]
     ) {
         self.init(
             rootDirectory: rootDirectory, projectionURL: projectionURL, keyStore: keyStore, clock: clock,

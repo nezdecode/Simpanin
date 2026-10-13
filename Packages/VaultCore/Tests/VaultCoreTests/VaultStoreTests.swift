@@ -213,7 +213,8 @@ struct VaultStoreTests {
         let vault = try TestVault()
         let store = VaultStore(
             rootDirectory: vault.root, projectionURL: vault.projectionURL,
-            keyStore: vault.keyStore, clock: vault.clock, reminderOffsets: [90, 14])
+            keyStore: vault.keyStore, clock: vault.clock,
+            fileProtector: NoFileProtection(), reminderOffsets: [90, 14])
         try await store.open()
         _ = try await store.createDocument(
             type: .stnk, expiry: Synthetic.simExpiry, pinned: false,
