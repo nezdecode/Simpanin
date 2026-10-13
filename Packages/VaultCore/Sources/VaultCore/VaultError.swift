@@ -16,6 +16,9 @@ public enum VaultError: Error, Equatable, Sendable {
     case authenticationFailed
     /// A file couldn't be decoded, for example bad JSON, a bad header or a key of the wrong length.
     case corruptFile
+    /// A file is there but can't be read right now, for example while the phone is locked.
+    /// Nothing was changed, so try again later.
+    case fileUnavailable
     /// A file has a format or schema version newer than this build understands.
     case unsupportedVersion
     /// The vault key exists but can't be read right now, so don't recreate the vault. `status`
@@ -30,6 +33,7 @@ public enum VaultError: Error, Equatable, Sendable {
     /// The vault is locked. Call `open()` first.
     case locked
     case documentNotFound
+    /// The id isn't in the document, or the page's file is gone.
     case pageNotFound
     /// The document is in Recently deleted. Restore it before editing it or its pages.
     case documentDeleted

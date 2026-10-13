@@ -71,7 +71,11 @@ extension VaultStore {
         else {
             throw VaultError.quarantineUnreadable
         }
-        let liveID = state?.header.vaultId ?? (try? readHeader(at: headerURL))?.vaultId
+        var liveID = state?.header.vaultId
+        if liveID == nil, FileManager.default.fileExists(atPath: headerURL.path) {
+            // Throws if the live vault.json can't be read, rather than guess it's another vault.
+            liveID = try readHeader(at: headerURL).vaultId
+        }
         guard liveID != vault.vaultID,
             vault.folder.standardizedFileURL.path != root.standardizedFileURL.path
         else {

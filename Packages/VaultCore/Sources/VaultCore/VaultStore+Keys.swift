@@ -17,7 +17,7 @@ extension VaultStore {
 
     func readHeader(at url: URL) throws -> VaultHeader {
         struct VersionProbe: Decodable { var formatVersion: Int }
-        guard let data = try? Data(contentsOf: url),
+        guard let data = try readFile(at: url),
             let probe = try? VaultJSON.decoder.decode(VersionProbe.self, from: data)
         else {
             throw VaultError.corruptFile

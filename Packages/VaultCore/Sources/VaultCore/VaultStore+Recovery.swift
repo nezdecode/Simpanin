@@ -35,9 +35,7 @@ extension VaultStore {
     }
 
     private func readIndexFile(_ url: URL, vaultID: VaultID, indexKey: SymmetricKey) throws -> IndexFile {
-        guard let sealed = try? Data(contentsOf: url) else {
-            return FileManager.default.fileExists(atPath: url.path) ? .unreadable : .missing
-        }
+        guard let sealed = try readFile(at: url) else { return .missing }
         guard let plain = try? VaultCrypto.open(sealed, with: indexKey, as: .index(vaultID)) else { return .unreadable }
         struct VersionProbe: Decodable { var schemaVersion: Int }
         guard let probe = try? VaultJSON.decoder.decode(VersionProbe.self, from: plain) else { return .unreadable }
@@ -106,8 +104,8 @@ extension VaultStore {
     }
 
     /// The page's header if it opens with this vault's key, else nil.
-    private func verifiedHeader(_ info: PageFileInfo, wrapKey: SymmetricKey) -> PageHeader? {
-        guard let data = try? Data(contentsOf: info.url),
+    private func verifiedHeader(_ info: PageFileInfo, wrapKey: SymmetricKey) throws -> PageHeader? {
+        guard let data = try readFile(at: info.url),
             let file = try? PageFile(decoding: data),
             file.header.formatVersion == PageHeader.currentFormatVersion,
             file.header.pageId == info.id,
@@ -137,7 +135,7 @@ extension VaultStore {
         var positions: [PageID: Int] = [:]
         var touched: Set<DocumentID> = []
         for info in files where !referenced.contains(info.id) {
-            guard let header = verifiedHeader(info, wrapKey: wrapKey) else {
+            guard let header = try verifiedHeader(info, wrapKey: wrapKey) else {
                 unreadable += 1
                 continue
             }
@@ -179,7 +177,7 @@ extension VaultStore {
         let now = clock.now
         var removed = 0
         for info in try listPageFiles() where !referenced.contains(info.id) {
-            guard verifiedHeader(info, wrapKey: state.wrapKey) != nil else {
+            guard try verifiedHeader(info, wrapKey: state.wrapKey) != nil else {
                 unreadable += 1
                 continue
             }

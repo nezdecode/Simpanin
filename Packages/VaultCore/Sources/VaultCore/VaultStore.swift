@@ -112,6 +112,18 @@ public actor VaultStore {
     var pagesDirectory: URL { root.appending(path: "pages", directoryHint: .isDirectory) }
     func pageURL(_ id: PageID) -> URL { pagesDirectory.appending(path: "\(id.string).enc") }
 
+    /// Nil only when the file doesn't exist. Any other read error, like a file iOS keeps
+    /// locked while the phone is locked, is `fileUnavailable`, never "missing" or "damaged".
+    func readFile(at url: URL) throws -> Data? {
+        do {
+            return try Data(contentsOf: url)
+        } catch CocoaError.fileReadNoSuchFile {
+            return nil
+        } catch {
+            throw VaultError.fileUnavailable
+        }
+    }
+
     // MARK: - Open and lock
 
     /// Unlocks the vault, then repairs the index if needed, removes orphan pages and purges.

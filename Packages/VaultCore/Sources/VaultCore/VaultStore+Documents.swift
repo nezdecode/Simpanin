@@ -47,12 +47,7 @@ extension VaultStore {
     public func page(_ pageID: PageID, of id: DocumentID) throws -> Page {
         let entry = try entry(id)
         guard entry.pageIds.contains(pageID) else { throw VaultError.pageNotFound }
-        let raw: Data
-        do {
-            raw = try Data(contentsOf: pageURL(pageID))
-        } catch {
-            throw VaultError.pageNotFound
-        }
+        guard let raw = try readFile(at: pageURL(pageID)) else { throw VaultError.pageNotFound }
         let file = try PageFile(decoding: raw)
         guard file.header.formatVersion <= PageHeader.currentFormatVersion else { throw VaultError.unsupportedVersion }
         guard file.header.docId == id, file.header.pageId == pageID, file.header.sealedKey == entry.sealedKey else {
