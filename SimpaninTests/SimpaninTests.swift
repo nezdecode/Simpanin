@@ -10,6 +10,7 @@
 //
 
 import Testing
+
 @testable import Simpanin
 
 struct SimpaninTests {

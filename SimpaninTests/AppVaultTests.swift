@@ -1,0 +1,90 @@
+//
+//  AppVaultTests.swift
+//  SimpaninTests
+//
+//  Created by Inez Amanda on 14/10/26.
+//
+//  This Source Code Form is subject to the terms of the Mozilla Public
+//  License, v. 2.0. If a copy of the MPL was not distributed with this
+//  file, You can obtain one at https://mozilla.org/MPL/2.0/.
+//
+
+import Foundation
+import Testing
+import VaultCore
+
+@testable import Simpanin
+
+/// The simulator doesn't store protection classes (they read back as nil), so the read-back
+/// check only runs on a real device.
+let isSimulator: Bool = {
+    #if targetEnvironment(simulator)
+        true
+    #else
+        false
+    #endif
+}()
+
+@Suite("App vault setup")
+struct AppVaultTests {
+    @Test func protectorAsksForTheClassVaultCoreNames() {
+        #expect(DataProtectionFileProtector.protectionType(for: .complete) == .complete)
+        #expect(
+            DataProtectionFileProtector.protectionType(for: .completeUntilFirstUserAuthentication)
+                == .completeUntilFirstUserAuthentication)
+    }
+
+    @Test func infoPlistCarriesTheExpandedKeychainGroupAndAppGroup() throws {
+        let group = try #require(AppConfiguration.keychainAccessGroup)
+        #expect(group.hasSuffix(".simpanin.vault"))
+        #expect(group.count > ".simpanin.vault".count)  // the team prefix is filled in
+        #expect(AppConfiguration.appGroup == "group.com.inez.Simpanin")
+        let faceID = Bundle.main.object(forInfoDictionaryKey: "NSFaceIDUsageDescription") as? String
+        #expect(faceID == "Simpanin memakai Face ID untuk membuka vault dokumenmu.")
+    }
+
+    @Test func appGroupContainerIsAvailable() throws {
+        let group = try #require(AppConfiguration.appGroup)
+        #expect(FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: group) != nil)
+    }
+
+    @Test func locations() {
+        let support = URL(filePath: "/Support", directoryHint: .isDirectory)
+        let group = URL(filePath: "/Group", directoryHint: .isDirectory)
+        let locations = VaultLocations(applicationSupport: support, appGroupContainer: group)
+        #expect(locations.root.path == "/Support/Vault")
+        #expect(locations.quarantine.path == "/Support/Quarantine")
+        #expect(locations.projection.path == "/Group/projection.json")
+    }
+
+    /// S1 from the review notes, read back from the file system.
+    @Test(.enabled(if: !isSimulator, "The simulator doesn't store protection classes"))
+    func vaultFilesAndFoldersHaveTheirClassOnDevice() async throws {
+        let base = FileManager.default.temporaryDirectory.appending(path: "S1-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: base) }
+        let locations = VaultLocations(
+            applicationSupport: base.appending(path: "Support"), appGroupContainer: base.appending(path: "Group"))
+        let store = VaultStore(
+            rootDirectory: locations.root, projectionURL: locations.projection, keyStore: PreviewKeyStore(),
+            fileProtector: DataProtectionFileProtector())
+        try await store.open()
+        _ = try await store.createDocument(
+            type: .ktp, expiry: nil, pinned: false, fields: DocumentFields(["nik": "0012345678901234"]),
+            pages: [Data(repeating: 7, count: 2_000)])
+
+        func protection(_ url: URL) throws -> FileProtectionType? {
+            try FileManager.default.attributesOfItem(atPath: url.path)[.protectionKey] as? FileProtectionType
+        }
+        let vaultItems =
+            [locations.root]
+            + (try FileManager.default.subpathsOfDirectory(atPath: locations.root.path))
+            .map { locations.root.appending(path: $0) }
+        #expect(vaultItems.count >= 5)  // the folder, pages/, vault.json, index.enc, one page
+        for url in vaultItems {
+            #expect(try protection(url) == .complete, "\(url.lastPathComponent)")
+        }
+        #expect(try protection(locations.projection) == .completeUntilFirstUserAuthentication)
+        #expect(
+            try protection(locations.projection.deletingLastPathComponent()) == .completeUntilFirstUserAuthentication)
+    }
+}

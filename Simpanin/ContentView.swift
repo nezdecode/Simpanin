@@ -12,6 +12,9 @@
 import SwiftUI
 
 struct ContentView: View {
+    /// Nil when the vault couldn't be set up, for example without the App Group entitlement.
+    let vault: AppVault?
+
     var body: some View {
         VStack {
             Image(systemName: "globe")
@@ -24,5 +27,5 @@ struct ContentView: View {
 }
 
 #Preview {
-    ContentView()
+    ContentView(vault: .preview())
 }
