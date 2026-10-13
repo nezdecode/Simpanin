@@ -87,9 +87,7 @@ extension VaultStore {
             documents: documents.filter { $0.deletedAt == nil }.map {
                 ProjectionEntry(id: $0.id, type: $0.type, expiry: $0.expiry, reminderOffsets: reminderOffsets)
             })
-        try FileManager.default.createDirectory(
-            at: projectionURL.deletingLastPathComponent(),
-            withIntermediateDirectories: true)
+        try createFolder(projectionURL.deletingLastPathComponent(), protection: .completeUntilFirstUserAuthentication)
         try write(
             VaultJSON.encoder.encode(projection), to: projectionURL,
             protection: .completeUntilFirstUserAuthentication)

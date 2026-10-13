@@ -33,7 +33,7 @@ extension VaultStore {
         lock()
         let fileManager = FileManager.default
         guard fileManager.fileExists(atPath: root.path) else { return nil }
-        try fileManager.createDirectory(at: quarantineDirectory, withIntermediateDirectories: true)
+        try createFolder(quarantineDirectory, protection: .complete)
         let destination = quarantineDestination(in: quarantineDirectory)
         try fileManager.moveItem(at: root, to: destination)
         return destination

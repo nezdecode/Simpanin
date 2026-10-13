@@ -125,6 +125,14 @@ public actor VaultStore {
         }
     }
 
+    /// Creates a folder that's missing and gives it a class, which new files in it start with.
+    /// A folder that's already there is left alone.
+    func createFolder(_ url: URL, protection: FileProtectionClass) throws {
+        guard !FileManager.default.fileExists(atPath: url.path) else { return }
+        try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        try fileProtector.protect(url, as: protection)
+    }
+
     // MARK: - Open and lock
 
     /// Unlocks the vault, then repairs the index if needed, removes orphan pages and purges.
@@ -159,12 +167,13 @@ public actor VaultStore {
             let vaultID = VaultID()
             vaultKey = try await readOrCreateNewVaultKey(vaultID)
             header = VaultHeader(vaultID: vaultID, keySlots: [KeySlot(kind: .device, createdAt: now())])
-            try fileManager.createDirectory(at: pagesDirectory, withIntermediateDirectories: true)
+            try createFolder(root, protection: .complete)
+            try createFolder(pagesDirectory, protection: .complete)
             try write(VaultJSON.encoder.encode(header), to: headerURL, protection: .complete)
             report.createdVault = true
         }
         guard vaultKey.bitCount == 256 else { throw VaultError.vaultUnreadable }
-        try fileManager.createDirectory(at: pagesDirectory, withIntermediateDirectories: true)
+        try createFolder(pagesDirectory, protection: .complete)
 
         let indexKey = VaultCrypto.indexKey(from: vaultKey, vaultID: header.vaultID)
         let wrapKey = VaultCrypto.wrapKey(from: vaultKey, vaultID: header.vaultID)

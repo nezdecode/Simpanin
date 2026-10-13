@@ -131,9 +131,10 @@ struct OnDiskPrivacyTests {
             return url.path.components(separatedBy: vault.base.lastPathComponent).last ?? ""
         }
         let projection = name(vault.projectionURL)
+        let backgroundReadable = [projection, name(vault.projectionURL.deletingLastPathComponent())]
         for call in protector.calls {
             let expected: FileProtectionClass =
-                name(call.url) == projection ? .completeUntilFirstUserAuthentication : .complete
+                backgroundReadable.contains(name(call.url)) ? .completeUntilFirstUserAuthentication : .complete
             #expect(call.protection == expected, "\(name(call.url))")
         }
         // index.prev.enc is index.enc moved aside, and a move keeps the class.
@@ -142,5 +143,25 @@ struct OnDiskPrivacyTests {
             #expect(protected.contains(name(file)), "\(name(file)) was never protected")
         }
         #expect(protected.contains(projection))
+    }
+
+    @Test func everyFolderVaultCoreCreatesIsProtected() async throws {
+        // A folder's class becomes the default for new files in it, so temp files start there.
+        let vault = try TestVault()
+        let protector = RecordingProtector()
+        let store = VaultStore(
+            rootDirectory: vault.root, projectionURL: vault.projectionURL, keyStore: vault.keyStore,
+            clock: vault.clock, fileProtector: protector)
+        try await store.open()
+        _ = try await store.quarantineVault(to: vault.quarantineURL)
+
+        func protection(of folder: URL) -> FileProtectionClass? {
+            protector.calls.last { $0.url.standardizedFileURL.path == folder.standardizedFileURL.path }?.protection
+        }
+        #expect(protection(of: vault.root) == .complete)
+        #expect(protection(of: vault.pagesDirectory) == .complete)
+        #expect(protection(of: vault.quarantineURL) == .complete)
+        #expect(
+            protection(of: vault.projectionURL.deletingLastPathComponent()) == .completeUntilFirstUserAuthentication)
     }
 }
