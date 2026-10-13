@@ -151,4 +151,13 @@ struct TamperTests {
         #expect(report.indexSource == .previous)
         #expect(report.newestChangeMayBeLost)
     }
+
+    @Test func damagedVaultHeaderIsCorruptAndChangesNothing() async throws {
+        let vault = try TestVault()
+        try await vault.makeStore().open()
+        try Data("{ not json".utf8).write(to: vault.headerURL)
+        let before = try TestVault.files(in: vault.base)
+        await #expect(throws: VaultError.corruptFile) { try await vault.makeStore().open() }
+        #expect(try TestVault.files(in: vault.base) == before)
+    }
 }

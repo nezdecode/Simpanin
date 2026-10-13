@@ -93,4 +93,16 @@ struct UnreadableFileTests {
         #expect(await vault.keyStore.key(for: liveID) != nil)
         #expect(FileManager.default.fileExists(atPath: copy.path))
     }
+
+    @Test func unreadableOrphanStopsOpen() async throws {
+        // An unreferenced page file that can't be read might still be someone's data.
+        let (vault, _) = try await makeEditedKTP()
+        let stray = vault.pageURL(PageID())
+        try Data("synthetic".utf8).write(to: stray)
+        try setReadable(false, stray)
+        vault.clock.advance(by: 3600)
+        await #expect(throws: VaultError.fileUnavailable) { try await vault.makeStore().open() }
+        try setReadable(true, stray)
+        #expect(FileManager.default.fileExists(atPath: stray.path))
+    }
 }
