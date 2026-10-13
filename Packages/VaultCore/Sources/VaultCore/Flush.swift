@@ -12,7 +12,7 @@
 import Foundation
 
 /// How the flushes before a deletion were done.
-public enum FlushMethod: Sendable, Equatable {
+enum FlushMethod: Sendable, Equatable {
     /// fcntl(F_FULLFSYNC), which asks the drive to write its cache to permanent storage.
     case fullFsync
     /// fsync, used where F_FULLFSYNC is unavailable or rejected.
