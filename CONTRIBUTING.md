@@ -58,3 +58,9 @@ Add a comment when the code can't say it for itself: why something is done this 
 ## Commits
 
 Write a short subject in the imperative ("Add page reordering"), and a body that says why when it isn't obvious. Keep moves and reformatting in their own commits, separate from changes in behaviour, so each diff is easy to review.
+
+## Branches and pull requests
+
+Don't commit to `main`. Each piece of work gets its own branch, named after it, like `app/part-4-screens` or `vaultcore/fix-flush`. Keep the small commits on that branch, then open a pull request into `main` that says what changed and which tests you ran.
+
+Merge with **Create a merge commit**. Don't squash or rebase: notes and reviews refer to commits by their hash, and both of those create new hashes.
