@@ -164,4 +164,39 @@ struct OnDiskPrivacyTests {
         #expect(
             protection(of: vault.projectionURL.deletingLastPathComponent()) == .completeUntilFirstUserAuthentication)
     }
+
+    @Test func everyPageCarriesTheIndexEntrysSealedKey() async throws {
+        // The document key is sealed once. Recovery reads it from the page headers.
+        let vault = try TestVault()
+        let store = vault.makeStore()
+        try await store.open()
+        let id = try await store.createDocument(
+            type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields,
+            pages: [Synthetic.page("front"), Synthetic.page("back")])
+        _ = try await store.addPage(Synthetic.page("extra"), to: id)
+        _ = try await store.replacePage(try await store.document(id).pageIDs[0], of: id, with: Synthetic.page("rescan"))
+
+        let entry = try #require(try await vault.readIndex(at: vault.indexURL).documents.first)
+        #expect(entry.pageIDs.count == 3)
+        for pageID in entry.pageIDs {
+            let header = try PageFile(decoding: Data(contentsOf: vault.pageURL(pageID))).header
+            #expect(header.sealedKey == entry.sealedKey)
+        }
+    }
+
+    @Test func editingReusesTheKeyAndReseals() async throws {
+        // Same fields saved again: the key stays, but a fresh nonce gives new ciphertext.
+        let vault = try TestVault()
+        let store = vault.makeStore()
+        try await store.open()
+        let id = try await store.createDocument(
+            type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields, pages: [])
+        let before = try #require(try await vault.readIndex(at: vault.indexURL).documents.first)
+        try await store.editDocument(id, type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields)
+        let after = try #require(try await vault.readIndex(at: vault.indexURL).documents.first)
+
+        #expect(after.sealedKey == before.sealedKey)
+        #expect(after.sealedFields.prefix(12) != before.sealedFields.prefix(12))
+        #expect(try await store.fields(of: id) == Synthetic.ktpFields)
+    }
 }
