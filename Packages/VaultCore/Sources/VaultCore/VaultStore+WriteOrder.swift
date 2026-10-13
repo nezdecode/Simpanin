@@ -30,7 +30,8 @@ extension VaultStore {
 
         // 3. Delete pages the index no longer references. First flush the new pages, the pages
         //    folder, the index and the vault folder, so nothing is deleted before its
-        //    replacement is on disk.
+        //    replacement is on disk. If a flush fails, the save still counts because the index
+        //    is written. The old pages just stay until orphan cleanup on a later open.
         let fileManager = FileManager.default
         var doomed: [PageID] = []
         for pageID in obsoletePages where fileManager.fileExists(atPath: pageURL(pageID).path) {
@@ -48,7 +49,7 @@ extension VaultStore {
                 // A commit is only as durable as its weakest flush.
                 lastFlushMethod = methods.allSatisfy { $0 == .fullFsync } ? .fullFsync : .fsync
             } catch {
-                throw VaultError.flushFailed
+                doomed = []
             }
         }
         for pageID in doomed {
