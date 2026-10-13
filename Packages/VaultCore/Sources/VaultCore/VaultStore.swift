@@ -61,6 +61,8 @@ public actor VaultStore {
     let flusher: any IndexFlusher
     /// How the last commit that flushed did it. `.fsync` if any of its flushes fell back.
     var lastFlushMethod: FlushMethod?
+    /// How often the crash hook stopped a write, so `afterSave` never swallows a simulated crash.
+    var crashHookStops = 0
 
     struct OpenState {
         let header: VaultHeader
@@ -205,7 +207,7 @@ public actor VaultStore {
                 report.removedOrphanPages = try removeOrphanPages(unreadable: &report.unreadablePages)
             }
             report.purgedDocuments = try purgeExpired()
-            try writeProjection(try requireState().index.documents)
+            try afterSave { try writeProjection(try requireState().index.documents) }
         } catch {
             state = nil
             throw error

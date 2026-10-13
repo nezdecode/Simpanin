@@ -24,9 +24,10 @@ extension VaultStore {
         }
         try step(.pagesWritten)
 
-        // 2. Rotate and write the index (twice for a purge).
+        // 2. Rotate and write the index (twice for a purge). Once index.enc is written the
+        //    change is saved. Anything that fails after this is repaired by the next open().
         try writeIndex(documents)
-        if writeIndexTwice { try writeIndex(documents) }
+        if writeIndexTwice { try afterSave { try writeIndex(documents) } }
 
         // 3. Delete pages the index no longer references. First flush the new pages, the pages
         //    folder, the index and the vault folder, so nothing is deleted before its
@@ -53,13 +54,24 @@ extension VaultStore {
             }
         }
         for pageID in doomed {
-            try fileManager.removeItem(at: pageURL(pageID))
+            try afterSave { try FileManager.default.removeItem(at: pageURL(pageID)) }
         }
         try step(.obsoletePagesDeleted)
 
         // 4. Projection last.
-        try writeProjection(documents)
+        try afterSave { try writeProjection(documents) }
         try step(.projectionWritten)
+    }
+
+    /// Runs a step that comes after index.enc is written. A failure is left for the next
+    /// open() to repair, except a stop from the tests' crash hook, which must still stop.
+    func afterSave(_ body: () throws -> Void) throws {
+        let stopsBefore = crashHookStops
+        do {
+            try body()
+        } catch {
+            if crashHookStops != stopsBefore { throw error }
+        }
     }
 
     private func writeIndex(_ documents: [IndexEntry]) throws {
@@ -136,6 +148,11 @@ extension VaultStore {
     }
 
     private func step(_ step: WriteStep) throws {
-        try crashHook?(step)
+        do {
+            try crashHook?(step)
+        } catch {
+            crashHookStops += 1
+            throw error
+        }
     }
 }

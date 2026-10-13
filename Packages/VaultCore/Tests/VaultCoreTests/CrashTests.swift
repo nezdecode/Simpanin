@@ -219,6 +219,60 @@ struct CrashTests {
         }
         #expect(try TestVault.files(in: vault.base) == before)
     }
+
+    // MARK: Once index.enc is written, the change counts. The next open() repairs the rest.
+
+    func makeStore(_ vault: TestVault, _ protector: FailingProtector) -> VaultStore {
+        VaultStore(
+            rootDirectory: vault.root, projectionURL: vault.projectionURL, keyStore: vault.keyStore,
+            clock: vault.clock, fileProtector: protector)
+    }
+
+    @Test func failedProjectionWriteStillCountsAsSaved() async throws {
+        let vault = try TestVault()
+        let protector = FailingProtector(failingOn: "projection.json", with: CocoaError(.fileWriteOutOfSpace))
+        let store = makeStore(vault, protector)
+        try await store.open()
+        protector.arm(true)
+        let id = try await store.createDocument(
+            type: .sim, expiry: Synthetic.simExpiry, pinned: false, fields: Synthetic.simFields, pages: [])
+        #expect(try vault.projection().documents.isEmpty)  // stale until the next open
+
+        // A projection that still can't be written never keeps the vault locked.
+        let stillFull = makeStore(vault, protector)
+        try await stillFull.open()
+        #expect(try await stillFull.document(id).type == .sim)
+
+        protector.arm(false)
+        try await vault.makeStore().open()
+        #expect(try vault.projection().documents.map(\.id) == [id])
+    }
+
+    @Test func failedSecondPurgeWriteStillCountsAsPurged() async throws {
+        let vault = try TestVault()
+        let protector = FailingProtector(failingOn: "index.enc", with: CocoaError(.fileWriteOutOfSpace), skipping: 1)
+        let store = makeStore(vault, protector)
+        try await store.open()
+        let id = try await store.createDocument(
+            type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields, pages: [Synthetic.page("front")])
+        let sealedKey = try #require(try await vault.readIndex(at: vault.indexURL).documents.first).sealedKey
+
+        protector.arm(true)
+        try await store.deletePermanently(id)
+        await #expect(throws: VaultError.documentNotFound) { try await store.document(id) }
+
+        // The next open writes index.enc again and removes the purged pages.
+        protector.arm(false)
+        vault.clock.advance(by: 3600)
+        let reopened = vault.makeStore()
+        try await reopened.open()
+        await #expect(throws: VaultError.documentNotFound) { try await reopened.document(id) }
+        #expect(FileManager.default.fileExists(atPath: vault.indexURL.path))
+        #expect(try vault.pageFiles().isEmpty)
+        for file in try vault.allFiles() {
+            #expect(!(try Data(contentsOf: file)).contains(bytes: sealedKey), "\(file.lastPathComponent)")
+        }
+    }
 }
 
 extension VaultStore {

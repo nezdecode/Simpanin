@@ -110,18 +110,26 @@ final class RecordingProtector: FileProtector {
 }
 
 /// While armed, throws `error` for any path that contains `target`, like a class that can't
-/// be set or a disk that's full.
+/// be set or a disk that's full. The first `skipping` matching calls still succeed.
 final class FailingProtector: FileProtector {
     let target: String
     let error: any Error
+    let skipping: Int
     private let armed = Mutex(false)
-    init(failingOn target: String, with error: any Error = CocoaError(.fileWriteNoPermission)) {
+    private let skipped = Mutex(0)
+    init(failingOn target: String, with error: any Error = CocoaError(.fileWriteNoPermission), skipping: Int = 0) {
         self.target = target
         self.error = error
+        self.skipping = skipping
     }
     func arm(_ isArmed: Bool) { armed.withLock { $0 = isArmed } }
     func protect(_ url: URL, as protection: FileProtectionClass) throws {
-        if armed.withLock({ $0 }), url.path.contains(target) { throw error }
+        guard armed.withLock({ $0 }), url.path.contains(target) else { return }
+        let skip = skipped.withLock { count in
+            count += 1
+            return count <= skipping
+        }
+        if !skip { throw error }
     }
 }
 
