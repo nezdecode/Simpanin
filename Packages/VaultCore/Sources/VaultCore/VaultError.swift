@@ -44,6 +44,4 @@ public enum VaultError: Error, Equatable, Sendable {
     case quarantineUnreadable
     /// The quarantine entry names the vault that is in use. Nothing is deleted.
     case quarantineInUse
-    /// A flush before deleting files failed, so nothing was deleted.
-    case flushFailed
 }

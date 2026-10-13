@@ -19,6 +19,9 @@ enum FlushMethod: Sendable, Equatable {
     case fsync
 }
 
+/// A flush didn't reach permanent storage. Internal: the store only skips its deletions.
+struct FlushFailed: Error, Equatable {}
+
 /// Flushes a file or folder to permanent storage. It's a protocol so tests can record flushes.
 protocol IndexFlusher: Sendable {
     func flush(_ url: URL) throws -> FlushMethod
@@ -41,10 +44,10 @@ struct FileSystemFlusher: IndexFlusher {
 
     func flush(_ url: URL) throws -> FlushMethod {
         let descriptor = open(url.path, O_RDONLY)
-        guard descriptor >= 0 else { throw VaultError.flushFailed }
+        guard descriptor >= 0 else { throw FlushFailed() }
         defer { close(descriptor) }
         if fullSync(descriptor) != -1 { return .fullFsync }
-        guard fileSync(descriptor) == 0 else { throw VaultError.flushFailed }
+        guard fileSync(descriptor) == 0 else { throw FlushFailed() }
         return .fsync
     }
 }
