@@ -312,6 +312,13 @@ struct VaultStoreLimitTests {
             type: .ktp, expiry: nil, pinned: false,
             fields: Synthetic.ktpFields, pages: [Synthetic.page("k")])
         await #expect(throws: VaultError.pageNotFound) { try await store.page(PageID(), of: id) }
+        await #expect(throws: VaultError.pageNotFound) {
+            try await store.replacePage(PageID(), of: id, with: Synthetic.page("k2"))
+        }
+        // A page the index lists but whose file is gone.
+        let pageID = try await store.document(id).pageIDs[0]
+        try FileManager.default.removeItem(at: vault.pageURL(pageID))
+        await #expect(throws: VaultError.pageNotFound) { try await store.page(pageID, of: id) }
     }
 
     @Test func timestampsAreWholeSeconds() async throws {
