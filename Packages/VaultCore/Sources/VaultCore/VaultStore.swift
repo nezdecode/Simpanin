@@ -176,6 +176,9 @@ public actor VaultStore {
             try write(VaultJSON.encoder.encode(header), to: headerURL, protection: .complete)
             report.createdVault = true
         }
+        // lock() may have run while we waited for the key, and the files may have been
+        // quarantined meanwhile. Nothing below waits, so this is the last chance to honour it.
+        guard lockCount == lockCountAtStart else { throw VaultError.locked }
         guard vaultKey.bitCount == 256 else { throw VaultError.vaultUnreadable }
         try createFolder(pagesDirectory, protection: .complete)
 
@@ -188,9 +191,6 @@ public actor VaultStore {
             !report.createdVault && loaded.source == .recovered
             && !loaded.index.documents.isEmpty
         report.unreadablePages = loaded.unreadablePages
-        // lock() may have run while we waited for the key. Nothing below waits, so this is
-        // the last chance to honour it.
-        guard lockCount == lockCountAtStart else { throw VaultError.locked }
         state = OpenState(
             header: header, indexKey: indexKey, wrapKey: wrapKey, index: loaded.index,
             indexFileIsCurrent: loaded.source == .current)

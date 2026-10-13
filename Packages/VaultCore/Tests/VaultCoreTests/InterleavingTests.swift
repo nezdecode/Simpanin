@@ -60,6 +60,44 @@ struct InterleavingTests {
         #expect(!report.createdVault)
         #expect(await vault.keyStore.createCount == 1)
     }
+    @Test func quarantineWhileOpenWaitsWritesNothingAfterwards() async throws {
+        // quarantineVault waits for an open in progress, but a new open can start before it
+        // resumes. Then it locks and moves the folder while that open waits for the key.
+        // The test does those two steps itself, because the real call would wait at the gate.
+        let vault = try TestVault()
+        try await vault.makeStore().open()
+        let keyStore = GatedKeyStore(vault.keyStore)
+        let store = makeStore(vault, keyStore)
+        let opening = Task { try await store.open() }
+        await keyStore.waitForCalls()
+
+        await store.lock()
+        let moved = vault.base.appending(path: "Moved", directoryHint: .isDirectory)
+        try FileManager.default.moveItem(at: vault.root, to: moved)
+        await keyStore.release()
+        await #expect(throws: VaultError.locked) { try await opening.value }
+        #expect(!FileManager.default.fileExists(atPath: vault.root.path))  // no empty Vault/pages/
+    }
+
+    @Test func deletingTheSameQuarantinedVaultTwiceSucceedsOnce() async throws {
+        // A double tap on "delete": both calls wait for the key store at the same time.
+        let vault = try TestVault()
+        try await vault.makeStore().open()
+        let oldID = try vault.header().vaultID
+        let keyStore = GatedKeyStore(vault.keyStore)
+        let store = makeStore(vault, keyStore)
+        let folder = try #require(try await store.quarantineVault(to: vault.quarantineURL))
+        let entry = try #require(try await store.quarantinedVaults(in: vault.quarantineURL).vaults.first)
+
+        let first = Task { try await store.deleteQuarantinedVault(entry) }
+        let second = Task { try await store.deleteQuarantinedVault(entry) }
+        await keyStore.waitForCalls(2)
+        await keyStore.release()
+        try await first.value
+        try await second.value
+        #expect(!FileManager.default.fileExists(atPath: folder.path))
+        #expect(await vault.keyStore.key(for: oldID) == nil)
+    }
 }
 
 /// Holds every key store call at a gate until the test calls `release()`, like a Face ID

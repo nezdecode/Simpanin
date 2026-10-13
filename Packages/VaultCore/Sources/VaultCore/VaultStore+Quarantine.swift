@@ -88,7 +88,11 @@ extension VaultStore {
         } catch {
             throw Self.unavailable(error)
         }
-        try FileManager.default.removeItem(at: vault.folder)
+        do {
+            try FileManager.default.removeItem(at: vault.folder)
+        } catch CocoaError.fileNoSuchFile {
+            // A second delete of the same entry ran while this one waited for the key store.
+        }
     }
 
     private func folderSize(_ folder: URL) throws -> Int64 {
