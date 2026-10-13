@@ -73,6 +73,8 @@ public actor VaultStore {
 
     var state: OpenState?
     private var lastReport: OpenReport?
+    /// Bumped by every `lock()`, so an `open()` that was waiting for the key can tell.
+    private var lockCount = 0
     var openTask: Task<OpenReport, any Error>?
 
     /// - Parameters:
@@ -150,10 +152,12 @@ public actor VaultStore {
     public func lock() {
         state = nil
         lastReport = nil
+        lockCount += 1
     }
 
     private func performOpen() async throws -> OpenReport {
         if state != nil, let lastReport { return lastReport }
+        let lockCountAtStart = lockCount
         var report = OpenReport()
         let fileManager = FileManager.default
 
@@ -184,6 +188,9 @@ public actor VaultStore {
             !report.createdVault && loaded.source == .recovered
             && !loaded.index.documents.isEmpty
         report.unreadablePages = loaded.unreadablePages
+        // lock() may have run while we waited for the key. Nothing below waits, so this is
+        // the last chance to honour it.
+        guard lockCount == lockCountAtStart else { throw VaultError.locked }
         state = OpenState(
             header: header, indexKey: indexKey, wrapKey: wrapKey, index: loaded.index,
             indexFileIsCurrent: loaded.source == .current)

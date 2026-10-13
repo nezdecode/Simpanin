@@ -33,7 +33,8 @@ public enum VaultError: Error, Equatable, Sendable {
     case vaultHeaderMissing
     /// Neither index file nor any page file could be opened with this vault key.
     case vaultUnreadable
-    /// The vault is locked. Call `open()` first.
+    /// The vault is locked. Call `open()` first. `open()` itself throws this when `lock()` ran
+    /// while it was waiting for the key.
     case locked
     case documentNotFound
     /// The id isn't in the document, or the page's file is gone.
