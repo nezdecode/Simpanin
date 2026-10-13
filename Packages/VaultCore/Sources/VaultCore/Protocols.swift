@@ -36,6 +36,7 @@ public protocol KeyStore: Sendable {
     /// with `.itemAlreadyExists` instead of overwriting it.
     func createVaultKey(for vaultID: VaultID) async throws -> SymmetricKey
 
+    /// Throw `.itemNotFound` if there is no item. VaultCore treats that as already deleted.
     func deleteVaultKey(for vaultID: VaultID) async throws
 }
 
