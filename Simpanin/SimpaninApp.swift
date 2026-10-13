@@ -18,7 +18,12 @@ struct SimpaninApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView(vault: try? vault.get())
+            if let vault = try? vault.get() {
+                RootView(vault: vault)
+            } else {
+                // Only a broken build gets here: the entitlements or Info.plist values are missing.
+                ContentUnavailableView("Simpanin tidak bisa disiapkan", systemImage: "exclamationmark.triangle")
+            }
         }
     }
 }
