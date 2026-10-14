@@ -49,7 +49,8 @@ final class SimpaninUITests: XCTestCase {
         XCTAssertEqual(rows(app).count, 3)
         screenshot("02 list with samples")
 
-        rows(app).element(boundBy: 0).swipeLeft()
+        // The list is a grid of tiles, so deleting is in the long-press menu.
+        rows(app).element(boundBy: 0).press(forDuration: 1.2)
         app.buttons["Hapus"].tap()
         XCTAssertTrue(rows(app).element(boundBy: 1).waitForExistence(timeout: 5))
         XCTAssertEqual(rows(app).count, 2)

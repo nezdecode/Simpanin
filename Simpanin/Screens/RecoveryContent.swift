@@ -57,6 +57,21 @@ nonisolated struct RecoveryContent: Equatable, Sendable {
     }
 }
 
+/// The one extra sentence some recovery screens carry, below the design doc's text.
+nonisolated enum RecoveryText {
+    static func extra(_ screen: RecoveryScreen) -> LocalizedStringResource? {
+        switch screen {
+        case .passcodeNeeded: "recovery.extra.passcodeNeeded"
+        case .passcodeTurnedOff: "recovery.extra.passcodeTurnedOff"
+        case .cannotOpenNow: "recovery.extra.cannotOpenNow"
+        case .keyMissing: "recovery.extra.keyMissing"
+        case .vaultUnreadable: "recovery.extra.vaultUnreadable"
+        case .updateApp: "recovery.extra.updateApp"
+        case .unlockPhoneAndRetry, .storageFullOnOpen, .storageFullOnSave, .saveFailed: nil
+        }
+    }
+}
+
 extension VaultNotice {
     nonisolated var message: LocalizedStringResource {
         switch self {

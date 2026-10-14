@@ -39,7 +39,7 @@ final class LockController {
     var screenCaptured = false
     var contentHidden: Bool { state != .unlocked || coverShown || screenCaptured }
 
-    let relockTimeout: TimeInterval
+    var relockTimeout: TimeInterval
     private let vault: any VaultOpening
     private let clock: any VaultClock
     private let passcode: @MainActor () -> PasscodeState

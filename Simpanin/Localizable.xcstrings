@@ -1,6 +1,50 @@
 {
   "sourceLanguage" : "id",
   "strings" : {
+    "autoLock.fiveMinutes" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Setelah 5 menit"
+          }
+        }
+      }
+    },
+    "autoLock.immediately" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Langsung"
+          }
+        }
+      }
+    },
+    "autoLock.oneMinute" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Setelah 1 menit"
+          }
+        }
+      }
+    },
+    "banner.more %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "dan %lld dokumen lain perlu dicek"
+          }
+        }
+      }
+    },
     "button.cancel" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -19,6 +63,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Hapus"
+          }
+        }
+      }
+    },
+    "button.deleteForever" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hapus permanen"
           }
         }
       }
@@ -122,7 +177,51 @@
         }
       }
     },
-    "list.empty" : {
+    "deleted.explanation" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dokumen di sini dihapus permanen 30 hari setelah dihapus, bersama kuncinya. Sampai saat itu kamu masih bisa memulihkannya."
+          }
+        }
+      }
+    },
+    "deleted.purgeIn %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dihapus permanen dalam %lld hari"
+          }
+        }
+      }
+    },
+    "deleted.purgeToday" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dihapus permanen hari ini"
+          }
+        }
+      }
+    },
+    "empty.body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pindai KTP, SIM, atau paspor. Semuanya terenkripsi dan tetap di HP ini."
+          }
+        }
+      }
+    },
+    "empty.title" : {
       "extractionState" : "manual",
       "localizations" : {
         "id" : {
@@ -133,24 +232,112 @@
         }
       }
     },
-    "list.expiry %@" : {
+    "expiry.expired %@" : {
       "extractionState" : "manual",
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Berlaku sampai %@"
+            "value" : "Sudah habis sejak %@"
           }
         }
       }
     },
-    "list.noExpiry" : {
+    "expiry.lifetime" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seumur hidup"
+          }
+        }
+      }
+    },
+    "expiry.none" : {
       "extractionState" : "manual",
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tanpa masa berlaku"
+          }
+        }
+      }
+    },
+    "expiry.soon %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Habis dalam %lld hari"
+          }
+        }
+      }
+    },
+    "expiry.tax %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pajak sampai %@"
+          }
+        }
+      }
+    },
+    "expiry.taxExpired %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pajak sudah habis sejak %@"
+          }
+        }
+      }
+    },
+    "expiry.taxSoon %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pajak habis dalam %lld hari"
+          }
+        }
+      }
+    },
+    "expiry.taxToday" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pajak habis hari ini"
+          }
+        }
+      }
+    },
+    "expiry.today" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Habis hari ini"
+          }
+        }
+      }
+    },
+    "expiry.valid %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Berlaku sampai %@"
           }
         }
       }
@@ -184,6 +371,61 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dokumen"
+          }
+        }
+      }
+    },
+    "lock.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terkunci. Dokumenmu terenkripsi di HP ini."
+          }
+        }
+      }
+    },
+    "lock.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Simpanin"
+          }
+        }
+      }
+    },
+    "main.allDocuments" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Semua dokumen"
+          }
+        }
+      }
+    },
+    "main.lockNow" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kunci sekarang"
+          }
+        }
+      }
+    },
+    "main.subtitle %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld dokumen, terenkripsi di HP ini"
           }
         }
       }
@@ -227,7 +469,29 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hapus data lama ini? Kunci vault lamanya juga ikut dihapus. Ini tidak bisa dibatalkan."
+            "value" : "Hapus data lama ini?"
+          }
+        }
+      }
+    },
+    "oldVaults.deleteMessage" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dokumen di dalamnya hilang permanen, bersama kuncinya."
+          }
+        }
+      }
+    },
+    "oldVaults.detail %@ %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ · dipindahkan pukul %2$@"
           }
         }
       }
@@ -243,13 +507,101 @@
         }
       }
     },
-    "oldVaults.row %@" : {
+    "oldVaults.explanation" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vault yang tidak bisa dibuka lagi, disimpan apa adanya dan tetap terenkripsi. Simpanin tidak menghapusnya sendiri."
+          }
+        }
+      }
+    },
+    "oldVaults.footer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menghapus juga menghapus kunci lamanya. Setelah itu dokumen di dalamnya tidak bisa dipulihkan lagi."
+          }
+        }
+      }
+    },
+    "oldVaults.title %@" : {
       "extractionState" : "manual",
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Vault lama, %@"
+          }
+        }
+      }
+    },
+    "onboarding.recheck" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Simpanin memeriksa lagi saat kamu kembali."
+          }
+        }
+      }
+    },
+    "onboarding.step1" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buka app Pengaturan, di halaman utamanya"
+          }
+        }
+      }
+    },
+    "onboarding.step2.faceID" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ketuk Face ID & Kode Sandi"
+          }
+        }
+      }
+    },
+    "onboarding.step2.passcode" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ketuk Kode Sandi"
+          }
+        }
+      }
+    },
+    "onboarding.step2.touchID" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ketuk Touch ID & Kode Sandi"
+          }
+        }
+      }
+    },
+    "onboarding.step3" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ketuk Nyalakan Kode Sandi, lalu kembali ke Simpanin"
           }
         }
       }
@@ -261,6 +613,72 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Vault tidak bisa dibuka sekarang. Coba lagi nanti."
+          }
+        }
+      }
+    },
+    "recovery.extra.cannotOpenNow" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dokumenmu tidak berubah."
+          }
+        }
+      }
+    },
+    "recovery.extra.keyMissing" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidak ada yang dihapus. Kalau kamu mulai vault baru, dokumen lama disimpan di Pengaturan, Data lama."
+          }
+        }
+      }
+    },
+    "recovery.extra.passcodeNeeded" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dokumen di Simpanin hanya bisa dibuka dengan Face ID atau passcode HP ini. Tanpa passcode, kuncinya tidak bisa dibuat."
+          }
+        }
+      }
+    },
+    "recovery.extra.passcodeTurnedOff" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dokumenmu masih ada dan aman, dan terbuka lagi setelah passcode dinyalakan."
+          }
+        }
+      }
+    },
+    "recovery.extra.updateApp" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dokumenmu utuh."
+          }
+        }
+      }
+    },
+    "recovery.extra.vaultUnreadable" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Data lama disimpan apa adanya. Versi Simpanin berikutnya mungkin bisa memulihkannya."
           }
         }
       }
@@ -364,6 +782,61 @@
         }
       }
     },
+    "saveFull.hint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kosongkan ruang di Pengaturan › Umum › Penyimpanan iPhone, lalu simpan lagi."
+          }
+        }
+      }
+    },
+    "settings.autoLock" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kunci otomatis"
+          }
+        }
+      }
+    },
+    "settings.data" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Data"
+          }
+        }
+      }
+    },
+    "settings.deviceOnly" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dokumen hanya ada di HP ini. Kalau HP hilang atau ganti, dokumen tidak ikut pindah."
+          }
+        }
+      }
+    },
+    "settings.noAccount" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Simpanin tidak punya akun, server, atau analitik. Semua dokumen tetap di HP ini."
+          }
+        }
+      }
+    },
     "settings.oldVaults" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -375,6 +848,28 @@
         }
       }
     },
+    "settings.privacy" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Privasi"
+          }
+        }
+      }
+    },
+    "settings.security" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keamanan"
+          }
+        }
+      }
+    },
     "settings.title" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -382,6 +877,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pengaturan"
+          }
+        }
+      }
+    },
+    "settings.version %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Versi %@"
           }
         }
       }
@@ -403,7 +909,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vault lama dipindahkan ke Data lama, tidak dihapus. Kamu bisa menghapusnya nanti di Pengaturan."
+            "value" : "Vault lama dipindahkan ke Data lama tanpa diubah. Dokumen di dalamnya tidak bisa dibuka tanpa kunci lamanya, tapi tetap disimpan sampai kamu menghapusnya sendiri."
           }
         }
       }
@@ -426,6 +932,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ketik %@ untuk melanjutkan."
+          }
+        }
+      }
+    },
+    "startNew.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mulai vault baru?"
+          }
+        }
+      }
+    },
+    "storageFull.hint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lihat apa yang memakai ruang di Pengaturan › Umum › Penyimpanan iPhone"
           }
         }
       }
@@ -507,6 +1035,61 @@
         }
       }
     },
+    "type.simA" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SIM A"
+          }
+        }
+      }
+    },
+    "type.simB1" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SIM B1"
+          }
+        }
+      }
+    },
+    "type.simB2" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SIM B2"
+          }
+        }
+      }
+    },
+    "type.simC" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SIM C"
+          }
+        }
+      }
+    },
+    "type.simD" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SIM D"
+          }
+        }
+      }
+    },
     "type.stnk" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -514,6 +1097,50 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "STNK"
+          }
+        }
+      }
+    },
+    "unlock.faceID" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pakai Face ID atau passcode HP"
+          }
+        }
+      }
+    },
+    "unlock.opticID" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pakai Optic ID atau passcode HP"
+          }
+        }
+      }
+    },
+    "unlock.passcode" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pakai passcode HP"
+          }
+        }
+      }
+    },
+    "unlock.touchID" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pakai Touch ID atau passcode HP"
           }
         }
       }
