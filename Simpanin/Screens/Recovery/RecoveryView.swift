@@ -66,7 +66,7 @@ struct RecoveryView: View {
                 button(ScreenText.retry) { Task { await lock.unlock() } }
             case .openSettings:
                 button(ScreenText.openSettings) {
-                    if let url = SystemLinks.settings { openURL(url) }
+                    if let url = URL.appSettings { openURL(url) }
                 }
             case .startNewVault:
                 // A decision rather than the obvious next step, so the softer button. Not red:
@@ -74,7 +74,7 @@ struct RecoveryView: View {
                 button(ScreenText.startNewVault, emphasis: .secondary) { startingNewVault = true }
             case .openAppStore:
                 button(ScreenText.openAppStore) {
-                    if let url = SystemLinks.appStore { openURL(url) }
+                    if let url = URL.appStore { openURL(url) }
                 }
             case .dismiss:
                 EmptyView()

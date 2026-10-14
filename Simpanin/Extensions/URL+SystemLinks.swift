@@ -1,5 +1,5 @@
 //
-//  SystemLinks.swift
+//  URL+SystemLinks.swift
 //  Simpanin
 //
 //  Created by Inez Amanda on 15/10/26.
@@ -12,8 +12,8 @@
 import UIKit
 
 /// Places outside the app that a screen can send the user to.
-enum SystemLinks {
+extension URL {
     /// Simpanin's own page in Settings; iOS doesn't allow linking deeper.
-    static var settings: URL? { URL(string: UIApplication.openSettingsURLString) }
+    static var appSettings: URL? { URL(string: UIApplication.openSettingsURLString) }
     static var appStore: URL? { URL(string: "itms-apps://apps.apple.com") }
 }
