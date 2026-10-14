@@ -31,6 +31,17 @@ nonisolated enum OldVaultText {
         return "oldVaults.title \(movedAt.formatted(style))"
     }
 
+    /// "12 MB · 2 Okt 2026", or only the size when the folder name has no date.
+    static func unreadableDetail(
+        folderName: String, sizeInBytes: Int64, timeZone: TimeZone = .current
+    ) -> LocalizedStringResource {
+        let size = OldVaultsModel.sizeText(sizeInBytes)
+        guard let moved = movedAt(folderName: folderName) else { return "oldVaults.sizeOnly \(size)" }
+        var style = Date.FormatStyle(locale: Locale(identifier: "id_ID")).day().month(.abbreviated).year()
+        style.timeZone = timeZone
+        return "oldVaults.unreadableDetail \(size) \(moved.formatted(style))"
+    }
+
     static func detail(_ movedAt: Date, sizeInBytes: Int64, timeZone: TimeZone = .current) -> LocalizedStringResource {
         let time = DateFormatter()
         time.locale = Locale(identifier: "id_ID")

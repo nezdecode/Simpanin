@@ -88,7 +88,14 @@ final class Library {
 /// Keychain item, through VaultCore.
 @MainActor @Observable
 final class OldVaultsModel {
+    /// A folder VaultCore can't read. It can't be deleted safely yet, so it's only shown.
+    struct UnreadableFolder: Equatable {
+        let folder: URL
+        let sizeInBytes: Int64
+    }
+
     private(set) var vaults: [QuarantinedVault] = []
+    private(set) var unreadable: [UnreadableFolder] = []
     private let store: any QuarantineStoring
     private let folder: URL
 
@@ -101,8 +108,25 @@ final class OldVaultsModel {
         ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)
     }
 
+    nonisolated static func folderSize(_ folder: URL) -> Int64 {
+        let keys: [URLResourceKey] = [.isRegularFileKey, .fileSizeKey]
+        guard let files = FileManager.default.enumerator(at: folder, includingPropertiesForKeys: keys) else { return 0 }
+        var total: Int64 = 0
+        for case let file as URL in files {
+            guard let values = try? file.resourceValues(forKeys: Set(keys)), values.isRegularFile == true else {
+                continue
+            }
+            total += Int64(values.fileSize ?? 0)
+        }
+        return total
+    }
+
     func reload() async {
-        vaults = (try? await store.quarantinedVaults(in: folder))?.vaults ?? []
+        let listing = try? await store.quarantinedVaults(in: folder)
+        vaults = listing?.vaults ?? []
+        unreadable = (listing?.unreadableFolders ?? []).map {
+            UnreadableFolder(folder: $0, sizeInBytes: Self.folderSize($0))
+        }
     }
 
     func delete(_ vault: QuarantinedVault) async {

@@ -51,7 +51,11 @@ nonisolated final class AppVault: Sendable {
     /// What SimpaninApp starts with: the real vault, or in DEBUG UI tests a throwaway one.
     static func launch() throws -> AppVault {
         #if DEBUG
-            if UITestSetup.isActive { return preview() }
+            if UITestSetup.isActive {
+                let vault = preview()
+                UITestSetup.addBrokenOldVault(to: vault.locations.quarantine)
+                return vault
+            }
         #endif
         return try live()
     }
