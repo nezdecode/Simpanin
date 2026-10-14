@@ -9,10 +9,14 @@
 //  file, You can obtain one at https://mozilla.org/MPL/2.0/.
 //
 
+import Foundation
 import os
 
 extension Logger {
+    /// The bundle identifier, so a separate debug build logs under its own name.
+    nonisolated private static let subsystem = Bundle.main.bundleIdentifier ?? "Simpanin"
+
     /// Never log field values, names, numbers, keys or file contents here.
-    nonisolated static let launch = Logger(subsystem: "com.inez.Simpanin", category: "launch")
-    nonisolated static let library = Logger(subsystem: "com.inez.Simpanin", category: "library")
+    nonisolated static let launch = Logger(subsystem: subsystem, category: "launch")
+    nonisolated static let library = Logger(subsystem: subsystem, category: "library")
 }
