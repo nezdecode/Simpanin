@@ -93,8 +93,9 @@ struct RecoveryView: View {
         VStack(alignment: .leading, spacing: 16) {
             Spacer(minLength: 40)
             IconBadge(
-                symbol: tone.symbol, size: 64, symbolFont: .system(size: 30, weight: .semibold), tint: tone.colour,
-                background: tone.colour.opacity(0.14))
+                symbol: content.tone.symbol, size: 64, symbolFont: .system(size: 30, weight: .semibold),
+                tint: toneColour,
+                background: toneColour.opacity(0.14))
             Text(content.message)
                 .font(.title2.bold())
                 .accessibilityIdentifier("recovery.message")
@@ -156,13 +157,11 @@ struct RecoveryView: View {
             .buttonStyle(.fullWidth(emphasis))
     }
 
-    /// The design's four tones follow what the user has to do, not how bad the error is.
-    private var tone: (symbol: String, colour: Color) {
-        switch content.action {
-        case .openSettings: ("lock", .accentColor)
-        case .startNewVault: ("questionmark", Color(.onWarning))
-        case .openAppStore: ("arrow.up", .accentColor)
-        case .retry, .dismiss: ("arrow.clockwise", .secondary)
+    private var toneColour: Color {
+        switch content.tone {
+        case .needsAction, .update: .accentColor
+        case .decision: Color(.onWarning)
+        case .temporary: .secondary
         }
     }
 }

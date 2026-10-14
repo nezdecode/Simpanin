@@ -19,8 +19,31 @@ nonisolated struct RecoveryContent: Equatable, Sendable {
         case retry, openSettings, startNewVault, openAppStore, dismiss
     }
 
+    /// The design's four tones follow what the user has to do, not how bad the error is.
+    enum Tone: Equatable, Sendable {
+        case needsAction, temporary, decision, update
+
+        var symbol: String {
+            switch self {
+            case .needsAction: "lock"
+            case .temporary: "arrow.clockwise"
+            case .decision: "questionmark"
+            case .update: "arrow.up"
+            }
+        }
+    }
+
     let message: LocalizedStringResource
     let action: Action
+
+    var tone: Tone {
+        switch action {
+        case .openSettings: .needsAction
+        case .startNewVault: .decision
+        case .openAppStore: .update
+        case .retry, .dismiss: .temporary
+        }
+    }
 
     init(_ screen: RecoveryScreen) {
         switch screen {

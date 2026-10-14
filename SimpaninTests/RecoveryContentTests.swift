@@ -56,6 +56,21 @@ struct RecoveryContentTests {
     }
 
     /// The "Way out" column.
+    @Test func tonesFollowWhatTheUserHasToDo() {
+        #expect(RecoveryContent(.passcodeNeeded).tone == .needsAction)
+        #expect(RecoveryContent(.passcodeTurnedOff).tone == .needsAction)
+        #expect(RecoveryContent(.unlockPhoneAndRetry).tone == .temporary)
+        #expect(RecoveryContent(.cannotOpenNow).tone == .temporary)
+        #expect(RecoveryContent(.storageFullOnOpen).tone == .temporary)
+        #expect(RecoveryContent(.keyMissing).tone == .decision)
+        #expect(RecoveryContent(.vaultUnreadable).tone == .decision)
+        #expect(RecoveryContent(.updateApp).tone == .update)
+        let symbols: [RecoveryContent.Tone: String] = [
+            .needsAction: "lock", .temporary: "arrow.clockwise", .decision: "questionmark", .update: "arrow.up",
+        ]
+        for (tone, symbol) in symbols { #expect(tone.symbol == symbol) }
+    }
+
     @Test func waysOut() {
         #expect(RecoveryContent(.keyMissing).action == .startNewVault)
         #expect(RecoveryContent(.vaultUnreadable).action == .startNewVault)
