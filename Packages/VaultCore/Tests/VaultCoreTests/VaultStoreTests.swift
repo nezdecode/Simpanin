@@ -38,6 +38,16 @@ struct VaultStoreTests {
         #expect(await vault.keyStore.createCount == 1)
     }
 
+    @Test func vaultExistsOnlyOnceTheHeaderIsWritten() async throws {
+        let vault = try TestVault()
+        #expect(VaultStore.headerFileName == "vault.json")
+        #expect(!VaultStore.vaultExists(in: vault.root))
+        try await vault.makeStore().open()
+        #expect(VaultStore.vaultExists(in: vault.root))
+        try FileManager.default.removeItem(at: vault.headerURL)
+        #expect(!VaultStore.vaultExists(in: vault.root))
+    }
+
     @Test func createAndReadDocument() async throws {
         let vault = try TestVault()
         let store = vault.makeStore()

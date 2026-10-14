@@ -40,7 +40,9 @@ Simpanin has two parts: a core that knows how to keep documents safe, and an app
 - `Vault/`: the platform side of VaultCore (`KeychainKeyStore`, `DataProtectionFileProtector`) and `AppVault`, which creates the app's one `VaultStore` at launch.
 - `Lock/`: `LockController`, the lock's state machine, `RecoveryMapping`, which decides what the user sees when opening fails, and the lock settings and checks every screen relies on.
 - `Documents/`: how a document reads on screen: type names, colours and the expiry wording.
-- `Screens/`: one folder per area (`Library`, `Settings`, `Recovery`), each holding its views and the models behind them side by side. A file is named after its main type: `LibraryModel.swift` holds the `@Observable` model, `LibraryView.swift` its view. `Shared/` holds the few pieces several screens use.
+- `Screens/`: one folder per screen or flow (`Library`, `RecentlyDeleted`, `Settings`, `OldVaults`, `LockCover`), each holding its views and the models behind them side by side. A file is named after its main type: `LibraryModel.swift` holds the `@Observable` model, `LibraryView.swift` its view.
+- `Components/`: views and styles several screens use, like `IconBadge` and `FullWidthButtonStyle`. Check here before building a new one.
+- `Extensions/`: extensions on system types, one file per type and purpose, named like `Date+Indonesian.swift`.
 - `Debug/`: tools that only exist in DEBUG builds.
 
 VaultCore keeps its public types in `Models.swift` and everything it writes to disk in `Format.swift`, so a format change is easy to spot.

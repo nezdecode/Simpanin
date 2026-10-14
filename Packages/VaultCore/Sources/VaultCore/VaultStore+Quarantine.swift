@@ -51,7 +51,7 @@ extension VaultStore {
         .filter { (try? $0.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true }
         .sorted { $0.lastPathComponent < $1.lastPathComponent }
         for folder in folders {
-            if let header = try? readHeader(at: folder.appending(path: "vault.json")) {
+            if let header = try? readHeader(at: folder.appending(path: Self.headerFileName)) {
                 listing.vaults.append(
                     QuarantinedVault(
                         vaultID: header.vaultID, folder: folder,
@@ -66,7 +66,7 @@ extension VaultStore {
     /// Deletes the Keychain item, then the folder. Refuses a mismatched vault or the one in use.
     /// If the key can't be deleted, the folder stays so the user can try again.
     public func deleteQuarantinedVault(_ vault: QuarantinedVault) async throws {
-        guard let header = try? readHeader(at: vault.folder.appending(path: "vault.json")),
+        guard let header = try? readHeader(at: vault.folder.appending(path: Self.headerFileName)),
             header.vaultID == vault.vaultID
         else {
             throw VaultError.quarantineUnreadable

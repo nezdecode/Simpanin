@@ -20,8 +20,7 @@ struct SimpaninApp: App {
         if case .failure(let error) = result {
             // Domain and code only; a file system error's message can hold paths.
             let error = error as NSError
-            Logger(subsystem: "com.inez.Simpanin", category: "launch")
-                .error("Setup failed: \(error.domain, privacy: .public) \(error.code, privacy: .public)")
+            Logger.launch.error("Setup failed: \(error.domain, privacy: .public) \(error.code, privacy: .public)")
         }
         return result
     }()

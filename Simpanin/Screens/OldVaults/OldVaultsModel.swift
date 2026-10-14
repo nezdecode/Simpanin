@@ -28,7 +28,7 @@ extension VaultStore: QuarantineStoring {}
 final class OldVaultsModel {
     /// A folder VaultCore can't read. It can't be deleted safely yet, so it's only shown.
     struct UnreadableFolder: Equatable {
-        let folder: URL
+        let url: URL
         let sizeInBytes: Int64
     }
 
@@ -40,10 +40,6 @@ final class OldVaultsModel {
     init(store: any QuarantineStoring, folder: URL) {
         self.store = store
         self.folder = folder
-    }
-
-    nonisolated static func sizeText(_ bytes: Int64) -> String {
-        ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)
     }
 
     nonisolated static func folderSize(_ folder: URL) -> Int64 {
@@ -63,7 +59,7 @@ final class OldVaultsModel {
         let listing = try? await store.quarantinedVaults(in: folder)
         vaults = listing?.vaults ?? []
         unreadable = (listing?.unreadableFolders ?? []).map {
-            UnreadableFolder(folder: $0, sizeInBytes: Self.folderSize($0))
+            UnreadableFolder(url: $0, sizeInBytes: Self.folderSize($0))
         }
     }
 
@@ -87,27 +83,20 @@ nonisolated enum OldVaultText {
     }
 
     static func title(_ movedAt: Date, timeZone: TimeZone = .current) -> LocalizedStringResource {
-        var style = Date.FormatStyle(locale: Locale(identifier: "id_ID")).day().month(.abbreviated).year()
-        style.timeZone = timeZone
-        return "oldVaults.title \(movedAt.formatted(style))"
+        "oldVaults.title \(movedAt.formatted(.indonesianDate(timeZone: timeZone)))"
     }
 
     /// "12 MB · 2 Okt 2026", or only the size when the folder name has no date.
     static func unreadableDetail(
         folderName: String, sizeInBytes: Int64, timeZone: TimeZone = .current
     ) -> LocalizedStringResource {
-        let size = OldVaultsModel.sizeText(sizeInBytes)
+        let size = sizeInBytes.formatted(.byteCount(style: .file))
         guard let moved = movedAt(folderName: folderName) else { return "oldVaults.sizeOnly \(size)" }
-        var style = Date.FormatStyle(locale: Locale(identifier: "id_ID")).day().month(.abbreviated).year()
-        style.timeZone = timeZone
-        return "oldVaults.unreadableDetail \(size) \(moved.formatted(style))"
+        return "oldVaults.unreadableDetail \(size) \(moved.formatted(.indonesianDate(timeZone: timeZone)))"
     }
 
     static func detail(_ movedAt: Date, sizeInBytes: Int64, timeZone: TimeZone = .current) -> LocalizedStringResource {
-        let time = DateFormatter()
-        time.locale = Locale(identifier: "id_ID")
-        time.timeZone = timeZone
-        time.dateFormat = "HH.mm"
-        return "oldVaults.detail \(OldVaultsModel.sizeText(sizeInBytes)) \(time.string(from: movedAt))"
+        let time = movedAt.formatted(.indonesianTime(timeZone: timeZone))
+        return "oldVaults.detail \(sizeInBytes.formatted(.byteCount(style: .file))) \(time)"
     }
 }

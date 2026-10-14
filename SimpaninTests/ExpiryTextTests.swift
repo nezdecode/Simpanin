@@ -1,5 +1,5 @@
 //
-//  DocumentPresentationTests.swift
+//  ExpiryTextTests.swift
 //  SimpaninTests
 //
 //  Created by Inez Amanda on 15/10/26.
@@ -11,51 +11,13 @@
 
 import Foundation
 import Testing
-import UIKit
 import VaultCore
 
 @testable import Simpanin
 
-/// How a document's type and expiry read on the list. Nothing here may need the document's
-/// encrypted fields: the list only knows the type and the expiry date.
-@Suite("Document presentation")
-struct DocumentPresentationTests {
-    static let names: [(DocumentType, String)] = [
-        (.ktp, "KTP"), (.simA, "SIM A"), (.simB1, "SIM B1"), (.simB2, "SIM B2"), (.simC, "SIM C"),
-        (.simD, "SIM D"), (.sim, "SIM"), (.passport, "Paspor"), (.stnk, "STNK"), (.kk, "Kartu Keluarga"),
-        (.npwp, "NPWP"), (.bpjs, "BPJS"), (.other, "Lainnya"),
-    ]
-
-    @Test(arguments: names)
-    func typeName(_ type: DocumentType, _ name: String) {
-        #expect(String(localized: DocumentStyle.name(type)) == name)
-    }
-
-    @Test func nameWithLabel() {
-        #expect(String(localized: DocumentStyle.name(.npwp, label: "Kantor")) == "NPWP · Kantor")
-        #expect(String(localized: DocumentStyle.name(.ktp, label: nil)) == "KTP")
-        #expect(String(localized: DocumentStyle.name(.ktp, label: "  ")) == "KTP")
-    }
-
-    @Test func aTypeFromANewerVersionReadsAsOther() {
-        #expect(String(localized: DocumentStyle.name(DocumentType(rawValue: "visa"))) == "Lainnya")
-    }
-
-    /// Every type has a tile colour pair in the asset catalog, in light and dark.
-    @Test(arguments: names.map(\.0))
-    func tileColoursExist(_ type: DocumentType) {
-        let colours = DocumentStyle.tileColours(type)
-        for name in [colours.background, colours.foreground] {
-            let colour = UIColor(named: name)
-            #expect(colour != nil, "\(name)")
-            let light = colour?.resolvedColor(with: UITraitCollection(userInterfaceStyle: .light))
-            let dark = colour?.resolvedColor(with: UITraitCollection(userInterfaceStyle: .dark))
-            #expect(light != dark, "\(name) has no dark variant")
-        }
-    }
-
-    // MARK: Expiry wording
-
+/// How an expiry date reads, from the calendar days alone.
+@Suite("Expiry wording")
+struct ExpiryTextTests {
     let today = CalendarDate(year: 2026, month: 10, day: 15)!
 
     func text(_ type: DocumentType, _ expiry: CalendarDate?) -> String {

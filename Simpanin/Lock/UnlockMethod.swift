@@ -48,7 +48,7 @@ nonisolated enum UnlockMethod: Equatable, Sendable {
         }
     }
 
-    var symbol: String {
+    var systemImage: String {
         switch self {
         case .faceID: "faceid"
         case .touchID: "touchid"

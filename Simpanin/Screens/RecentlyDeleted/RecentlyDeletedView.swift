@@ -23,26 +23,7 @@ struct RecentlyDeletedView: View {
                     Text("list.recentlyDeletedEmpty").foregroundStyle(.secondary)
                 }
                 ForEach(library.deleted) { document in
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(DocumentStyle.name(document.type, label: document.label)).font(.headline)
-                        if let deletedAt = document.deletedAt {
-                            Text(
-                                PurgeCountdown.text(daysLeft: PurgeCountdown.daysLeft(deletedAt: deletedAt, now: .now))
-                            )
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                        }
-                    }
-                    .accessibilityElement(children: .combine)
-                    .accessibilityIdentifier("document.row")
-                    .swipeActions {
-                        Button {
-                            Task { await library.restore(document.id) }
-                        } label: {
-                            Text("button.restore")
-                        }
-                        .tint(.accentColor)
-                    }
+                    DeletedDocumentRow(document: document) { Task { await library.restore(document.id) } }
                 }
             } footer: {
                 Text("deleted.explanation")

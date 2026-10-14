@@ -41,11 +41,11 @@ struct LibraryView: View {
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                     }
-                    notices
+                    NoticeList(notices: lock.notices, onDismiss: lock.dismiss)
                     if library.documents.isEmpty {
                         EmptyLibraryView()
                     } else {
-                        expiryBanner
+                        ExpiryBanner(documents: library.documents, today: today)
                         Text("main.allDocuments").font(.title3.weight(.semibold)).padding(.top, 8)
                         LazyVGrid(columns: columns, spacing: 12) {
                             ForEach(library.documents) { document in
@@ -67,7 +67,8 @@ struct LibraryView: View {
                     NavigationLink {
                         RecentlyDeletedView(library: library)
                     } label: {
-                        GroupedRow(title: "list.recentlyDeleted", value: "\(library.deleted.count)", symbol: "trash")
+                        GroupedRow(
+                            title: "list.recentlyDeleted", value: "\(library.deleted.count)", systemImage: "trash")
                     }
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("list.recentlyDeleted")
@@ -81,7 +82,7 @@ struct LibraryView: View {
             .task { await library.reload() }
             .alert(
                 library.saveError.map { Text(RecoveryContent($0).message) } ?? Text(verbatim: ""),
-                isPresented: Binding(get: { library.saveError != nil }, set: { if !$0 { library.saveError = nil } })
+                isPresented: Binding(isPresent: $library.saveError)
             ) {
                 Button {
                     library.saveError = nil
@@ -139,124 +140,5 @@ struct LibraryView: View {
                 .accessibilityIdentifier("list.addSample")
             }
         #endif
-    }
-
-    /// The one-time notices from opening, then the full-disk banner, each dismissed with "Oke".
-    @ViewBuilder private var notices: some View {
-        let order: [VaultNotice] = [.recoveredFromPages, .newestChangeMayBeLost, .repairWaitingForSpace]
-        ForEach(order, id: \.self) { notice in
-            if lock.notices.contains(notice) {
-                HStack(alignment: .top, spacing: 12) {
-                    Image(systemName: notice == .repairWaitingForSpace ? "externaldrive" : "info.circle")
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(notice.message)
-                        Button {
-                            lock.dismiss(notice)
-                        } label: {
-                            Text(ScreenText.okay).fontWeight(.semibold)
-                        }
-                    }
-                }
-                .foregroundStyle(Color("OnWarning"))
-                .padding(14)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color("Warning"), in: .rect(cornerRadius: 16))
-            }
-        }
-    }
-
-    /// The document that expires soonest, or already has. Others that need attention are counted.
-    @ViewBuilder private var expiryBanner: some View {
-        let attention = ExpiryText.needsAttention(library.documents.map(\.expiry), today: today)
-        if let first = attention.first {
-            let document = library.documents[first]
-            HStack(spacing: 12) {
-                Image(systemName: "clock")
-                    .frame(width: 36, height: 36)
-                    .background(Color("WarningIcon"), in: .circle)
-                    .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(DocumentStyle.name(document.type)).font(.headline)
-                    Text(ExpiryText.text(type: document.type, expiry: document.expiry, today: today))
-                    if attention.count > 1 {
-                        Text("banner.more \(attention.count - 1)").font(.subheadline)
-                    }
-                }
-                Spacer(minLength: 0)
-            }
-            .foregroundStyle(Color("OnWarning"))
-            .padding(14)
-            .background(Color("Warning"), in: .rect(cornerRadius: 16))
-            .accessibilityElement(children: .combine)
-        }
-    }
-}
-
-/// A document on the list: its type and expiry, in the type's colours.
-struct DocumentTile: View {
-    let document: Document
-    let today: CalendarDate
-    let wide: Bool
-
-    var body: some View {
-        let colours = DocumentStyle.tileColours(document.type)
-        VStack(alignment: .leading, spacing: 6) {
-            Text(DocumentStyle.name(document.type))
-                .font(.footnote.weight(.bold))
-                .tracking(0.6)
-            Spacer(minLength: wide ? 0 : 12)
-            if let label = DocumentStyle.shownLabel(document.label) {
-                Text(verbatim: label).font(.headline).lineLimit(1)
-            }
-            Text(ExpiryText.text(type: document.type, expiry: document.expiry, today: today))
-                .font(.footnote)
-        }
-        .foregroundStyle(Color(colours.foreground))
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
-        .frame(maxWidth: .infinity, minHeight: wide ? 0 : 104, alignment: .leading)
-        .background(Color(colours.background), in: .rect(cornerRadius: 18))
-        .accessibilityElement(children: .combine)
-        .accessibilityIdentifier("document.row")
-    }
-}
-
-/// "Belum ada dokumen".
-struct EmptyLibraryView: View {
-    var body: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "lock.shield")
-                .font(.system(size: 26))
-                .foregroundStyle(Color("OnAccent"))
-                .frame(width: 52, height: 52)
-                .background(Color.accentColor, in: .circle)
-                .accessibilityHidden(true)
-            Text("empty.title").font(.title3.bold())
-            Text("empty.body").foregroundStyle(.secondary).multilineTextAlignment(.center)
-        }
-        .padding(.vertical, 60)
-        .padding(.horizontal, 20)
-        .frame(maxWidth: .infinity)
-    }
-}
-
-/// A white row on the grouped background, like a table cell.
-struct GroupedRow: View {
-    let title: LocalizedStringResource
-    var value: String = ""
-    var symbol: String?
-
-    var body: some View {
-        HStack(spacing: 12) {
-            if let symbol { Image(systemName: symbol).foregroundStyle(.secondary).accessibilityHidden(true) }
-            Text(title)
-            Spacer()
-            Text(verbatim: value).foregroundStyle(.secondary)
-            Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
-        }
-        .padding(.horizontal, 16)
-        .frame(minHeight: 50)
-        .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 12))
-        .contentShape(.rect)
     }
 }

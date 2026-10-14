@@ -45,7 +45,7 @@
             guard ProcessInfo.processInfo.arguments.contains("-SimpaninUITestBrokenOldVault") else { return }
             let folder = quarantine.appending(path: "20261002-031500", directoryHint: .isDirectory)
             try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-            try? Data("not a vault".utf8).write(to: folder.appending(path: "vault.json"))
+            try? Data("not a vault".utf8).write(to: folder.appending(path: VaultStore.headerFileName))
         }
 
         static var passcode: PasscodeState {
@@ -57,11 +57,10 @@
             let opener: any VaultOpening =
                 openFailure.map { ScriptedOpening(store: vault.store, failure: $0.error, times: $0.times) }
                 ?? vault.store
-            let header = vault.locations.root.appending(path: "vault.json")
             let passcode = passcode
             return LockController(
                 vault: opener, passcode: { passcode },
-                vaultExists: { FileManager.default.fileExists(atPath: header.path) },
+                vaultExists: { VaultStore.vaultExists(in: vault.locations.root) },
                 protectedDataAvailable: { true })
         }
     }

@@ -47,13 +47,26 @@ struct AutoLockTests {
         #expect(RootView.makeLock(for: .preview(), defaults: defaults).relockTimeout == 0)
     }
 
+    @Test func settingTheChoiceSavesAndAppliesIt() {
+        let defaults = defaults()
+        let controller = LockController(
+            vault: FakeVault([]), clock: FixedClock(), passcode: { .set }, vaultExists: { true },
+            protectedDataAvailable: { true })
+        controller.setAutoLock(.fiveMinutes, in: defaults)
+        #expect(controller.relockTimeout == 300)
+        #expect(AutoLock.stored(in: defaults) == .fiveMinutes)
+        controller.setAutoLock(.immediately, in: defaults)
+        #expect(controller.relockTimeout == 0)
+        #expect(AutoLock.stored(in: defaults) == .immediately)
+    }
+
     @Test func immediatelyRelocksOnAnyReturn() async {
         let clock = FixedClock()
         let vault = FakeVault([])
         let controller = LockController(
             vault: vault, clock: clock, passcode: { .set }, vaultExists: { true }, protectedDataAvailable: { true })
         await controller.sceneDidBecomeActive()
-        controller.relockTimeout = AutoLock.immediately.seconds
+        controller.setAutoLock(.immediately, in: defaults())
         controller.sceneDidEnterBackground()
         clock.advance(by: 1)
         await controller.sceneDidBecomeActive()

@@ -39,7 +39,7 @@
                 let label: String
                 switch path {
                 case "pages": label = "pages folder"
-                case "vault.json": label = "vault header"
+                case VaultStore.headerFileName: label = "vault header"
                 case "index.enc": label = "index"
                 case "index.prev.enc": label = "previous index"
                 default:

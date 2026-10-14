@@ -28,10 +28,7 @@ struct SettingsView: View {
                 } label: {
                     Text("settings.autoLock")
                 }
-                .onChange(of: autoLock) { _, choice in
-                    choice.store()
-                    lock.relockTimeout = choice.seconds
-                }
+                .onChange(of: autoLock) { _, choice in lock.setAutoLock(choice) }
             } header: {
                 Text("settings.security")
             }
