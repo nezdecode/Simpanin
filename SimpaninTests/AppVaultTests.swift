@@ -59,13 +59,38 @@ struct AppVaultTests {
         #expect(try folder.resourceValues(forKeys: [.isExcludedFromBackupKey]).isExcludedFromBackup == true)
     }
 
-    @Test func launchExcludesTheAppGroupFromBackup() throws {
+    /// iOS doesn't let the app change the App Group container itself (error 513 on a device,
+    /// though the simulator allows it), so the projection gets a folder of its own.
+    @Test func projectionFolderIsPreparedAndExcludedFromBackup() throws {
+        let base = FileManager.default.temporaryDirectory.appending(path: "Projection-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: base) }
+        let locations = VaultLocations(
+            applicationSupport: base.appending(path: "Support"), appGroupContainer: base.appending(path: "Group"))
+        try FileManager.default.createDirectory(
+            at: base.appending(path: "Group"), withIntermediateDirectories: true)
+        try Data("{}".utf8).write(to: locations.oldProjection)
+        let other = base.appending(path: "Group/keep.txt")
+        try Data("keep".utf8).write(to: other)
+
+        for _ in 1...2 {
+            try AppVault.prepareProjectionFolder(locations, protector: NoFileProtection())
+        }
+        var folder = locations.projectionFolder
+        folder.removeAllCachedResourceValues()
+        #expect(try folder.resourceValues(forKeys: [.isExcludedFromBackupKey]).isExcludedFromBackup == true)
+        // The old plaintext copy goes; the projection is written again on the next unlock.
+        #expect(!FileManager.default.fileExists(atPath: locations.oldProjection.path))
+        #expect(FileManager.default.fileExists(atPath: other.path))
+    }
+
+    @Test func launchPreparesTheRealProjectionFolder() throws {
         // The test host launched the app, so the real App Group container has been through launch.
         let group = try #require(AppConfiguration.appGroup)
-        var container = try #require(
+        let container = try #require(
             FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: group))
-        container.removeAllCachedResourceValues()
-        #expect(try container.resourceValues(forKeys: [.isExcludedFromBackupKey]).isExcludedFromBackup == true)
+        var folder = container.appending(path: "Projection", directoryHint: .isDirectory)
+        folder.removeAllCachedResourceValues()
+        #expect(try folder.resourceValues(forKeys: [.isExcludedFromBackupKey]).isExcludedFromBackup == true)
     }
 
     @Test func locations() {
@@ -74,7 +99,8 @@ struct AppVaultTests {
         let locations = VaultLocations(applicationSupport: support, appGroupContainer: group)
         #expect(locations.root.path == "/Support/Vault")
         #expect(locations.quarantine.path == "/Support/Quarantine")
-        #expect(locations.projection.path == "/Group/projection.json")
+        #expect(locations.projection.path == "/Group/Projection/projection.json")
+        #expect(locations.oldProjection.path == "/Group/projection.json")
     }
 
     /// S1 from the review notes, read back from the file system.

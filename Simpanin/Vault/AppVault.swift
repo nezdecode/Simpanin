@@ -19,11 +19,16 @@ nonisolated struct VaultLocations: Equatable, Sendable {
     let root: URL
     let quarantine: URL
     let projection: URL
+    let projectionFolder: URL
+    /// Where builds before 15 Oct 2026 kept the projection, directly in the App Group.
+    let oldProjection: URL
 
     init(applicationSupport: URL, appGroupContainer: URL) {
         root = applicationSupport.appending(path: "Vault", directoryHint: .isDirectory)
         quarantine = applicationSupport.appending(path: "Quarantine", directoryHint: .isDirectory)
-        projection = appGroupContainer.appending(path: "projection.json")
+        projectionFolder = appGroupContainer.appending(path: "Projection", directoryHint: .isDirectory)
+        projection = projectionFolder.appending(path: "projection.json")
+        oldProjection = appGroupContainer.appending(path: "projection.json")
     }
 }
 
@@ -60,18 +65,36 @@ nonisolated final class AppVault: Sendable {
         try folder.setResourceValues(values)
     }
 
+    /// projection.json is plaintext, so its folder stays out of backups. It's a folder of its own
+    /// because iOS doesn't let an app change the App Group container itself. Runs at every launch,
+    /// so a recreated folder is never missed. The copy older builds kept in the container is
+    /// removed; open() writes the projection again.
+    static func prepareProjectionFolder(_ locations: VaultLocations, protector: any FileProtector) throws {
+        let fileManager = FileManager.default
+        if !fileManager.fileExists(atPath: locations.projectionFolder.path) {
+            try fileManager.createDirectory(at: locations.projectionFolder, withIntermediateDirectories: true)
+            try protector.protect(locations.projectionFolder, as: .completeUntilFirstUserAuthentication)
+        }
+        try excludeFromBackup(locations.projectionFolder)
+        do {
+            try fileManager.removeItem(at: locations.oldProjection)
+        } catch CocoaError.fileNoSuchFile {
+            // Already gone.
+        }
+    }
+
     static func live() throws -> AppVault {
         guard let accessGroup = AppConfiguration.keychainAccessGroup, let appGroup = AppConfiguration.appGroup,
             let container = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroup)
         else { throw SetupError.missingConfiguration }
         let support = try FileManager.default.url(
             for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
-        // projection.json is plaintext. Set at every launch, so a recreated folder is never missed.
-        try excludeFromBackup(container)
         let locations = VaultLocations(applicationSupport: support, appGroupContainer: container)
+        let protector = DataProtectionFileProtector()
+        try prepareProjectionFolder(locations, protector: protector)
         let store = VaultStore(
             rootDirectory: locations.root, projectionURL: locations.projection,
-            keyStore: KeychainKeyStore(accessGroup: accessGroup), fileProtector: DataProtectionFileProtector())
+            keyStore: KeychainKeyStore(accessGroup: accessGroup), fileProtector: protector)
         return AppVault(store: store, locations: locations)
     }
 

@@ -9,19 +9,29 @@
 //  file, You can obtain one at https://mozilla.org/MPL/2.0/.
 //
 
+import OSLog
 import SwiftUI
 
 @main
 struct SimpaninApp: App {
     /// The one VaultStore, made here once. Nothing else creates one for the real vault.
-    private let vault = Result { try AppVault.launch() }
+    private let vault: Result<AppVault, any Error> = {
+        let result = Result { try AppVault.launch() }
+        if case .failure(let error) = result {
+            // Domain and code only; a file system error's message can hold paths.
+            let error = error as NSError
+            Logger(subsystem: "com.inez.Simpanin", category: "launch")
+                .error("Setup failed: \(error.domain, privacy: .public) \(error.code, privacy: .public)")
+        }
+        return result
+    }()
 
     var body: some Scene {
         WindowGroup {
             if let vault = try? vault.get() {
                 RootView(vault: vault)
             } else {
-                // Only a broken build gets here: the entitlements or Info.plist values are missing.
+                // A broken build (missing entitlements or Info.plist values) or a file system error.
                 ContentUnavailableView("setup.failed", systemImage: "exclamationmark.triangle")
             }
         }
