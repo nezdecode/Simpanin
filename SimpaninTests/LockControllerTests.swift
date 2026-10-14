@@ -222,6 +222,32 @@ struct LockControllerTests {
         #expect(controller.state == .unlocked)
     }
 
+    @Test func returningFromSettingsRetriesThePasscodeScreen() async {
+        // "Settings link; retry on return": the user sets a passcode and comes back.
+        let vault = FakeVault([])
+        let passcode = Mutex(PasscodeState.notSet)
+        let controller = LockController(
+            vault: vault, clock: clock, passcode: { passcode.withLock { $0 } }, vaultExists: { false },
+            protectedDataAvailable: { true })
+        await controller.sceneDidBecomeActive()
+        #expect(controller.state == .recovery(.passcodeNeeded))
+        controller.sceneDidEnterBackground()
+        passcode.withLock { $0 = .set }
+        await controller.sceneDidBecomeActive()
+        #expect(controller.state == .unlocked)
+        #expect(await vault.openCount == 1)
+    }
+
+    @Test func returningDoesNotRetryAScreenThatNeedsADecision() async {
+        let vault = FakeVault([.failure(.vaultKeyMissing)])
+        let controller = makeController(vault)
+        await controller.sceneDidBecomeActive()
+        controller.sceneDidEnterBackground()
+        await controller.sceneDidBecomeActive()
+        #expect(controller.state == .recovery(.keyMissing))
+        #expect(await vault.openCount == 1)
+    }
+
     @Test func noticesFromOpening() async {
         var report = OpenReport()
         report.repairWaitingForSpace = true

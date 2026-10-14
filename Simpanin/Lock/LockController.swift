@@ -68,6 +68,12 @@ final class LockController {
 
     // MARK: - Scene phase
 
+    /// The passcode screens send the user to Settings, so coming back retries by itself.
+    private var retriesOnReturn: Bool {
+        guard case .recovery(let screen) = state else { return false }
+        return RecoveryContent(screen).action == .openSettings
+    }
+
     /// Prompts only at launch and on a return from the background. The prompt itself makes the
     /// app inactive and active again, so prompting on every activation would loop after a cancel.
     func sceneDidBecomeActive() async {
@@ -78,7 +84,7 @@ final class LockController {
             await lock()
         }
         backgroundedAt = nil
-        if returning, state == .locked { await unlock() }
+        if returning, state == .locked || retriesOnReturn { await unlock() }
     }
 
     func sceneDidBecomeInactive() {
