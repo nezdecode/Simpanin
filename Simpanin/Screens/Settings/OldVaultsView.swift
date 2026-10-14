@@ -25,55 +25,10 @@ struct OldVaultsView: View {
                     Text("oldVaults.empty").foregroundStyle(.secondary)
                 }
                 ForEach(model.vaults, id: \.folder) { old in
-                    HStack(spacing: 12) {
-                        IconBadge(
-                            symbol: "archivebox", tint: .secondary, background: Color(.systemGray5),
-                            outline: .rounded(8))
-                        VStack(alignment: .leading, spacing: 2) {
-                            if let moved = OldVaultText.movedAt(folderName: old.folder.lastPathComponent) {
-                                Text(OldVaultText.title(moved))
-                                Text(OldVaultText.detail(moved, sizeInBytes: old.sizeInBytes))
-                                    .font(.footnote)
-                                    .foregroundStyle(.secondary)
-                            } else {
-                                Text(verbatim: OldVaultsModel.sizeText(old.sizeInBytes))
-                            }
-                        }
-                        Spacer(minLength: 0)
-                        Button(role: .destructive) {
-                            pendingDelete = old
-                        } label: {
-                            Text("button.delete")
-                        }
-                        .buttonStyle(.borderless)
-                        .foregroundStyle(Color(.destructive))
-                        .accessibilityIdentifier("oldVaults.delete")
-                    }
-                    .swipeActions {
-                        Button(role: .destructive) {
-                            pendingDelete = old
-                        } label: {
-                            Text("button.delete")
-                        }
-                    }
+                    OldVaultRow(vault: old) { pendingDelete = old }
                 }
                 ForEach(model.unreadable, id: \.folder) { folder in
-                    HStack(spacing: 12) {
-                        IconBadge(
-                            symbol: "exclamationmark.triangle", tint: Color(.onWarning), background: Color(.warning),
-                            outline: .rounded(8))
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("oldVaults.unreadableTitle")
-                            Text(
-                                OldVaultText.unreadableDetail(
-                                    folderName: folder.folder.lastPathComponent, sizeInBytes: folder.sizeInBytes)
-                            )
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                        }
-                    }
-                    .accessibilityElement(children: .combine)
-                    .accessibilityIdentifier("oldVaults.unreadable")
+                    UnreadableFolderRow(folder: folder)
                 }
             } header: {
                 Text("oldVaults.explanation").textCase(nil)

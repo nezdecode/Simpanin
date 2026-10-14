@@ -41,11 +41,11 @@ struct LibraryView: View {
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                     }
-                    notices
+                    NoticeList(notices: lock.notices, onDismiss: lock.dismiss)
                     if library.documents.isEmpty {
                         EmptyLibraryView()
                     } else {
-                        expiryBanner
+                        ExpiryBanner(documents: library.documents, today: today)
                         Text("main.allDocuments").font(.title3.weight(.semibold)).padding(.top, 8)
                         LazyVGrid(columns: columns, spacing: 12) {
                             ForEach(library.documents) { document in
@@ -139,46 +139,5 @@ struct LibraryView: View {
                 .accessibilityIdentifier("list.addSample")
             }
         #endif
-    }
-
-    /// The one-time notices from opening, then the full-disk banner, each dismissed with "Oke".
-    @ViewBuilder private var notices: some View {
-        let order: [VaultNotice] = [.recoveredFromPages, .newestChangeMayBeLost, .repairWaitingForSpace]
-        ForEach(order, id: \.self) { notice in
-            if lock.notices.contains(notice) {
-                HStack(alignment: .top, spacing: 12) {
-                    Image(systemName: notice == .repairWaitingForSpace ? "externaldrive" : "info.circle")
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(notice.message)
-                        Button {
-                            lock.dismiss(notice)
-                        } label: {
-                            Text(ScreenText.okay).fontWeight(.semibold)
-                        }
-                    }
-                }
-                .noticeCard()
-            }
-        }
-    }
-
-    /// The document that expires soonest, or already has. Others that need attention are counted.
-    @ViewBuilder private var expiryBanner: some View {
-        let attention = ExpiryText.needsAttention(library.documents.map(\.expiry), today: today)
-        if let first = attention.first {
-            let document = library.documents[first]
-            HStack(spacing: 12) {
-                IconBadge(symbol: "clock", tint: Color(.onWarning), background: Color(.warningIcon))
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(DocumentStyle.name(document.type)).font(.headline)
-                    Text(ExpiryText.text(type: document.type, expiry: document.expiry, today: today))
-                    if attention.count > 1 {
-                        Text("banner.more \(attention.count - 1)").font(.subheadline)
-                    }
-                }
-            }
-            .noticeCard()
-            .accessibilityElement(children: .combine)
-        }
     }
 }
