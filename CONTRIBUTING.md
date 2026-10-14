@@ -28,6 +28,31 @@ The hook rejects images and PDFs outside `Fixtures/Synthetic/`, and Swift files 
 - Once a format ships, it stays. Don't change a key derivation label, an associated-data string, a Keychain flag or the file layout without a migration and a new fixture test. The vault in `Fixtures/Synthetic/VaultV1` must always open.
 - For VaultCore, write the test first and watch it fail before you fix the code.
 
+## Architecture
+
+Simpanin has two parts: a core that knows how to keep documents safe, and an app around it.
+
+**VaultCore** (`Packages/VaultCore`) holds everything about storing documents: encryption, the file format, the order of writes, recovery and purging. It imports only Foundation and Crypto, so its tests run on a Mac without a simulator. It reaches the platform through small protocols (`KeyStore`, `VaultClock`, `FileProtector`) that the app implements. `VaultStore` is an actor and the only way in, and every change goes through its write order. If a piece of logic doesn't need UIKit, SwiftUI, the Keychain or Face ID, it probably belongs here.
+
+**The app** (`Simpanin/`) is organised by topic:
+
+- `Vault/`: the platform side of VaultCore (`KeychainKeyStore`, `DataProtectionFileProtector`) and `AppVault`, which creates the app's one `VaultStore` at launch.
+- `Lock/`: `LockController`, the lock's state machine, and `RecoveryMapping`, which decides what the user sees when opening fails.
+- `Screens/`: SwiftUI views and the models behind them.
+- `Debug/`: tools that only exist in DEBUG builds.
+
+A few rules keep it that way:
+
+- Views stay thin. They show state and pass on taps. State and logic live in `@MainActor @Observable` models, one per screen or flow.
+- When a decision can be a pure function, make it one, like what to show for an error. Then it's tested without any UI.
+- Models depend on small protocols (`VaultOpening`, `DocumentStoring` and so on) rather than on `VaultStore` itself, so tests can use stand-ins. Add a protocol when a test needs one, not before.
+- There is one `VaultStore` per vault folder. Don't create another one for the real vault.
+- Calls that can block, like the Keychain while a prompt is up, run off the actor that calls them.
+- Every text the user sees lives in `Localizable.xcstrings` under a short key.
+- DEBUG-only code stays inside `#if DEBUG`, in `Debug/` where possible.
+
+Tests follow the same split. VaultCore is tested with `swift test`. App logic is tested in `SimpaninTests` with stand-ins. Screens are tested in `SimpaninUITests` on a throwaway vault (the `-SimpaninUITest` launch argument), finding elements by accessibility identifier rather than by layout. What only a real phone can show, like Face ID and file protection classes, goes through the DEBUG device checks screen.
+
 ## Style
 
 swift-format handles layout (`.swift-format`). SwiftLint handles naming, size and file headers (`.swiftlint.yml`). Before you commit, run:
