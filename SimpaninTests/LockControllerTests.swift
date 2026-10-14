@@ -24,15 +24,19 @@ actor FakeVault: VaultOpening {
     private(set) var lockCount = 0
     private var gate: CheckedContinuation<Void, Never>?
     private let gated: Bool
+    private let onlyFirstGated: Bool
 
-    init(_ results: [Result<OpenReport, VaultError>], gated: Bool = false) {
+    /// - Parameter onlyFirstGated: later opens answer at once, so a retry the test doesn't
+    ///   expect fails the test instead of hanging it.
+    init(_ results: [Result<OpenReport, VaultError>], gated: Bool = false, onlyFirstGated: Bool = false) {
         self.results = results
         self.gated = gated
+        self.onlyFirstGated = onlyFirstGated
     }
 
     func open() async throws -> OpenReport {
         openCount += 1
-        if gated { await withCheckedContinuation { gate = $0 } }
+        if gated, !onlyFirstGated || openCount == 1 { await withCheckedContinuation { gate = $0 } }
         let result = results.isEmpty ? .success(OpenReport()) : results.removeFirst()
         return try result.get()
     }
@@ -259,6 +263,35 @@ struct LockControllerTests {
         #expect(log[0].contains("-128") && log[0].contains("lockCover"))
         #expect(log[1].contains("opened") && log[1].contains("unlocked"))
         #expect(log[2].contains("phone locked"))
+    }
+
+    @Test func phoneLockingDuringThePromptIsACancelWithoutARetry() async {
+        // Check 7 on the iPhone: the phone locks while the prompt is up, and the interrupted
+        // read returns -25293 before the app has left the foreground.
+        let vault = FakeVault(
+            [Self.unavailable(-25293), Self.unavailable(-25308)], gated: true, onlyFirstGated: true)
+        let controller = makeController(vault)
+        let opening = Task { await controller.sceneDidBecomeActive() }
+        #expect(await vault.waitUntilOpening())
+        await controller.protectedDataWillBecomeUnavailable()
+        await vault.release()
+        await opening.value
+        #expect(controller.state == .locked)
+        #expect(await vault.openCount == 1)  // no second prompt against a locked phone
+    }
+
+    @Test func aLockDuringASuccessfulOpenWins() async {
+        // Face ID succeeds just as the phone locks: the open finishes after the lock.
+        let vault = FakeVault([.success(OpenReport())], gated: true, onlyFirstGated: true)
+        let controller = makeController(vault)
+        let opening = Task { await controller.sceneDidBecomeActive() }
+        #expect(await vault.waitUntilOpening())
+        await controller.lock()
+        await vault.release()
+        await opening.value
+        #expect(controller.state == .locked)
+        #expect(controller.contentHidden)
+        #expect(await vault.lockCount == 2)  // locked again, after the open finished
     }
 
     @Test func noticesFromOpening() async {

@@ -51,6 +51,8 @@ final class LockController {
     private var waitingForProtectedData = false
     private var leftForegroundDuringPrompt = false
     private var failuresInARow = 0
+    /// Bumped by every lock, so an attempt that was waiting for the vault can tell it lost.
+    private var lockCount = 0
 
     #if DEBUG
         /// For the device checks: each open attempt and lock event, as statuses only.
@@ -131,11 +133,23 @@ final class LockController {
         }
         state = .unlocking
         leftForegroundDuringPrompt = false
+        let lockCountAtStart = lockCount
         let result: Result<OpenReport, any Error>
         do {
             result = .success(try await vault.open())
         } catch {
             result = .failure(error)
+        }
+        // A lock that came in meanwhile (the user, or the phone locking) wins over the result. The
+        // phone may lock before the app leaves the foreground, and the open may even finish after
+        // the lock reached the store, so lock the store again and keep the cover.
+        guard lockCount == lockCountAtStart else {
+            #if DEBUG
+                attemptLog.append("open: \(Self.describe(result)) -> dropped, locked meanwhile")
+            #endif
+            await vault.lock()
+            state = .locked
+            return
         }
         let outcome = RecoveryMapping.outcome(
             of: result, passcode: passcode(), failuresInARow: failuresInARow,
@@ -152,6 +166,7 @@ final class LockController {
     }
 
     func lock() async {
+        lockCount += 1
         await vault.lock()
         state = .locked
         notices = []
