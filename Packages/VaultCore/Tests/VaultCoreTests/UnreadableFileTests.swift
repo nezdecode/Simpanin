@@ -30,7 +30,7 @@ struct UnreadableFileTests {
         try await store.open()
         let id = try await store.createDocument(
             type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields, pages: [Synthetic.page("front")])
-        try await store.editDocument(id, type: .ktp, expiry: nil, pinned: true, fields: Synthetic.ktpFields)
+        try await store.editDocument(id, type: .ktp, label: nil, expiry: nil, pinned: true, fields: Synthetic.ktpFields)
         return (vault, id)
     }
 

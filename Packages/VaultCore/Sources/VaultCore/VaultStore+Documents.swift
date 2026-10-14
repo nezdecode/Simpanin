@@ -63,7 +63,7 @@ extension VaultStore {
 
     /// Creates a document with its own random key. Pages are never written unencrypted.
     public func createDocument(
-        type: DocumentType, expiry: CalendarDate?, pinned: Bool,
+        type: DocumentType, label: String? = nil, expiry: CalendarDate?, pinned: Bool,
         fields: DocumentFields, pages: [Data]
     ) throws -> DocumentID {
         let state = try requireState()
@@ -79,7 +79,7 @@ extension VaultStore {
         }
         let stamp = now()
         let entry = IndexEntry(
-            id: id, type: type, createdAt: stamp, updatedAt: stamp, expiry: expiry,
+            id: id, type: type, label: label, createdAt: stamp, updatedAt: stamp, expiry: expiry,
             pinned: pinned, deletedAt: nil, sealedKey: sealedKey,
             sealedFields: try sealFields(fields, key: key, documentID: id),
             pageIDs: newPages.map(\.0))
@@ -87,13 +87,15 @@ extension VaultStore {
         return id
     }
 
-    /// Throws `documentDeleted` while the document is in Recently deleted.
-    public func editDocument(
-        _ id: DocumentID, type: DocumentType, expiry: CalendarDate?, pinned: Bool,
+    /// Throws `documentDeleted` while the document is in Recently deleted. A nil label removes it.
+    /// One call with every value, so an edit writes the index once.
+    public func editDocument(  // swiftlint:disable:this function_parameter_count
+        _ id: DocumentID, type: DocumentType, label: String?, expiry: CalendarDate?, pinned: Bool,
         fields: DocumentFields
     ) throws {
         try update(id, rejectDeleted: true) { entry, key in
             entry.type = type
+            entry.label = label
             entry.expiry = expiry
             entry.pinned = pinned
             entry.sealedFields = try self.sealFields(fields, key: key, documentID: id)

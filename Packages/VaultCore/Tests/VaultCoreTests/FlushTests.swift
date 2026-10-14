@@ -54,7 +54,7 @@ struct FlushTests {
         let id = try await store.createDocument(
             type: .ktp, expiry: nil, pinned: false,
             fields: Synthetic.ktpFields, pages: [Synthetic.page("k")])
-        try await store.editDocument(id, type: .ktp, expiry: nil, pinned: true, fields: Synthetic.ktpFields)
+        try await store.editDocument(id, type: .ktp, label: nil, expiry: nil, pinned: true, fields: Synthetic.ktpFields)
         _ = try await store.addPage(Synthetic.page("k2"), to: id)
         try await store.delete(id)
         try await store.restore(id)

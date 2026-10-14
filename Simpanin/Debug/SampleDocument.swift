@@ -17,6 +17,7 @@
     /// a province code no real region has, so it can never be a real person's number.
     struct SampleDocument {
         let type: DocumentType
+        let label: String?
         let expiry: CalendarDate?
         let fields: DocumentFields
         let page: Data
@@ -24,6 +25,8 @@
         init(number: Int) {
             let types: [DocumentType] = [.ktp, .sim, .passport]
             type = types[(number - 1) % types.count]
+            let labels = ["Saya", nil, nil, "Ibu"]
+            label = labels[(number - 1) % labels.count]
             expiry = CalendarDate(year: 2030 + number % 5, month: 8, day: 17)
             fields = DocumentFields([
                 "nik": "00" + String(format: "%014d", number),

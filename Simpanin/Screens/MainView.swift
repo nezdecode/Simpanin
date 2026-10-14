@@ -204,7 +204,10 @@ struct DocumentTile: View {
             Text(DocumentStyle.name(document.type))
                 .font(.footnote.weight(.bold))
                 .tracking(0.6)
-            Spacer(minLength: wide ? 0 : 24)
+            Spacer(minLength: wide ? 0 : 12)
+            if let label = DocumentStyle.shownLabel(document.label) {
+                Text(verbatim: label).font(.headline).lineLimit(1)
+            }
             Text(ExpiryText.text(type: document.type, expiry: document.expiry, today: today))
                 .font(.footnote)
         }

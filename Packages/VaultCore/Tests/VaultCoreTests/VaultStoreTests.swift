@@ -73,7 +73,7 @@ struct VaultStoreTests {
         vault.clock.advance(by: 60)
 
         try await store.editDocument(
-            id, type: .sim, expiry: Synthetic.simExpiry, pinned: true,
+            id, type: .sim, label: nil, expiry: Synthetic.simExpiry, pinned: true,
             fields: Synthetic.simFields)
         let edited = try await store.document(id)
         #expect(edited.type == .sim)
@@ -178,7 +178,8 @@ struct VaultStoreTests {
         let filesBefore = try TestVault.files(in: vault.base)
 
         await #expect(throws: VaultError.documentDeleted) {
-            try await store.editDocument(id, type: .sim, expiry: nil, pinned: true, fields: Synthetic.simFields)
+            try await store.editDocument(
+                id, type: .sim, label: nil, expiry: nil, pinned: true, fields: Synthetic.simFields)
         }
         await #expect(throws: VaultError.documentDeleted) { try await store.addPage(Synthetic.page("x"), to: id) }
         await #expect(throws: VaultError.documentDeleted) {
@@ -188,7 +189,7 @@ struct VaultStoreTests {
 
         // After restoring, editing works again.
         try await store.restore(id)
-        try await store.editDocument(id, type: .sim, expiry: nil, pinned: true, fields: Synthetic.simFields)
+        try await store.editDocument(id, type: .sim, label: nil, expiry: nil, pinned: true, fields: Synthetic.simFields)
         #expect(try await store.document(id).pinned)
     }
 
@@ -260,7 +261,8 @@ struct VaultStoreLimitTests {
             try await store.createDocument(type: .ktp, expiry: nil, pinned: false, fields: DocumentFields(), pages: [])
         }
         await #expect(throws: VaultError.locked) {
-            try await store.editDocument(ktp, type: .ktp, expiry: nil, pinned: true, fields: DocumentFields())
+            try await store.editDocument(
+                ktp, type: .ktp, label: nil, expiry: nil, pinned: true, fields: DocumentFields())
         }
         await #expect(throws: VaultError.locked) { try await store.addPage(Synthetic.page("x"), to: ktp) }
         await #expect(throws: VaultError.locked) {

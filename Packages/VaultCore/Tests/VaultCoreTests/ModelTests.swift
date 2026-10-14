@@ -97,7 +97,7 @@ struct ModelTests {
 
     @Test func indexJSONHasDesignDocFields() throws {
         let entry = IndexEntry(
-            id: docID, type: .sim,
+            id: docID, type: .sim, label: nil,
             createdAt: Date(timeIntervalSince1970: 1_790_000_000),
             updatedAt: Date(timeIntervalSince1970: 1_790_000_100),
             expiry: CalendarDate(year: 2030, month: 8, day: 17), pinned: true, deletedAt: nil,
@@ -106,7 +106,7 @@ struct ModelTests {
         let index = VaultIndex(generation: 7, documents: [entry])
         let object = try jsonObject(VaultJSON.encoder.encode(index))
         #expect(Set(object.keys) == ["schemaVersion", "generation", "documents"])
-        #expect(object["schemaVersion"] as? Int == 1)
+        #expect(object["schemaVersion"] as? Int == 2)
         #expect(object["generation"] as? Int == 7)
         let doc = try #require((object["documents"] as? [[String: Any]])?.first)
         #expect(
@@ -119,9 +119,22 @@ struct ModelTests {
         #expect(try VaultJSON.decoder.decode(VaultIndex.self, from: VaultJSON.encoder.encode(index)) == index)
     }
 
+    @Test func labelIsWrittenOnlyWhenSet() throws {
+        var entry = IndexEntry(
+            id: docID, type: .ktp, label: "Ibu",
+            createdAt: Date(timeIntervalSince1970: 1_790_000_000),
+            updatedAt: Date(timeIntervalSince1970: 1_790_000_000), expiry: nil, pinned: false,
+            deletedAt: nil, sealedKey: Data([1]), sealedFields: Data([2]), pageIDs: [])
+        var object = try jsonObject(VaultJSON.encoder.encode(VaultIndex(generation: 1, documents: [entry])))
+        #expect((object["documents"] as? [[String: Any]])?.first?["label"] as? String == "Ibu")
+        entry.label = nil
+        object = try jsonObject(VaultJSON.encoder.encode(VaultIndex(generation: 1, documents: [entry])))
+        #expect((object["documents"] as? [[String: Any]])?.first?.keys.contains("label") == false)
+    }
+
     @Test func deletedEntryWritesDeletedAt() throws {
         let entry = IndexEntry(
-            id: docID, type: .ktp,
+            id: docID, type: .ktp, label: nil,
             createdAt: Date(timeIntervalSince1970: 1_790_000_000),
             updatedAt: Date(timeIntervalSince1970: 1_790_000_000), expiry: nil, pinned: false,
             deletedAt: Date(timeIntervalSince1970: 1_790_000_200),

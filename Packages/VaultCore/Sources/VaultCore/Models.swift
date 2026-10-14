@@ -102,6 +102,9 @@ public struct DocumentFields: Hashable, Sendable, Codable {
 public struct Document: Hashable, Sendable, Identifiable {
     public let id: DocumentID
     public var type: DocumentType
+    /// A short name the user picks to tell documents apart, like "Ibu". Shown on the list, so
+    /// it's kept in the index and never in the projection.
+    public var label: String?
     public var createdAt: Date
     public var updatedAt: Date
     public var expiry: CalendarDate?
@@ -176,6 +179,8 @@ public struct VaultHeader: Hashable, Sendable, Codable {
 struct IndexEntry: Hashable, Sendable, Codable {
     var id: DocumentID
     var type: DocumentType
+    /// Added in index schema version 2. Missing in version 1, where it reads as nil.
+    var label: String?
     var createdAt: Date
     var updatedAt: Date
     var expiry: CalendarDate?
@@ -188,20 +193,21 @@ struct IndexEntry: Hashable, Sendable, Codable {
     var pageIDs: [PageID]
 
     enum CodingKeys: String, CodingKey {
-        case id, type, createdAt, updatedAt, expiry, pinned, deletedAt, sealedKey, sealedFields
+        case id, type, label, createdAt, updatedAt, expiry, pinned, deletedAt, sealedKey, sealedFields
         case pageIDs = "pageIds"
     }
 
     var document: Document {
         Document(
-            id: id, type: type, createdAt: createdAt, updatedAt: updatedAt, expiry: expiry,
+            id: id, type: type, label: label, createdAt: createdAt, updatedAt: updatedAt, expiry: expiry,
             pinned: pinned, deletedAt: deletedAt, pageIDs: pageIDs)
     }
 }
 
 /// The plaintext of index.enc, sealed with the index key and "index|v1|<vaultId>".
 struct VaultIndex: Hashable, Sendable, Codable {
-    static let currentSchemaVersion = 1
+    /// 2 added the optional document label.
+    static let currentSchemaVersion = 2
 
     var schemaVersion: Int
     var generation: UInt64

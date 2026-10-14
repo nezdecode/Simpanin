@@ -171,6 +171,32 @@ struct FixtureTests {
         #expect(try await store.recentlyDeleted().isEmpty)
     }
 
+    @Test func v1FixtureMovesToSchemaVersion2OnTheFirstChange() async throws {
+        let vault = try await openableCopy()
+        let store = vault.makeStore()
+        try await store.open()
+        let live = try await store.documents()
+        #expect(live.allSatisfy { $0.label == nil })
+        #expect(try await store.recentlyDeleted().allSatisfy { $0.label == nil })
+
+        let sim = live[1]
+        try await store.editDocument(
+            sim.id, type: sim.type, label: "Motor", expiry: sim.expiry, pinned: sim.pinned,
+            fields: try await store.fields(of: sim.id))
+        #expect(try await vault.readIndex(at: vault.indexURL).schemaVersion == 2)
+
+        let reopened = vault.makeStore()
+        try await reopened.open()
+        let after = try await reopened.documents()
+        #expect(after.map(\.label) == [nil, "Motor", nil, nil])
+        // Everything else comes through the move to version 2 unchanged.
+        #expect(after[0] == live[0])
+        #expect(after[2...] == live[2...])
+        #expect(try await reopened.fields(of: sim.id).values == Self.simFields)
+        #expect(try await hashes(reopened, sim.id) == [Self.simPage])
+        #expect(try await reopened.recentlyDeleted() == store.recentlyDeleted())
+    }
+
     // MARK: Writing the fixture
 
     /// Writes the fixture, but not over an existing one. To replace it, delete the folder by
@@ -204,7 +230,7 @@ struct FixtureTests {
             pages: [Synthetic.page("fixture-sim")])  // 3
         clock.set(Self.t0 + 120)
         try await store.editDocument(
-            sim, type: .sim, expiry: Self.simExpiry, pinned: false,
+            sim, type: .sim, label: nil, expiry: Self.simExpiry, pinned: false,
             fields: DocumentFields(Self.simFields))  // 4
         clock.set(Self.t0 + 180)
         _ = try await store.replacePage(

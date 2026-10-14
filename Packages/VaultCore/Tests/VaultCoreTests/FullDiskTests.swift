@@ -35,7 +35,7 @@ struct FullDiskTests {
         try await store.open()
         let id = try await store.createDocument(
             type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields, pages: [Synthetic.page("front")])
-        try await store.editDocument(id, type: .ktp, expiry: nil, pinned: true, fields: Synthetic.ktpFields)
+        try await store.editDocument(id, type: .ktp, label: nil, expiry: nil, pinned: true, fields: Synthetic.ktpFields)
         // A damaged index.enc, so the next open loads index.prev.enc and has to write a new one.
         var damaged = try Data(contentsOf: vault.indexURL)
         damaged[damaged.count / 2] ^= 0x01
@@ -53,7 +53,7 @@ struct FullDiskTests {
         // Space is freed and the user saves. The bad index.enc is replaced, never moved over
         // the good index.prev.enc.
         protector.arm(false)
-        try await full.editDocument(id, type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields)
+        try await full.editDocument(id, type: .ktp, label: nil, expiry: nil, pinned: false, fields: Synthetic.ktpFields)
         #expect(try Data(contentsOf: vault.previousIndexURL) == goodPrevious)
 
         let reopened = vault.makeStore()

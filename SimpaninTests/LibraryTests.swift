@@ -29,8 +29,10 @@ actor FakeDocuments: DocumentStoring {
     func documents() async throws -> [Document] { live }
     func recentlyDeleted() async throws -> [Document] { bin }
 
+    // swiftlint:disable:next function_parameter_count - mirrors VaultStore.createDocument
     func createDocument(
-        type: DocumentType, expiry: CalendarDate?, pinned: Bool, fields: DocumentFields, pages: [Data]
+        type: DocumentType, label: String?, expiry: CalendarDate?, pinned: Bool, fields: DocumentFields,
+        pages: [Data]
     ) async throws -> DocumentID {
         if let failure { throw failure }
         let id = DocumentID()

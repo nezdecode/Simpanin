@@ -26,7 +26,7 @@ struct VersionTests {
         let id = try await store.createDocument(
             type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields,
             pages: [Synthetic.page("front")])
-        try await store.editDocument(id, type: .ktp, expiry: nil, pinned: true, fields: Synthetic.ktpFields)
+        try await store.editDocument(id, type: .ktp, label: nil, expiry: nil, pinned: true, fields: Synthetic.ktpFields)
         return (vault, id)
     }
 
@@ -53,11 +53,11 @@ struct VersionTests {
         let key = try #require(await vault.keyStore.key(for: header.vaultID))
         let indexKey = VaultCrypto.indexKey(from: key, vaultID: header.vaultID)
         let plain = try VaultCrypto.open(Data(contentsOf: vault.indexURL), with: indexKey, as: .index(header.vaultID))
-        let newer = try setting("schemaVersion", to: 2, in: plain)
+        let newer = try setting("schemaVersion", to: VaultIndex.currentSchemaVersion + 1, in: plain)
         try VaultCrypto.seal(newer, with: indexKey, as: .index(header.vaultID)).write(to: vault.indexURL)
         let before = try TestVault.files(in: vault.base)
 
-        // index.prev.enc is still a readable v1 index, but the store must not fall back to it.
+        // index.prev.enc is still a readable index, but the store must not fall back to it.
         await #expect(throws: VaultError.unsupportedVersion) { try await vault.makeStore().open() }
         #expect(try TestVault.files(in: vault.base) == before)
     }

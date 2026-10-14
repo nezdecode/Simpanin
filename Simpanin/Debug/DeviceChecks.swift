@@ -78,7 +78,7 @@
             let fields = DocumentFields(["nik": "0012345678901234"])
             let id = try await store.createDocument(
                 type: .ktp, expiry: nil, pinned: false, fields: fields, pages: [Data(repeating: 7, count: 2_000)])
-            try await store.editDocument(id, type: .ktp, expiry: nil, pinned: true, fields: fields)
+            try await store.editDocument(id, type: .ktp, label: nil, expiry: nil, pinned: true, fields: fields)
             return try vaultClasses(root: locations.root, projection: locations.projection)
         }
 

@@ -24,7 +24,7 @@ struct RecentlyDeletedView: View {
                 }
                 ForEach(library.deleted) { document in
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(DocumentStyle.name(document.type)).font(.headline)
+                        Text(DocumentStyle.name(document.type, label: document.label)).font(.headline)
                         if let deletedAt = document.deletedAt {
                             Text(
                                 PurgeCountdown.text(daysLeft: PurgeCountdown.daysLeft(deletedAt: deletedAt, now: .now))

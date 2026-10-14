@@ -129,7 +129,8 @@ struct TamperTests {
         let (vault, store, ktp, sim) = try await makeVaultWithTwoDocuments()
         let stale = try Data(contentsOf: vault.indexURL)  // generation with both documents
         try await store.delete(ktp)  // newer generations
-        try await store.editDocument(sim, type: .sim, expiry: nil, pinned: true, fields: Synthetic.simFields)
+        try await store.editDocument(
+            sim, type: .sim, label: nil, expiry: nil, pinned: true, fields: Synthetic.simFields)
         let previous = try await vault.readIndex(at: vault.previousIndexURL)
 
         try stale.write(to: vault.indexURL)  // put the old index back
