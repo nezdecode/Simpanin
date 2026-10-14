@@ -16,54 +16,6 @@ import Testing
 @testable import Simpanin
 @testable import VaultCore
 
-/// Answers open() from a list of results. A gated open waits until the test releases it, like
-/// a prompt that is still on screen.
-actor FakeVault: VaultOpening {
-    private var results: [Result<OpenReport, VaultError>]
-    private(set) var openCount = 0
-    private(set) var lockCount = 0
-    private var gate: CheckedContinuation<Void, Never>?
-    private let gated: Bool
-    private let onlyFirstGated: Bool
-
-    /// - Parameter onlyFirstGated: later opens answer at once, so a retry the test doesn't
-    ///   expect fails the test instead of hanging it.
-    init(_ results: [Result<OpenReport, VaultError>], gated: Bool = false, onlyFirstGated: Bool = false) {
-        self.results = results
-        self.gated = gated
-        self.onlyFirstGated = onlyFirstGated
-    }
-
-    func open() async throws -> OpenReport {
-        openCount += 1
-        if gated, !onlyFirstGated || openCount == 1 { await withCheckedContinuation { gate = $0 } }
-        let result = results.isEmpty ? .success(OpenReport()) : results.removeFirst()
-        return try result.get()
-    }
-
-    func lock() async { lockCount += 1 }
-
-    /// False if open() didn't start within two seconds, so a broken controller fails the test
-    /// instead of hanging it.
-    func waitUntilOpening() async -> Bool {
-        for _ in 0..<2_000 where gate == nil {
-            try? await Task.sleep(for: .milliseconds(1))
-        }
-        return gate != nil
-    }
-
-    func release() {
-        gate?.resume()
-        gate = nil
-    }
-}
-
-final class FixedClock: VaultClock {
-    private let date = Mutex(Date(timeIntervalSince1970: 1_790_000_000))
-    var now: Date { date.withLock { $0 } }
-    func advance(by seconds: TimeInterval) { date.withLock { $0 += seconds } }
-}
-
 @MainActor
 @Suite("Lock controller")
 struct LockControllerTests {

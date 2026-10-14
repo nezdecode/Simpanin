@@ -1,0 +1,135 @@
+//
+//  Fakes.swift
+//  SimpaninTests
+//
+//  Created by Inez Amanda on 15/10/26.
+//
+//  This Source Code Form is subject to the terms of the Mozilla Public
+//  License, v. 2.0. If a copy of the MPL was not distributed with this
+//  file, You can obtain one at https://mozilla.org/MPL/2.0/.
+//
+
+import Foundation
+import Synchronization
+
+@testable import Simpanin
+@testable import VaultCore
+
+/// Answers open() from a list of results. A gated open waits until the test releases it, like
+/// a prompt that is still on screen.
+actor FakeVault: VaultOpening {
+    private var results: [Result<OpenReport, VaultError>]
+    private(set) var openCount = 0
+    private(set) var lockCount = 0
+    private var gate: CheckedContinuation<Void, Never>?
+    private let gated: Bool
+    private let onlyFirstGated: Bool
+
+    /// - Parameter onlyFirstGated: later opens answer at once, so a retry the test doesn't
+    ///   expect fails the test instead of hanging it.
+    init(_ results: [Result<OpenReport, VaultError>], gated: Bool = false, onlyFirstGated: Bool = false) {
+        self.results = results
+        self.gated = gated
+        self.onlyFirstGated = onlyFirstGated
+    }
+
+    func open() async throws -> OpenReport {
+        openCount += 1
+        if gated, !onlyFirstGated || openCount == 1 { await withCheckedContinuation { gate = $0 } }
+        let result = results.isEmpty ? .success(OpenReport()) : results.removeFirst()
+        return try result.get()
+    }
+
+    func lock() async { lockCount += 1 }
+
+    /// False if open() didn't start within two seconds, so a broken controller fails the test
+    /// instead of hanging it.
+    func waitUntilOpening() async -> Bool {
+        for _ in 0..<2_000 where gate == nil {
+            try? await Task.sleep(for: .milliseconds(1))
+        }
+        return gate != nil
+    }
+
+    func release() {
+        gate?.resume()
+        gate = nil
+    }
+}
+
+final class FixedClock: VaultClock {
+    private let date = Mutex(Date(timeIntervalSince1970: 1_790_000_000))
+    var now: Date { date.withLock { $0 } }
+    func advance(by seconds: TimeInterval) { date.withLock { $0 += seconds } }
+}
+
+/// Stands in for VaultStore's document calls, with documents kept in memory.
+actor FakeDocuments: DocumentStoring {
+    private var live: [Document] = []
+    private var bin: [Document] = []
+    private(set) var created: [DocumentFields] = []
+    private(set) var createdPages: [[Data]] = []
+    private var failure: VaultError?
+
+    func setFailure(_ failure: VaultError?) { self.failure = failure }
+
+    func documents() async throws -> [Document] { live }
+    func recentlyDeleted() async throws -> [Document] { bin }
+
+    // swiftlint:disable:next function_parameter_count - mirrors VaultStore.createDocument
+    func createDocument(
+        type: DocumentType, label: String?, expiry: CalendarDate?, pinned: Bool, fields: DocumentFields,
+        pages: [Data]
+    ) async throws -> DocumentID {
+        if let failure { throw failure }
+        let id = DocumentID()
+        created.append(fields)
+        createdPages.append(pages)
+        live.append(
+            Document(
+                id: id, type: type, createdAt: .now, updatedAt: .now, expiry: expiry, pinned: pinned,
+                deletedAt: nil, pageIDs: pages.map { _ in PageID() }))
+        return id
+    }
+
+    func delete(_ id: DocumentID) async throws {
+        if let failure { throw failure }
+        guard let index = live.firstIndex(where: { $0.id == id }) else { return }
+        var document = live.remove(at: index)
+        document.deletedAt = .now
+        bin.append(document)
+    }
+
+    func restore(_ id: DocumentID) async throws {
+        if let failure { throw failure }
+        guard let index = bin.firstIndex(where: { $0.id == id }) else { return }
+        var document = bin.remove(at: index)
+        document.deletedAt = nil
+        live.append(document)
+    }
+}
+
+/// Stands in for VaultStore's quarantine calls.
+actor FakeQuarantine: QuarantineStoring {
+    private(set) var quarantinedTo: [URL] = []
+    private(set) var deleted: [QuarantinedVault] = []
+    var listing = QuarantineListing(vaults: [], unreadableFolders: [])
+    var failure: VaultError?
+
+    func setListing(_ listing: QuarantineListing) { self.listing = listing }
+    func setFailure(_ failure: VaultError?) { self.failure = failure }
+
+    func quarantineVault(to quarantineDirectory: URL) async throws -> URL? {
+        if let failure { throw failure }
+        quarantinedTo.append(quarantineDirectory)
+        return quarantineDirectory.appending(path: "20261015-010000")
+    }
+
+    func quarantinedVaults(in quarantineDirectory: URL) async throws -> QuarantineListing { listing }
+
+    func deleteQuarantinedVault(_ vault: QuarantinedVault) async throws {
+        if let failure { throw failure }
+        deleted.append(vault)
+        listing.vaults.removeAll { $0 == vault }
+    }
+}
