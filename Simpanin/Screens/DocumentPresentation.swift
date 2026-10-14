@@ -101,6 +101,23 @@ nonisolated enum ExpiryText {
 extension CalendarDate {
     nonisolated var components: DateComponents { DateComponents(year: year, month: month, day: day) }
 
+    /// Today on the phone's calendar.
+    nonisolated static var today: CalendarDate {
+        let parts = Calendar.current.dateComponents([.year, .month, .day], from: .now)
+        return CalendarDate(year: parts.year ?? 2000, month: parts.month ?? 1, day: parts.day ?? 1)
+            ?? CalendarDate(year: 2000, month: 1, day: 1)!
+    }
+
+    /// The day in Indonesian, for example "17 Agu 2030". Read as UTC, so no time zone moves it.
+    nonisolated var displayText: String {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .gmt
+        guard let date = calendar.date(from: components) else { return string }
+        var style = Date.FormatStyle(date: .abbreviated, time: .omitted, locale: Locale(identifier: "id_ID"))
+        style.timeZone = .gmt
+        return date.formatted(style)
+    }
+
     /// The day and month in Indonesian, for example "3 Mar".
     nonisolated var dayAndMonthText: String {
         var calendar = Calendar(identifier: .gregorian)
