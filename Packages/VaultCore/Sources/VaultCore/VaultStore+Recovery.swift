@@ -148,7 +148,8 @@ extension VaultStore {
                     header.sealedKey, with: wrapKey, documentID: header.documentID)
                 result.append(
                     IndexEntry(
-                        id: header.documentID, type: .other, createdAt: stamp, updatedAt: stamp, expiry: nil,
+                        id: header.documentID, type: .other, label: nil, createdAt: stamp, updatedAt: stamp,
+                        expiry: nil,
                         pinned: false,
                         deletedAt: nil, sealedKey: header.sealedKey,
                         sealedFields: try sealFields(DocumentFields(), key: key, documentID: header.documentID),

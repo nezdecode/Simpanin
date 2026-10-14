@@ -52,7 +52,7 @@ struct CrashTests {
                 pages: [Synthetic.page("n1"), Synthetic.page("n2")])
         case .edit:
             try await store.editDocument(
-                base.ktp, type: .ktp, expiry: nil, pinned: true,
+                base.ktp, type: .ktp, label: nil, expiry: nil, pinned: true,
                 fields: DocumentFields(["nik": Synthetic.nik, "name": "ANI CONTOH"]))
         case .addPage:
             _ = try await store.addPage(Synthetic.page("a3"), to: base.ktp)
@@ -174,7 +174,8 @@ struct CrashTests {
         protector.arm(true)
         await #expect(throws: CocoaError.self) {
             if target == "index.enc" {
-                try await store.editDocument(ktp, type: .ktp, expiry: nil, pinned: true, fields: Synthetic.ktpFields)
+                try await store.editDocument(
+                    ktp, type: .ktp, label: nil, expiry: nil, pinned: true, fields: Synthetic.ktpFields)
             } else {
                 _ = try await store.addPage(Synthetic.page("back"), to: ktp)
             }

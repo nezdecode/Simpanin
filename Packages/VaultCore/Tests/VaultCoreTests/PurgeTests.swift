@@ -39,7 +39,8 @@ struct PurgeTests {
         let kept = try await store.createDocument(
             type: .sim, expiry: Synthetic.simExpiry, pinned: false,
             fields: Synthetic.simFields, pages: [Synthetic.page("k1")])
-        try await store.editDocument(purged, type: .ktp, expiry: nil, pinned: true, fields: Synthetic.ktpFields)
+        try await store.editDocument(
+            purged, type: .ktp, label: nil, expiry: nil, pinned: true, fields: Synthetic.ktpFields)
         try await store.delete(purged)
 
         let entry = try #require(try await vault.readIndex(at: vault.indexURL).documents.first { $0.id == purged })

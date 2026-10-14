@@ -18,8 +18,10 @@ import os
 nonisolated protocol DocumentStoring: Sendable {
     func documents() async throws -> [Document]
     func recentlyDeleted() async throws -> [Document]
+    // swiftlint:disable:next function_parameter_count - mirrors VaultStore.createDocument
     func createDocument(
-        type: DocumentType, expiry: CalendarDate?, pinned: Bool, fields: DocumentFields, pages: [Data]
+        type: DocumentType, label: String?, expiry: CalendarDate?, pinned: Bool, fields: DocumentFields,
+        pages: [Data]
     ) async throws -> DocumentID
     func delete(_ id: DocumentID) async throws
     func restore(_ id: DocumentID) async throws
@@ -64,7 +66,7 @@ final class Library {
             let sample = SampleDocument(number: samples)
             await save {
                 _ = try await self.store.createDocument(
-                    type: sample.type, expiry: sample.expiry, pinned: false, fields: sample.fields,
+                    type: sample.type, label: nil, expiry: sample.expiry, pinned: false, fields: sample.fields,
                     pages: [sample.page])
             }
         }

@@ -25,7 +25,8 @@ struct OnDiskPrivacyTests {
         let id = try await store.createDocument(
             type: .ktp, expiry: nil, pinned: false,
             fields: Synthetic.ktpFields, pages: [page])
-        try await store.editDocument(id, type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields)
+        try await store.editDocument(
+            id, type: .ktp, label: nil, expiry: nil, pinned: false, fields: Synthetic.ktpFields)
         for file in try vault.allFiles() {
             let data = try Data(contentsOf: file)
             #expect(!data.contains(bytes: Data(Synthetic.nik.utf8)), "NIK in \(file.lastPathComponent)")
@@ -42,7 +43,8 @@ struct OnDiskPrivacyTests {
             type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields, pages: [Synthetic.page("front")])
         let sim = try await store.createDocument(
             type: .sim, expiry: nil, pinned: false, fields: Synthetic.simFields, pages: [Synthetic.page("sim")])
-        try await store.editDocument(ktp, type: .ktp, expiry: nil, pinned: true, fields: Synthetic.ktpFields)
+        try await store.editDocument(
+            ktp, type: .ktp, label: nil, expiry: nil, pinned: true, fields: Synthetic.ktpFields)
         _ = try await store.addPage(Synthetic.page("back"), to: ktp)
         try await store.delete(sim)
         try await store.deletePermanently(sim)
@@ -114,7 +116,8 @@ struct OnDiskPrivacyTests {
             type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields, pages: [Synthetic.page("front")])
         let sim = try await store.createDocument(
             type: .sim, expiry: nil, pinned: false, fields: Synthetic.simFields, pages: [Synthetic.page("sim")])
-        try await store.editDocument(ktp, type: .ktp, expiry: nil, pinned: true, fields: Synthetic.ktpFields)
+        try await store.editDocument(
+            ktp, type: .ktp, label: nil, expiry: nil, pinned: true, fields: Synthetic.ktpFields)
         let back = try await store.addPage(Synthetic.page("back"), to: ktp)
         _ = try await store.replacePage(back, of: ktp, with: Synthetic.page("back-rescan"))
         try await store.delete(sim)
@@ -192,7 +195,8 @@ struct OnDiskPrivacyTests {
         let id = try await store.createDocument(
             type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields, pages: [])
         let before = try #require(try await vault.readIndex(at: vault.indexURL).documents.first)
-        try await store.editDocument(id, type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields)
+        try await store.editDocument(
+            id, type: .ktp, label: nil, expiry: nil, pinned: false, fields: Synthetic.ktpFields)
         let after = try #require(try await vault.readIndex(at: vault.indexURL).documents.first)
 
         #expect(after.sealedKey == before.sealedKey)
