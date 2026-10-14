@@ -11,38 +11,135 @@
 
 import XCTest
 
+/// The main flows, on a fresh throwaway vault with an in-memory key, never a real vault.
+/// Each screen is saved as a screenshot, for the design work.
 final class SimpaninUITests: XCTestCase {
-
     override func setUpWithError() throws {
-        // Put setup code here. This method is called before the invocation of each test method in the class.
-
-        // In UI tests it is usually best to stop immediately when a failure occurs.
         continueAfterFailure = false
-
-        // In UI tests it’s important to set the initial state - such as interface orientation - required for your
-        // tests before they run. The setUp method is a good place to do this.
-    }
-
-    override func tearDownWithError() throws {
-        // Put teardown code here. This method is called after the invocation of each test method in the class.
     }
 
     @MainActor
-    func testExample() throws {
-        // UI tests must launch the application that they test.
+    private func launch(_ arguments: [String] = []) -> XCUIApplication {
         let app = XCUIApplication()
+        app.launchArguments = ["-SimpaninUITest"] + arguments
         app.launch()
-
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
-        // XCUIAutomation Documentation
-        // https://developer.apple.com/documentation/xcuiautomation
+        return app
     }
 
     @MainActor
-    func testLaunchPerformance() throws {
-        // This measures how long it takes to launch your application.
-        measure(metrics: [XCTApplicationLaunchMetric()]) {
-            XCUIApplication().launch()
+    private func screenshot(_ name: String) {
+        let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
+
+    @MainActor
+    private func rows(_ app: XCUIApplication) -> XCUIElementQuery {
+        app.descendants(matching: .any).matching(identifier: "document.row")
+    }
+
+    @MainActor
+    func testAddDeleteAndRestore() throws {
+        let app = launch()
+        XCTAssertTrue(app.navigationBars["Dokumen"].waitForExistence(timeout: 10))
+        screenshot("01 empty list")
+        for _ in 0..<3 { app.buttons["list.addSample"].tap() }
+        XCTAssertTrue(rows(app).element(boundBy: 2).waitForExistence(timeout: 5))
+        XCTAssertEqual(rows(app).count, 3)
+        screenshot("02 list with samples")
+
+        rows(app).element(boundBy: 0).swipeLeft()
+        app.buttons["Hapus"].tap()
+        XCTAssertTrue(rows(app).element(boundBy: 1).waitForExistence(timeout: 5))
+        XCTAssertEqual(rows(app).count, 2)
+
+        app.buttons["list.recentlyDeleted"].tap()
+        XCTAssertTrue(rows(app).firstMatch.waitForExistence(timeout: 5))
+        screenshot("03 recently deleted")
+        rows(app).firstMatch.swipeLeft()
+        app.buttons["Pulihkan"].tap()
+        app.navigationBars.buttons.firstMatch.tap()
+        XCTAssertTrue(rows(app).element(boundBy: 2).waitForExistence(timeout: 5))
+        XCTAssertEqual(rows(app).count, 3)
+    }
+
+    @MainActor
+    func testSettingsAndOldVaults() throws {
+        let app = launch()
+        app.buttons["list.settings"].tap()
+        XCTAssertTrue(app.navigationBars["Pengaturan"].waitForExistence(timeout: 5))
+        screenshot("04 settings")
+        app.buttons["settings.oldVaults"].tap()
+        XCTAssertTrue(app.staticTexts["Tidak ada data lama"].waitForExistence(timeout: 5))
+        screenshot("05 data lama")
+    }
+
+    @MainActor
+    func testLockAndOpen() throws {
+        let app = launch()
+        app.buttons["list.addSample"].tap()
+        app.buttons["list.lock"].tap()
+        XCTAssertTrue(app.buttons["lock.open"].waitForExistence(timeout: 5))
+        XCTAssertFalse(rows(app).firstMatch.exists)
+        screenshot("06 lock cover")
+        app.buttons["lock.open"].tap()
+        XCTAssertTrue(rows(app).firstMatch.waitForExistence(timeout: 5))
+    }
+
+    /// Every recovery screen that open() can lead to, with its text and way out.
+    @MainActor
+    func testRecoveryScreens() throws {
+        let screens: [(arguments: [String], text: String, button: String)] = [
+            (
+                ["-SimpaninUITestOpenError", "keyMissing"],
+                "Kunci vault tidak ditemukan. Ini bisa terjadi setelah memindahkan data ke HP baru.", "Mulai vault baru"
+            ),
+            (["-SimpaninUITestOpenError", "vaultUnreadable"], "Vault tidak bisa dibuka.", "Mulai vault baru"),
+            (["-SimpaninUITestOpenError", "phoneLocked"], "Buka kunci HP, lalu coba lagi.", "Coba lagi"),
+            (
+                ["-SimpaninUITestOpenError", "otherStatus"],
+                "Vault tidak bisa dibuka sekarang. Coba lagi nanti.", "Coba lagi"
+            ),
+            (
+                ["-SimpaninUITestOpenError", "newerVersion"],
+                "Versi Simpanin ini terlalu lama untuk vault ini. Perbarui app.", "Buka App Store"
+            ),
+            (
+                ["-SimpaninUITestOpenError", "storageFull"],
+                "Penyimpanan HP penuh. Kosongkan ruang untuk mulai memakai Simpanin.", "Coba lagi"
+            ),
+            (
+                ["-SimpaninUITestPasscode", "notSet"],
+                "Simpanin butuh passcode HP untuk mengunci dokumenmu.", "Buka Pengaturan"
+            ),
+        ]
+        for (index, screen) in screens.enumerated() {
+            let app = launch(screen.arguments)
+            let message = app.staticTexts["recovery.message"]
+            XCTAssertTrue(message.waitForExistence(timeout: 10), screen.text)
+            XCTAssertEqual(message.label, screen.text)
+            XCTAssertEqual(app.buttons["recovery.action"].label, screen.button)
+            screenshot("07-\(index + 1) recovery \(screen.arguments[1])")
+            app.terminate()
         }
+    }
+
+    @MainActor
+    func testStartNewVaultNeedsTheTypedWords() throws {
+        let app = launch(["-SimpaninUITestOpenError", "keyMissing"])
+        app.buttons["recovery.action"].tap()
+        let confirm = app.buttons["startNew.confirm"]
+        XCTAssertTrue(confirm.waitForExistence(timeout: 5))
+        XCTAssertFalse(confirm.isEnabled)
+        let field = app.textFields["startNew.field"]
+        field.tap()
+        field.typeText("MULAI")
+        XCTAssertFalse(confirm.isEnabled)
+        field.typeText(" BARU")
+        XCTAssertTrue(confirm.isEnabled)
+        screenshot("08 mulai vault baru")
+        confirm.tap()
+        XCTAssertTrue(app.navigationBars["Dokumen"].waitForExistence(timeout: 10))
     }
 }

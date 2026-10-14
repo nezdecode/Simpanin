@@ -43,6 +43,14 @@ nonisolated final class AppVault: Sendable {
         self.locations = locations
     }
 
+    /// What SimpaninApp starts with: the real vault, or in DEBUG UI tests a throwaway one.
+    static func launch() throws -> AppVault {
+        #if DEBUG
+            if UITestSetup.isActive { return preview() }
+        #endif
+        return try live()
+    }
+
     static func live() throws -> AppVault {
         guard let accessGroup = AppConfiguration.keychainAccessGroup, let appGroup = AppConfiguration.appGroup,
             let container = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroup)

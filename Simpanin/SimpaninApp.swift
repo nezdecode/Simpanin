@@ -14,7 +14,7 @@ import SwiftUI
 @main
 struct SimpaninApp: App {
     /// The one VaultStore, made here once. Nothing else creates one for the real vault.
-    private let vault = Result { try AppVault.live() }
+    private let vault = Result { try AppVault.launch() }
 
     var body: some Scene {
         WindowGroup {
