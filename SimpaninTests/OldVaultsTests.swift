@@ -79,6 +79,8 @@ struct OldVaultsTests {
         // A second vault moved in the same second gets "-2"; the time still reads.
         #expect(OldVaultText.movedAt(folderName: "20261014-021200-2") == moved)
         #expect(OldVaultText.movedAt(folderName: "not-a-date") == nil)
+        // An impossible date is not a date, rather than rolling over into the next year.
+        #expect(OldVaultText.movedAt(folderName: "20261314-021200") == nil)
     }
 
     @Test func unreadableFolderShowsSizeAndDate() {

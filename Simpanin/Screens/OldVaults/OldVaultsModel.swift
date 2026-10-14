@@ -72,14 +72,18 @@ final class OldVaultsModel {
 /// The texts of a "Data lama" entry. VaultCore names each folder after the moment it was moved
 /// aside, in UTC (`yyyyMMdd-HHmmss`, plus "-2", "-3" when the name was taken).
 nonisolated enum OldVaultText {
+    /// VaultCore's fixed folder-name format, in UTC. Display goes through `.indonesianDate`.
+    private static let folderNameDate = Date.ParseStrategy(
+        format: """
+            \(year: .padded(4))\(month: .twoDigits)\(day: .twoDigits)-\
+            \(hour: .twoDigits(clock: .twentyFourHour, hourCycle: .zeroBased))\(minute: .twoDigits)\(second: .twoDigits)
+            """,
+        timeZone: .gmt, isLenient: false)
+
     static func movedAt(folderName: String) -> Date? {
         let stamp = String(folderName.prefix(15))
         guard stamp.count == 15 else { return nil }
-        let parser = DateFormatter()
-        parser.locale = Locale(identifier: "en_US_POSIX")
-        parser.timeZone = .gmt
-        parser.dateFormat = "yyyyMMdd-HHmmss"
-        return parser.date(from: stamp)
+        return try? Date(stamp, strategy: folderNameDate)
     }
 
     static func title(_ movedAt: Date, timeZone: TimeZone = .current) -> LocalizedStringResource {
