@@ -114,7 +114,16 @@ public actor VaultStore {
 
     // MARK: - Paths
 
-    var headerURL: URL { root.appending(path: "vault.json") }
+    var headerURL: URL { root.appending(path: Self.headerFileName) }
+
+    /// The vault's header file. Part of the format, so it never changes.
+    public static let headerFileName = "vault.json"
+
+    /// Whether `rootDirectory` holds a vault, judged by its header. Reads no file contents and
+    /// needs no key, so the app can ask before unlocking.
+    public nonisolated static func vaultExists(in rootDirectory: URL) -> Bool {
+        FileManager.default.fileExists(atPath: rootDirectory.appending(path: headerFileName).path)
+    }
     var indexURL: URL { root.appending(path: "index.enc") }
     var previousIndexURL: URL { root.appending(path: "index.prev.enc") }
     var pagesDirectory: URL { root.appending(path: "pages", directoryHint: .isDirectory) }

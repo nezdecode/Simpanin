@@ -11,6 +11,7 @@
 
 import SwiftUI
 import UIKit
+import VaultCore
 
 /// Connects the system events from the lifecycle table to the LockController and covers the
 /// content whenever it must be hidden.
@@ -28,11 +29,10 @@ struct RootView: View {
         #if DEBUG
             if UITestSetup.isActive { return UITestSetup.lockController(for: vault) }
         #endif
-        let header = vault.locations.root.appending(path: "vault.json")
         return LockController(
             vault: vault.store,
             relockTimeout: AutoLock.stored(in: defaults).seconds,
-            vaultExists: { FileManager.default.fileExists(atPath: header.path) },
+            vaultExists: { VaultStore.vaultExists(in: vault.locations.root) },
             protectedDataAvailable: { UIApplication.shared.isProtectedDataAvailable })
     }
 
