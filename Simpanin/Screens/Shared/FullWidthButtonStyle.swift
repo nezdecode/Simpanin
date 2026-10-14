@@ -30,7 +30,7 @@ struct FullWidthButtonStyle: PrimitiveButtonStyle {
         .buttonStyle(.borderedProminent)
         .buttonBorderShape(.roundedRectangle(radius: 14))
         .tint(emphasis == .primary ? .accentColor : Color(.accentSoft))
-        .foregroundStyle(emphasis == .primary ? AnyShapeStyle(.white) : AnyShapeStyle(Color(.onAccentSoft)))
+        .foregroundStyle(emphasis == .primary ? Color(.onAccent) : Color(.onAccentSoft))
     }
 }
 
