@@ -33,7 +33,7 @@ A folder grows subfolders when it passes about eight files, split by part of the
 
 ## 2. Files and names
 
-- **One main type per file, named after it.** `LibraryModel.swift`, `LibraryView.swift`, `DocumentTile.swift`. Small types that exist only for that main type can stay with it: the protocol a model depends on (`DocumentStoring` in `LibraryModel.swift`), or a value nested in it (`OldVaultsModel.UnreadableFolder`). A type that other files use gets its own file.
+- **One main type per file, named after it.** `LibraryModel.swift`, `LibraryView.swift`, `DocumentTile.swift`. Types that belong to the main type stay with it, even when other files use them: the protocol it depends on (`DocumentStoring` in `LibraryModel.swift`), a value it returns or holds (`RecoveryScreen` from `RecoveryMapping`, `VaultLocations` in `AppVault.swift`). A type that is its own idea gets its own file (`VaultNotice`, `PurgeCountdown`).
 - **A screen's model ends in `Model`, its view in `View`.** A screen is `XModel` + `XView`. Objects every screen shares are named for their job: `LockController`, `AppVault`. Rows and parts of a screen are named for what they show: `OldVaultRow`, `ExpiryBanner`.
 - **Extensions go in `Type+Purpose.swift`**: `Date+Indonesian.swift`, `Logger+Simpanin.swift`.
 - **Follow Apple's [API Design Guidelines](https://www.swift.org/documentation/api-design-guidelines/)** and use SwiftUI's own words: `systemImage` for an SF Symbol name, `onDelete` / `onRestore` for callbacks, `.roundedRectangle(cornerRadius:)` rather than a bare number.
