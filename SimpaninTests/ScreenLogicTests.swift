@@ -98,6 +98,14 @@ struct AutoLockTests {
         #expect(AutoLock.stored(in: defaults) == .fiveMinutes)
     }
 
+    @Test func launchUsesTheStoredChoice() {
+        let defaults = defaults()
+        AutoLock.fiveMinutes.store(in: defaults)
+        #expect(RootView.makeLock(for: .preview(), defaults: defaults).relockTimeout == 300)
+        AutoLock.immediately.store(in: defaults)
+        #expect(RootView.makeLock(for: .preview(), defaults: defaults).relockTimeout == 0)
+    }
+
     @Test func immediatelyRelocksOnAnyReturn() async {
         let clock = FixedClock()
         let vault = FakeVault([])

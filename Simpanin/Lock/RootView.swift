@@ -24,13 +24,14 @@ struct RootView: View {
         _lock = State(initialValue: Self.makeLock(for: vault))
     }
 
-    private static func makeLock(for vault: AppVault) -> LockController {
+    static func makeLock(for vault: AppVault, defaults: UserDefaults = .standard) -> LockController {
         #if DEBUG
             if UITestSetup.isActive { return UITestSetup.lockController(for: vault) }
         #endif
         let header = vault.locations.root.appending(path: "vault.json")
         return LockController(
             vault: vault.store,
+            relockTimeout: AutoLock.stored(in: defaults).seconds,
             vaultExists: { FileManager.default.fileExists(atPath: header.path) },
             protectedDataAvailable: { UIApplication.shared.isProtectedDataAvailable })
     }
