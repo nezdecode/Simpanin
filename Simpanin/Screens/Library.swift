@@ -95,7 +95,7 @@ final class OldVaultsModel {
         self.folder = folder
     }
 
-    static func sizeText(_ bytes: Int64) -> String {
+    nonisolated static func sizeText(_ bytes: Int64) -> String {
         ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)
     }
 

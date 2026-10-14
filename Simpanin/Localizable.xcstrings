@@ -1,6 +1,39 @@
 {
   "sourceLanguage" : "id",
   "strings" : {
+    "autoLock.fiveMinutes" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Setelah 5 menit"
+          }
+        }
+      }
+    },
+    "autoLock.immediately" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Langsung"
+          }
+        }
+      }
+    },
+    "autoLock.oneMinute" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Setelah 1 menit"
+          }
+        }
+      }
+    },
     "button.cancel" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -118,6 +151,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tambah dokumen contoh"
+          }
+        }
+      }
+    },
+    "deleted.purgeIn %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dihapus permanen dalam %lld hari"
+          }
+        }
+      }
+    },
+    "deleted.purgeToday" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dihapus permanen hari ini"
           }
         }
       }
@@ -342,6 +397,17 @@
         }
       }
     },
+    "oldVaults.detail %@ %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ · dipindahkan pukul %2$@"
+          }
+        }
+      }
+    },
     "oldVaults.empty" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -354,6 +420,17 @@
       }
     },
     "oldVaults.row %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vault lama, %@"
+          }
+        }
+      }
+    },
+    "oldVaults.title %@" : {
       "extractionState" : "manual",
       "localizations" : {
         "id" : {
@@ -679,6 +756,50 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "STNK"
+          }
+        }
+      }
+    },
+    "unlock.faceID" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pakai Face ID atau passcode HP"
+          }
+        }
+      }
+    },
+    "unlock.opticID" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pakai Optic ID atau passcode HP"
+          }
+        }
+      }
+    },
+    "unlock.passcode" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pakai passcode HP"
+          }
+        }
+      }
+    },
+    "unlock.touchID" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pakai Touch ID atau passcode HP"
           }
         }
       }
