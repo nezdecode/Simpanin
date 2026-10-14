@@ -529,6 +529,17 @@
         }
       }
     },
+    "oldVaults.sizeOnly %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@"
+          }
+        }
+      }
+    },
     "oldVaults.title %@" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -536,6 +547,39 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Vault lama, %@"
+          }
+        }
+      }
+    },
+    "oldVaults.unreadableDetail %@ %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ · %2$@"
+          }
+        }
+      }
+    },
+    "oldVaults.unreadableFooter" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Simpanin tidak bisa membaca folder ini, jadi belum bisa menghapusnya dengan aman. Mungkin dibuat oleh versi Simpanin yang lebih baru."
+          }
+        }
+      }
+    },
+    "oldVaults.unreadableTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Folder tidak terbaca"
           }
         }
       }

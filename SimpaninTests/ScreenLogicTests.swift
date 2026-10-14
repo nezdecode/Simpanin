@@ -57,6 +57,18 @@ struct ScreenLogicTests {
         #expect(OldVaultText.movedAt(folderName: "not-a-date") == nil)
     }
 
+    @Test func unreadableFolderShowsSizeAndDate() {
+        let size = OldVaultsModel.sizeText(12_000_000)
+        #expect(
+            String(
+                localized: OldVaultText.unreadableDetail(
+                    folderName: "20261002-031500", sizeInBytes: 12_000_000, timeZone: jakarta))
+                == "\(size) · 2 Okt 2026")
+        #expect(
+            String(localized: OldVaultText.unreadableDetail(folderName: "odd-name", sizeInBytes: 12_000_000))
+                == size)
+    }
+
     // MARK: Baru dihapus counts down to the purge
 
     @Test func daysUntilPurge() {

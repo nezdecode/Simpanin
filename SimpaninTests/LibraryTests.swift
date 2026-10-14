@@ -121,6 +121,27 @@ struct OldVaultsTests {
         QuarantinedVault(vaultID: VaultID(), folder: folder.appending(path: name), sizeInBytes: size)
     }
 
+    @Test func listsUnreadableFoldersToo() async {
+        let store = FakeQuarantine()
+        let old = entry("20261014-021200", size: 48_000_000)
+        let broken = folder.appending(path: "20261002-031500")
+        await store.setListing(QuarantineListing(vaults: [old], unreadableFolders: [broken]))
+        let model = OldVaultsModel(store: store, folder: folder)
+        await model.reload()
+        #expect(model.vaults == [old])
+        // The fake folder doesn't exist on disk, so its size reads as 0.
+        #expect(model.unreadable == [OldVaultsModel.UnreadableFolder(folder: broken, sizeInBytes: 0)])
+    }
+
+    @Test func folderSizeCountsEveryFile() throws {
+        let base = FileManager.default.temporaryDirectory.appending(path: "Size-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: base) }
+        try FileManager.default.createDirectory(at: base.appending(path: "pages"), withIntermediateDirectories: true)
+        try Data(count: 3).write(to: base.appending(path: "vault.json"))
+        try Data(count: 5).write(to: base.appending(path: "pages/one.enc"))
+        #expect(OldVaultsModel.folderSize(base) == 8)
+    }
+
     @Test func listsOldVaultsWithTheirSize() async {
         let store = FakeQuarantine()
         let old = entry("20261013-090000", size: 2_500_000)

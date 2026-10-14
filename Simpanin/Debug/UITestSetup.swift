@@ -16,6 +16,7 @@
     /// Launch arguments the UI tests use. `-SimpaninUITest` starts on a fresh throwaway vault
     /// with an in-memory key. `-SimpaninUITestOpenError <case>` makes opening fail, so a test
     /// lands on a recovery screen; `-SimpaninUITestPasscode notSet` acts as if there's no passcode.
+    /// `-SimpaninUITestBrokenOldVault` puts a folder VaultCore can't read into Data lama.
     nonisolated enum UITestSetup {
         static var isActive: Bool { ProcessInfo.processInfo.arguments.contains("-SimpaninUITest") }
 
@@ -37,6 +38,14 @@
             case "storageFull": (.storageFull, 1)
             default: nil
             }
+        }
+
+        /// A synthetic folder with an unreadable vault.json, dated 2 Oct 2026.
+        static func addBrokenOldVault(to quarantine: URL) {
+            guard ProcessInfo.processInfo.arguments.contains("-SimpaninUITestBrokenOldVault") else { return }
+            let folder = quarantine.appending(path: "20261002-031500", directoryHint: .isDirectory)
+            try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            try? Data("not a vault".utf8).write(to: folder.appending(path: "vault.json"))
         }
 
         static var passcode: PasscodeState {

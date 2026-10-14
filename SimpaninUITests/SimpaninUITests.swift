@@ -128,7 +128,7 @@ final class SimpaninUITests: XCTestCase {
 
     @MainActor
     func testStartNewVaultNeedsTheTypedWords() throws {
-        let app = launch(["-SimpaninUITestOpenError", "keyMissing"])
+        let app = launch(["-SimpaninUITestOpenError", "keyMissing", "-SimpaninUITestBrokenOldVault"])
         app.buttons["recovery.action"].tap()
         let confirm = app.buttons["startNew.confirm"]
         XCTAssertTrue(confirm.waitForExistence(timeout: 5))
@@ -142,5 +142,13 @@ final class SimpaninUITests: XCTestCase {
         screenshot("08 mulai vault baru")
         confirm.tap()
         XCTAssertTrue(app.navigationBars["Dokumen"].waitForExistence(timeout: 10))
+
+        // The vault failed before it was created, so nothing was moved aside. The broken folder
+        // is shown, but can't be deleted yet.
+        app.buttons["list.settings"].tap()
+        app.buttons["settings.oldVaults"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)["oldVaults.unreadable"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.buttons.matching(identifier: "oldVaults.delete").count, 0)
+        screenshot("09 data lama, folder tidak terbaca")
     }
 }
