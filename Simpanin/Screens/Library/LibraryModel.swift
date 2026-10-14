@@ -1,5 +1,5 @@
 //
-//  Library.swift
+//  LibraryModel.swift
 //  Simpanin
 //
 //  Created by Inez Amanda on 15/10/26.
@@ -32,7 +32,7 @@ extension VaultStore: DocumentStoring {}
 /// The live documents and Recently deleted, for the list screens. Shows only type and expiry;
 /// fields and pages stay sealed until a document is opened.
 @MainActor @Observable
-final class Library {
+final class LibraryModel {
     private(set) var documents: [Document] = []
     private(set) var deleted: [Document] = []
     /// The message for a failed save, if any.

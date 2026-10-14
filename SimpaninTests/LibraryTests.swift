@@ -21,7 +21,7 @@ import UIKit
 struct LibraryTests {
     @Test func sampleDocumentIsSyntheticWithOnePageImage() async throws {
         let store = FakeDocuments()
-        let library = Library(store: store)
+        let library = LibraryModel(store: store)
         await library.addSample()
         #expect(library.documents.count == 1)
         let fields = try #require(await store.created.first)
@@ -33,7 +33,7 @@ struct LibraryTests {
     }
 
     @Test func deleteMovesToRecentlyDeletedAndRestoreBringsItBack() async throws {
-        let library = Library(store: FakeDocuments())
+        let library = LibraryModel(store: FakeDocuments())
         await library.addSample()
         let id = try #require(library.documents.first?.id)
         await library.delete(id)
@@ -47,7 +47,7 @@ struct LibraryTests {
     @Test func aFullDiskOnASaveShowsItsScreen() async {
         let store = FakeDocuments()
         await store.setFailure(.storageFull)
-        let library = Library(store: store)
+        let library = LibraryModel(store: store)
         await library.addSample()
         #expect(library.saveError == .storageFullOnSave)
         #expect(library.documents.isEmpty)
@@ -55,7 +55,7 @@ struct LibraryTests {
 
     @Test func otherSaveFailuresSaySoButALockDoesNot() async {
         let store = FakeDocuments()
-        let library = Library(store: store)
+        let library = LibraryModel(store: store)
         await store.setFailure(.fileUnavailable)
         await library.addSample()
         #expect(library.saveError == .saveFailed)
@@ -63,22 +63,5 @@ struct LibraryTests {
         await store.setFailure(.locked)
         await library.addSample()
         #expect(library.saveError == nil)
-    }
-}
-
-@MainActor
-@Suite("Notices")
-struct NoticeTests {
-    @Test func aNoticeIsShownUntilDismissed() async {
-        var report = OpenReport()
-        report.newestChangeMayBeLost = true
-        report.repairWaitingForSpace = true
-        let lock = LockController(
-            vault: FakeVault([.success(report)]), clock: FixedClock(), passcode: { .set },
-            vaultExists: { true }, protectedDataAvailable: { true })
-        await lock.unlock()
-        #expect(lock.notices == [.newestChangeMayBeLost, .repairWaitingForSpace])
-        lock.dismiss(.newestChangeMayBeLost)
-        #expect(lock.notices == [.repairWaitingForSpace])
     }
 }

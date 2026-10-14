@@ -255,3 +255,20 @@ struct LockControllerTests {
         #expect(controller.notices == [.repairWaitingForSpace])
     }
 }
+
+@MainActor
+@Suite("Notices")
+struct NoticeTests {
+    @Test func aNoticeIsShownUntilDismissed() async {
+        var report = OpenReport()
+        report.newestChangeMayBeLost = true
+        report.repairWaitingForSpace = true
+        let lock = LockController(
+            vault: FakeVault([.success(report)]), clock: FixedClock(), passcode: { .set },
+            vaultExists: { true }, protectedDataAvailable: { true })
+        await lock.unlock()
+        #expect(lock.notices == [.newestChangeMayBeLost, .repairWaitingForSpace])
+        lock.dismiss(.newestChangeMayBeLost)
+        #expect(lock.notices == [.repairWaitingForSpace])
+    }
+}

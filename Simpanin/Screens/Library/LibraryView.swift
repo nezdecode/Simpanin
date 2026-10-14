@@ -17,13 +17,13 @@ import VaultCore
 struct LibraryView: View {
     let vault: AppVault
     let lock: LockController
-    @State private var library: Library
+    @State private var library: LibraryModel
     @Environment(\.dynamicTypeSize) private var typeSize
 
     init(vault: AppVault, lock: LockController) {
         self.vault = vault
         self.lock = lock
-        _library = State(initialValue: Library(store: vault.store))
+        _library = State(initialValue: LibraryModel(store: vault.store))
     }
 
     private var today: CalendarDate { CalendarDate.today }

@@ -1,5 +1,5 @@
 //
-//  LockScreens.swift
+//  LockCoverView.swift
 //  Simpanin
 //
 //  Created by Inez Amanda on 15/10/26.

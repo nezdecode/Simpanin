@@ -14,7 +14,7 @@ import VaultCore
 
 /// Baru dihapus: documents waiting for their purge, with the days left.
 struct RecentlyDeletedView: View {
-    let library: Library
+    let library: LibraryModel
 
     var body: some View {
         List {

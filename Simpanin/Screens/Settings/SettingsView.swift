@@ -15,7 +15,7 @@ import VaultCore
 struct SettingsView: View {
     let vault: AppVault
     let lock: LockController
-    let library: Library
+    let library: LibraryModel
     @State private var autoLock = AutoLock.stored()
 
     var body: some View {

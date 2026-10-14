@@ -1,5 +1,5 @@
 //
-//  RecoveryScreenTests.swift
+//  RecoveryContentTests.swift
 //  SimpaninTests
 //
 //  Created by Inez Amanda on 15/10/26.
@@ -18,7 +18,7 @@ import Testing
 
 /// The texts and ways out of the design doc's recovery table, word for word.
 @Suite("Recovery screens: texts and actions")
-struct RecoveryScreenTests {
+struct RecoveryContentTests {
     static let texts: [(RecoveryScreen, String)] = [
         (.keyMissing, "Kunci vault tidak ditemukan. Ini bisa terjadi setelah memindahkan data ke HP baru."),
         (.vaultUnreadable, "Vault tidak bisa dibuka."),
