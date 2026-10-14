@@ -129,6 +129,11 @@ final class LockController {
         await apply(outcome)
     }
 
+    /// Notices are shown once: dismissing one hides it until the next open reports it again.
+    func dismiss(_ notice: VaultNotice) {
+        notices.remove(notice)
+    }
+
     func lock() async {
         await vault.lock()
         state = .locked
