@@ -32,15 +32,3 @@ struct RecentlyDeletedView: View {
         .navigationTitle(Text("list.recentlyDeleted"))
     }
 }
-
-/// How long a document stays in Baru dihapus before VaultCore purges it.
-nonisolated enum PurgeCountdown {
-    static func daysLeft(deletedAt: Date, now: Date) -> Int {
-        let remaining = deletedAt.addingTimeInterval(VaultStore.purgeDelay).timeIntervalSince(now)
-        return max(0, Int((remaining / 86_400).rounded(.up)))
-    }
-
-    static func text(daysLeft: Int) -> LocalizedStringResource {
-        daysLeft == 0 ? "deleted.purgeToday" : "deleted.purgeIn \(daysLeft)"
-    }
-}

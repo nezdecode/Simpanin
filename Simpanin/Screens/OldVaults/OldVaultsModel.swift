@@ -13,15 +13,6 @@ import Observation
 import SwiftUI
 import VaultCore
 
-/// What the screens need from VaultStore's quarantine calls, so tests can stand in for it.
-nonisolated protocol QuarantineStoring: Sendable {
-    func quarantineVault(to quarantineDirectory: URL) async throws -> URL?
-    func quarantinedVaults(in quarantineDirectory: URL) async throws -> QuarantineListing
-    func deleteQuarantinedVault(_ vault: QuarantinedVault) async throws
-}
-
-extension VaultStore: QuarantineStoring {}
-
 /// "Data lama": old vaults moved aside by "Mulai vault baru". Deleting one also deletes its
 /// Keychain item, through VaultCore.
 @MainActor @Observable
@@ -66,41 +57,5 @@ final class OldVaultsModel {
     func delete(_ vault: QuarantinedVault) async {
         try? await store.deleteQuarantinedVault(vault)
         await reload()
-    }
-}
-
-/// The texts of a "Data lama" entry. VaultCore names each folder after the moment it was moved
-/// aside, in UTC (`yyyyMMdd-HHmmss`, plus "-2", "-3" when the name was taken).
-nonisolated enum OldVaultText {
-    /// VaultCore's fixed folder-name format, in UTC. Display goes through `.indonesianDate`.
-    private static let folderNameDate = Date.ParseStrategy(
-        format: """
-            \(year: .padded(4))\(month: .twoDigits)\(day: .twoDigits)-\
-            \(hour: .twoDigits(clock: .twentyFourHour, hourCycle: .zeroBased))\(minute: .twoDigits)\(second: .twoDigits)
-            """,
-        timeZone: .gmt, isLenient: false)
-
-    static func movedAt(folderName: String) -> Date? {
-        let stamp = String(folderName.prefix(15))
-        guard stamp.count == 15 else { return nil }
-        return try? Date(stamp, strategy: folderNameDate)
-    }
-
-    static func title(_ movedAt: Date, timeZone: TimeZone = .current) -> LocalizedStringResource {
-        "oldVaults.title \(movedAt.formatted(.indonesianDate(timeZone: timeZone)))"
-    }
-
-    /// "12 MB · 2 Okt 2026", or only the size when the folder name has no date.
-    static func unreadableDetail(
-        folderName: String, sizeInBytes: Int64, timeZone: TimeZone = .current
-    ) -> LocalizedStringResource {
-        let size = sizeInBytes.formatted(.byteCount(style: .file))
-        guard let moved = movedAt(folderName: folderName) else { return "oldVaults.sizeOnly \(size)" }
-        return "oldVaults.unreadableDetail \(size) \(moved.formatted(.indonesianDate(timeZone: timeZone)))"
-    }
-
-    static func detail(_ movedAt: Date, sizeInBytes: Int64, timeZone: TimeZone = .current) -> LocalizedStringResource {
-        let time = movedAt.formatted(.indonesianTime(timeZone: timeZone))
-        return "oldVaults.detail \(sizeInBytes.formatted(.byteCount(style: .file))) \(time)"
     }
 }

@@ -13,16 +13,6 @@ import Foundation
 import Security
 import VaultCore
 
-/// A one-time notice after the vault opened.
-nonisolated enum VaultNotice: Hashable, Sendable {
-    /// "Perubahan terakhir mungkin belum tersimpan. Periksa dokumen yang baru kamu ubah."
-    case newestChangeMayBeLost
-    /// "Vault dipulihkan dari gambar. ..."
-    case recoveredFromPages
-    /// The banner that doesn't block: a full disk held back a repair or purge.
-    case repairWaitingForSpace
-}
-
 /// A screen from the design doc's recovery table.
 nonisolated enum RecoveryScreen: Equatable, Sendable {
     /// No passcode on the device yet: "Simpanin butuh passcode HP untuk mengunci dokumenmu."
@@ -55,16 +45,6 @@ nonisolated enum LockOutcome: Equatable, Sendable {
     /// Show the normal prompt again.
     case promptAgain
     case recovery(RecoveryScreen)
-}
-
-/// An error as it may be logged: the VaultError case, which carries only a Keychain status,
-/// or the domain and code of any other error. Its message and details can hold file paths.
-nonisolated enum ErrorSummary {
-    static func describe(_ error: any Error) -> String {
-        if let error = error as? VaultError { return String(describing: error) }
-        let error = error as NSError
-        return "\(error.domain) \(error.code)"
-    }
 }
 
 /// The design doc's recovery screens table as a pure function, so every row is tested.

@@ -1,0 +1,22 @@
+//
+//  VaultNotice.swift
+//  Simpanin
+//
+//  Created by Inez Amanda on 15/10/26.
+//
+//  This Source Code Form is subject to the terms of the Mozilla Public
+//  License, v. 2.0. If a copy of the MPL was not distributed with this
+//  file, You can obtain one at https://mozilla.org/MPL/2.0/.
+//
+
+import Foundation
+
+/// A one-time notice after the vault opened.
+nonisolated enum VaultNotice: Hashable, Sendable {
+    /// "Perubahan terakhir mungkin belum tersimpan. Periksa dokumen yang baru kamu ubah."
+    case newestChangeMayBeLost
+    /// "Vault dipulihkan dari gambar. ..."
+    case recoveredFromPages
+    /// The banner that doesn't block: a full disk held back a repair or purge.
+    case repairWaitingForSpace
+}
