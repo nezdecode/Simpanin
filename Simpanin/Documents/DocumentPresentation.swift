@@ -9,6 +9,7 @@
 //  file, You can obtain one at https://mozilla.org/MPL/2.0/.
 //
 
+import DeveloperToolsSupport
 import Foundation
 import VaultCore
 
@@ -47,20 +48,18 @@ nonisolated enum DocumentStyle {
         return trimmed
     }
 
-    /// Asset catalog names, each with a light and a dark variant.
-    static func tileColours(_ type: DocumentType) -> (background: String, foreground: String) {
-        let family =
-            switch type {
-            case .ktp: "KTP"
-            case .sim, .simA, .simB1, .simB2, .simC, .simD: "SIM"
-            case .passport: "Passport"
-            case .stnk: "STNK"
-            case .kk: "KK"
-            case .npwp: "NPWP"
-            case .bpjs: "BPJS"
-            default: "Other"
-            }
-        return ("Tile\(family)Background", "Tile\(family)Foreground")
+    /// Asset catalog colours, each with a light and a dark variant.
+    @MainActor static func tileColours(_ type: DocumentType) -> (background: ColorResource, foreground: ColorResource) {
+        switch type {
+        case .ktp: (.tileKTPBackground, .tileKTPForeground)
+        case .sim, .simA, .simB1, .simB2, .simC, .simD: (.tileSIMBackground, .tileSIMForeground)
+        case .passport: (.tilePassportBackground, .tilePassportForeground)
+        case .stnk: (.tileSTNKBackground, .tileSTNKForeground)
+        case .kk: (.tileKKBackground, .tileKKForeground)
+        case .npwp: (.tileNPWPBackground, .tileNPWPForeground)
+        case .bpjs: (.tileBPJSBackground, .tileBPJSForeground)
+        default: (.tileOtherBackground, .tileOtherForeground)
+        }
     }
 }
 

@@ -157,10 +157,10 @@ struct LibraryView: View {
                         }
                     }
                 }
-                .foregroundStyle(Color("OnWarning"))
+                .foregroundStyle(Color(.onWarning))
                 .padding(14)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color("Warning"), in: .rect(cornerRadius: 16))
+                .background(Color(.warning), in: .rect(cornerRadius: 16))
             }
         }
     }
@@ -173,7 +173,7 @@ struct LibraryView: View {
             HStack(spacing: 12) {
                 Image(systemName: "clock")
                     .frame(width: 36, height: 36)
-                    .background(Color("WarningIcon"), in: .circle)
+                    .background(Color(.warningIcon), in: .circle)
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(DocumentStyle.name(document.type)).font(.headline)
@@ -184,9 +184,9 @@ struct LibraryView: View {
                 }
                 Spacer(minLength: 0)
             }
-            .foregroundStyle(Color("OnWarning"))
+            .foregroundStyle(Color(.onWarning))
             .padding(14)
-            .background(Color("Warning"), in: .rect(cornerRadius: 16))
+            .background(Color(.warning), in: .rect(cornerRadius: 16))
             .accessibilityElement(children: .combine)
         }
     }
@@ -227,7 +227,7 @@ struct EmptyLibraryView: View {
         VStack(spacing: 12) {
             Image(systemName: "lock.shield")
                 .font(.system(size: 26))
-                .foregroundStyle(Color("OnAccent"))
+                .foregroundStyle(Color(.onAccent))
                 .frame(width: 52, height: 52)
                 .background(Color.accentColor, in: .circle)
                 .accessibilityHidden(true)

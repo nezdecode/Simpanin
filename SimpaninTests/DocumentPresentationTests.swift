@@ -41,16 +41,15 @@ struct DocumentPresentationTests {
         #expect(String(localized: DocumentStyle.name(DocumentType(rawValue: "visa"))) == "Lainnya")
     }
 
-    /// Every type has a tile colour pair in the asset catalog, in light and dark.
-    @Test(arguments: names.map(\.0))
+    /// Every type's tile colours have a dark variant. The asset symbols make sure they exist.
+    @MainActor @Test(arguments: names.map(\.0))
     func tileColoursExist(_ type: DocumentType) {
         let colours = DocumentStyle.tileColours(type)
-        for name in [colours.background, colours.foreground] {
-            let colour = UIColor(named: name)
-            #expect(colour != nil, "\(name)")
-            let light = colour?.resolvedColor(with: UITraitCollection(userInterfaceStyle: .light))
-            let dark = colour?.resolvedColor(with: UITraitCollection(userInterfaceStyle: .dark))
-            #expect(light != dark, "\(name) has no dark variant")
+        for resource in [colours.background, colours.foreground] {
+            let colour = UIColor(resource: resource)
+            let light = colour.resolvedColor(with: UITraitCollection(userInterfaceStyle: .light))
+            let dark = colour.resolvedColor(with: UITraitCollection(userInterfaceStyle: .dark))
+            #expect(light != dark, "\(type.rawValue) has no dark variant")
         }
     }
 

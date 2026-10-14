@@ -38,13 +38,13 @@ struct LockedView: View {
             VStack(spacing: 16) {
                 Image(systemName: "lock.shield")
                     .font(.system(size: 44))
-                    .foregroundStyle(Color("LockIcon"))
+                    .foregroundStyle(Color(.lockIcon))
                     .frame(width: 88, height: 88)
-                    .background(Color("LockIconBackground"), in: .rect(cornerRadius: 22))
+                    .background(Color(.lockIconBackground), in: .rect(cornerRadius: 22))
                     .accessibilityHidden(true)
                 Text("lock.title").font(.title.bold())
                 Text("lock.subtitle")
-                    .foregroundStyle(Color("LockSecondaryText"))
+                    .foregroundStyle(Color(.lockSecondaryText))
                     .multilineTextAlignment(.center)
             }
             .padding(.horizontal, 32)
@@ -63,12 +63,12 @@ struct LockedView: View {
                         .frame(maxWidth: .infinity, minHeight: 54)
                     }
                     .buttonStyle(.plain)
-                    .foregroundStyle(Color("LockBackground"))
+                    .foregroundStyle(Color(.lockBackground))
                     .background(.white, in: .capsule)
                     .accessibilityIdentifier("lock.open")
                     Text(method.caption)
                         .font(.footnote)
-                        .foregroundStyle(Color("LockSecondaryText"))
+                        .foregroundStyle(Color(.lockSecondaryText))
                 }
                 .padding(.horizontal, 24)
                 .padding(.bottom, 32)
@@ -76,7 +76,7 @@ struct LockedView: View {
         }
         .foregroundStyle(.white)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color("LockBackground"))
+        .background(Color(.lockBackground))
     }
 }
 
@@ -163,7 +163,7 @@ struct RecoveryView: View {
     private var tone: (symbol: String, colour: Color) {
         switch content.action {
         case .openSettings: ("lock", .accentColor)
-        case .startNewVault: ("questionmark", Color("OnWarning"))
+        case .startNewVault: ("questionmark", Color(.onWarning))
         case .openAppStore: ("arrow.up", .accentColor)
         case .retry, .dismiss: ("arrow.clockwise", .secondary)
         }

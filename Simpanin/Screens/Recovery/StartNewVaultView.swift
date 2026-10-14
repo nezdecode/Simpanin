@@ -28,7 +28,7 @@ struct StartNewVaultView: View {
                         .accessibilityIdentifier("startNew.field")
                 }
                 if model.failed {
-                    Text("startNew.failed").foregroundStyle(Color("Destructive"))
+                    Text("startNew.failed").foregroundStyle(Color(.destructive))
                 }
                 Button {
                     Task {

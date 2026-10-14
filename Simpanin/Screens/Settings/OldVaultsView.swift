@@ -44,7 +44,7 @@ struct OldVaultsView: View {
                             Text("button.delete")
                         }
                         .buttonStyle(.borderless)
-                        .foregroundStyle(Color("Destructive"))
+                        .foregroundStyle(Color(.destructive))
                         .accessibilityIdentifier("oldVaults.delete")
                     }
                     .swipeActions {
@@ -58,7 +58,7 @@ struct OldVaultsView: View {
                 ForEach(model.unreadable, id: \.folder) { folder in
                     HStack(spacing: 12) {
                         OldVaultIcon(
-                            symbol: "exclamationmark.triangle", tint: Color("OnWarning"), background: Color("Warning"))
+                            symbol: "exclamationmark.triangle", tint: Color(.onWarning), background: Color(.warning))
                         VStack(alignment: .leading, spacing: 2) {
                             Text("oldVaults.unreadableTitle")
                             Text(
