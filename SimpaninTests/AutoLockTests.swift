@@ -33,6 +33,11 @@ struct AutoLockTests {
         #expect(String(localized: AutoLock.fiveMinutes.title) == "Setelah 5 menit")
     }
 
+    /// The stored values are what's already on people's phones: renaming a case must not change them.
+    @Test func storedValuesNeverChange() {
+        #expect(AutoLock.allCases.map(\.rawValue) == ["immediately", "oneMinute", "fiveMinutes"])
+    }
+
     @Test func choiceIsKept() {
         let defaults = defaults()
         AutoLock.fiveMinutes.store(in: defaults)
