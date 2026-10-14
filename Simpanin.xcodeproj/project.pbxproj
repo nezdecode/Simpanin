@@ -199,10 +199,10 @@
 				};
 			};
 			buildConfigurationList = 358873D83071696D00707845 /* Build configuration list for PBXProject "Simpanin" */;
-			developmentRegion = en;
+			developmentRegion = id;
 			hasScannedForEncodings = 0;
 			knownRegions = (
-				en,
+				id,
 				Base,
 			);
 			mainGroup = 358873D43071696D00707845;

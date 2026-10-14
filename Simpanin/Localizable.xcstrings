@@ -1,0 +1,215 @@
+{
+  "sourceLanguage": "id",
+  "strings": {
+    "button.cancel": {
+      "extractionState": "manual",
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Batal"
+          }
+        }
+      }
+    },
+    "button.ok": {
+      "extractionState": "manual",
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oke"
+          }
+        }
+      }
+    },
+    "button.open": {
+      "extractionState": "manual",
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buka"
+          }
+        }
+      }
+    },
+    "button.openAppStore": {
+      "extractionState": "manual",
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buka App Store"
+          }
+        }
+      }
+    },
+    "button.openSettings": {
+      "extractionState": "manual",
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buka Pengaturan"
+          }
+        }
+      }
+    },
+    "button.retry": {
+      "extractionState": "manual",
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coba lagi"
+          }
+        }
+      }
+    },
+    "button.startNewVault": {
+      "extractionState": "manual",
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mulai vault baru"
+          }
+        }
+      }
+    },
+    "notice.newestChangeMayBeLost": {
+      "extractionState": "manual",
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Perubahan terakhir mungkin belum tersimpan. Periksa dokumen yang baru kamu ubah."
+          }
+        }
+      }
+    },
+    "notice.recoveredFromPages": {
+      "extractionState": "manual",
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vault dipulihkan dari gambar. Nomor, nama, dan tanggal perlu diisi ulang, dan dokumen yang sudah dihapus mungkin muncul kembali."
+          }
+        }
+      }
+    },
+    "notice.repairWaitingForSpace": {
+      "extractionState": "manual",
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Penyimpanan HP hampir penuh. Beberapa perbaikan akan disimpan setelah ada ruang."
+          }
+        }
+      }
+    },
+    "recovery.cannotOpenNow": {
+      "extractionState": "manual",
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vault tidak bisa dibuka sekarang. Coba lagi nanti."
+          }
+        }
+      }
+    },
+    "recovery.keyMissing": {
+      "extractionState": "manual",
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kunci vault tidak ditemukan. Ini bisa terjadi setelah memindahkan data ke HP baru."
+          }
+        }
+      }
+    },
+    "recovery.passcodeNeeded": {
+      "extractionState": "manual",
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Simpanin butuh passcode HP untuk mengunci dokumenmu."
+          }
+        }
+      }
+    },
+    "recovery.passcodeTurnedOff": {
+      "extractionState": "manual",
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pasang passcode lagi untuk membuka vault."
+          }
+        }
+      }
+    },
+    "recovery.storageFullOnOpen": {
+      "extractionState": "manual",
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Penyimpanan HP penuh. Kosongkan ruang untuk mulai memakai Simpanin."
+          }
+        }
+      }
+    },
+    "recovery.storageFullOnSave": {
+      "extractionState": "manual",
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Penyimpanan HP penuh. Perubahan belum tersimpan, data lama aman."
+          }
+        }
+      }
+    },
+    "recovery.unlockPhoneAndRetry": {
+      "extractionState": "manual",
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buka kunci HP, lalu coba lagi."
+          }
+        }
+      }
+    },
+    "recovery.updateApp": {
+      "extractionState": "manual",
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Versi Simpanin ini terlalu lama untuk vault ini. Perbarui app."
+          }
+        }
+      }
+    },
+    "recovery.vaultUnreadable": {
+      "extractionState": "manual",
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vault tidak bisa dibuka."
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}
