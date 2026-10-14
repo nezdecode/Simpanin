@@ -1,0 +1,71 @@
+//
+//  RecoveryContentTests.swift
+//  SimpaninTests
+//
+//  Created by Inez Amanda on 15/10/26.
+//
+//  This Source Code Form is subject to the terms of the Mozilla Public
+//  License, v. 2.0. If a copy of the MPL was not distributed with this
+//  file, You can obtain one at https://mozilla.org/MPL/2.0/.
+//
+
+import Foundation
+import Synchronization
+import Testing
+
+@testable import Simpanin
+@testable import VaultCore
+
+/// The texts and ways out of the design doc's recovery table, word for word.
+@Suite("Recovery screens: texts and actions")
+struct RecoveryContentTests {
+    static let texts: [(RecoveryScreen, String)] = [
+        (.keyMissing, "Kunci vault tidak ditemukan. Ini bisa terjadi setelah memindahkan data ke HP baru."),
+        (.vaultUnreadable, "Vault tidak bisa dibuka."),
+        (.passcodeNeeded, "Simpanin butuh passcode HP untuk mengunci dokumenmu."),
+        (.passcodeTurnedOff, "Pasang passcode lagi untuk membuka vault."),
+        (.unlockPhoneAndRetry, "Buka kunci HP, lalu coba lagi."),
+        (.cannotOpenNow, "Vault tidak bisa dibuka sekarang. Coba lagi nanti."),
+        (.updateApp, "Versi Simpanin ini terlalu lama untuk vault ini. Perbarui app."),
+        (.storageFullOnOpen, "Penyimpanan HP penuh. Kosongkan ruang untuk mulai memakai Simpanin."),
+        (.storageFullOnSave, "Penyimpanan HP penuh. Perubahan belum tersimpan, data lama aman."),
+        (.saveFailed, "Perubahan belum tersimpan. Coba lagi."),
+    ]
+
+    @Test(arguments: texts)
+    func screenText(_ screen: RecoveryScreen, _ text: String) {
+        #expect(String(localized: RecoveryContent(screen).message) == text)
+    }
+
+    @Test func noticeTexts() {
+        #expect(
+            String(localized: VaultNotice.newestChangeMayBeLost.message)
+                == "Perubahan terakhir mungkin belum tersimpan. Periksa dokumen yang baru kamu ubah.")
+        #expect(
+            String(localized: VaultNotice.recoveredFromPages.message)
+                == "Vault dipulihkan dari gambar. Nomor, nama, dan tanggal perlu diisi ulang, "
+                + "dan dokumen yang sudah dihapus mungkin muncul kembali.")
+        #expect(
+            String(localized: VaultNotice.repairWaitingForSpace.message)
+                == "Penyimpanan HP hampir penuh. Beberapa perbaikan akan disimpan setelah ada ruang.")
+    }
+
+    @Test func buttonTexts() {
+        #expect(String(localized: ScreenText.open) == "Buka")
+        #expect(String(localized: ScreenText.startNewVault) == "Mulai vault baru")
+    }
+
+    /// The "Way out" column.
+    @Test func waysOut() {
+        #expect(RecoveryContent(.keyMissing).action == .startNewVault)
+        #expect(RecoveryContent(.vaultUnreadable).action == .startNewVault)
+        #expect(RecoveryContent(.passcodeNeeded).action == .openSettings)
+        #expect(RecoveryContent(.passcodeTurnedOff).action == .openSettings)
+        #expect(RecoveryContent(.unlockPhoneAndRetry).action == .retry)
+        #expect(RecoveryContent(.cannotOpenNow).action == .retry)
+        #expect(RecoveryContent(.storageFullOnOpen).action == .retry)
+        #expect(RecoveryContent(.updateApp).action == .openAppStore)
+        #expect(RecoveryContent(.storageFullOnSave).action == .dismiss)
+        #expect(RecoveryContent(.saveFailed).action == .dismiss)
+    }
+}

@@ -39,7 +39,7 @@ struct RootView: View {
     var body: some View {
         Group {
             if lock.state == .unlocked {
-                MainView(vault: vault, lock: lock)
+                LibraryView(vault: vault, lock: lock)
             } else {
                 Color.clear
             }

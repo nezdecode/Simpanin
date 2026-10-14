@@ -1,5 +1,5 @@
 //
-//  MainView.swift
+//  LibraryView.swift
 //  Simpanin
 //
 //  Created by Inez Amanda on 15/10/26.
@@ -14,16 +14,16 @@ import VaultCore
 
 /// The unlocked app: the document list, Baru dihapus and Settings. The list shows only the type
 /// and the expiry, never a name or a number: those stay sealed until a document is opened.
-struct MainView: View {
+struct LibraryView: View {
     let vault: AppVault
     let lock: LockController
-    @State private var library: Library
+    @State private var library: LibraryModel
     @Environment(\.dynamicTypeSize) private var typeSize
 
     init(vault: AppVault, lock: LockController) {
         self.vault = vault
         self.lock = lock
-        _library = State(initialValue: Library(store: vault.store))
+        _library = State(initialValue: LibraryModel(store: vault.store))
     }
 
     private var today: CalendarDate { CalendarDate.today }
@@ -258,11 +258,5 @@ struct GroupedRow: View {
         .frame(minHeight: 50)
         .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 12))
         .contentShape(.rect)
-    }
-}
-
-extension Bundle {
-    var shortVersion: String {
-        object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
     }
 }

@@ -34,12 +34,16 @@ Simpanin has two parts: a core that knows how to keep documents safe, and an app
 
 **VaultCore** (`Packages/VaultCore`) holds everything about storing documents: encryption, the file format, the order of writes, recovery and purging. It imports only Foundation and Crypto, so its tests run on a Mac without a simulator. It reaches the platform through small protocols (`KeyStore`, `VaultClock`, `FileProtector`) that the app implements. `VaultStore` is an actor and the only way in, and every change goes through its write order. If a piece of logic doesn't need UIKit, SwiftUI, the Keychain or Face ID, it probably belongs here.
 
-**The app** (`Simpanin/`) is organised by topic:
+**The app** (`Simpanin/`) is organised by topic at the top, and by screen inside `Screens/`:
 
+- `App/`: the entry point, `RootView` (which switches between the lock cover and the app) and the build configuration.
 - `Vault/`: the platform side of VaultCore (`KeychainKeyStore`, `DataProtectionFileProtector`) and `AppVault`, which creates the app's one `VaultStore` at launch.
-- `Lock/`: `LockController`, the lock's state machine, and `RecoveryMapping`, which decides what the user sees when opening fails.
-- `Screens/`: SwiftUI views and the models behind them.
+- `Lock/`: `LockController`, the lock's state machine, `RecoveryMapping`, which decides what the user sees when opening fails, and the lock settings and checks every screen relies on.
+- `Documents/`: how a document reads on screen: type names, colours and the expiry wording.
+- `Screens/`: one folder per area (`Library`, `Settings`, `Recovery`), each holding its views and the models behind them side by side. A file is named after its main type: `LibraryModel.swift` holds the `@Observable` model, `LibraryView.swift` its view. `Shared/` holds the few pieces several screens use.
 - `Debug/`: tools that only exist in DEBUG builds.
+
+VaultCore keeps its public types in `Models.swift` and everything it writes to disk in `Format.swift`, so a format change is easy to spot.
 
 A few rules keep it that way:
 
@@ -51,7 +55,7 @@ A few rules keep it that way:
 - Every text the user sees lives in `Localizable.xcstrings` under a short key.
 - DEBUG-only code stays inside `#if DEBUG`, in `Debug/` where possible.
 
-Tests follow the same split. VaultCore is tested with `swift test`. App logic is tested in `SimpaninTests` with stand-ins. Screens are tested in `SimpaninUITests` on a throwaway vault (the `-SimpaninUITest` launch argument), finding elements by accessibility identifier rather than by layout. What only a real phone can show, like Face ID and file protection classes, goes through the DEBUG device checks screen.
+Tests follow the same split. VaultCore is tested with `swift test`. App logic is tested in `SimpaninTests` with stand-ins, kept in `SimpaninTests/Support/`. Screens are tested in `SimpaninUITests` on a throwaway vault (the `-SimpaninUITest` launch argument), finding elements by accessibility identifier rather than by layout. What only a real phone can show, like Face ID and file protection classes, goes through the DEBUG device checks screen.
 
 ## Style
 
