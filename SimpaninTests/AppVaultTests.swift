@@ -48,6 +48,26 @@ struct AppVaultTests {
         #expect(FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: group) != nil)
     }
 
+    /// projection.json is plaintext, so it stays out of iCloud and device backups.
+    @Test func backupExclusionIsSetOnAFolder() throws {
+        var folder = FileManager.default.temporaryDirectory.appending(
+            path: "Backup-\(UUID().uuidString)", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        try AppVault.excludeFromBackup(folder)
+        folder.removeAllCachedResourceValues()
+        #expect(try folder.resourceValues(forKeys: [.isExcludedFromBackupKey]).isExcludedFromBackup == true)
+    }
+
+    @Test func launchExcludesTheAppGroupFromBackup() throws {
+        // The test host launched the app, so the real App Group container has been through launch.
+        let group = try #require(AppConfiguration.appGroup)
+        var container = try #require(
+            FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: group))
+        container.removeAllCachedResourceValues()
+        #expect(try container.resourceValues(forKeys: [.isExcludedFromBackupKey]).isExcludedFromBackup == true)
+    }
+
     @Test func locations() {
         let support = URL(filePath: "/Support", directoryHint: .isDirectory)
         let group = URL(filePath: "/Group", directoryHint: .isDirectory)
