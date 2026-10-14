@@ -51,12 +51,23 @@ nonisolated final class AppVault: Sendable {
         return try live()
     }
 
+    /// Keeps a folder and everything in it out of iCloud and device backups. Set on the folder,
+    /// because VaultCore replaces files by renaming, which would drop a flag on the file.
+    static func excludeFromBackup(_ folder: URL) throws {
+        var folder = folder
+        var values = URLResourceValues()
+        values.isExcludedFromBackup = true
+        try folder.setResourceValues(values)
+    }
+
     static func live() throws -> AppVault {
         guard let accessGroup = AppConfiguration.keychainAccessGroup, let appGroup = AppConfiguration.appGroup,
             let container = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroup)
         else { throw SetupError.missingConfiguration }
         let support = try FileManager.default.url(
             for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
+        // projection.json is plaintext. Set at every launch, so a recreated folder is never missed.
+        try excludeFromBackup(container)
         let locations = VaultLocations(applicationSupport: support, appGroupContainer: container)
         let store = VaultStore(
             rootDirectory: locations.root, projectionURL: locations.projection,
