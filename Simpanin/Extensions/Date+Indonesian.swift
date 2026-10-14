@@ -30,12 +30,3 @@ extension FormatStyle where Self == Date.FormatStyle {
         Date.FormatStyle(locale: Locale(identifier: "id_ID"), timeZone: timeZone)
     }
 }
-
-extension Calendar {
-    /// Gregorian in UTC, for calendar days that no time zone may move.
-    nonisolated static let gregorianUTC: Calendar = {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = .gmt
-        return calendar
-    }()
-}

@@ -20,3 +20,13 @@ nonisolated enum VaultNotice: Hashable, Sendable {
     /// The banner that doesn't block: a full disk held back a repair or purge.
     case repairWaitingForSpace
 }
+
+extension VaultNotice {
+    nonisolated var message: LocalizedStringResource {
+        switch self {
+        case .newestChangeMayBeLost: LocalizedStringResource("notice.newestChangeMayBeLost")
+        case .recoveredFromPages: LocalizedStringResource("notice.recoveredFromPages")
+        case .repairWaitingForSpace: LocalizedStringResource("notice.repairWaitingForSpace")
+        }
+    }
+}

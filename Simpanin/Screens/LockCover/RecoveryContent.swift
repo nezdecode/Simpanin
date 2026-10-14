@@ -83,13 +83,3 @@ nonisolated enum RecoveryText {
         }
     }
 }
-
-extension VaultNotice {
-    nonisolated var message: LocalizedStringResource {
-        switch self {
-        case .newestChangeMayBeLost: LocalizedStringResource("notice.newestChangeMayBeLost")
-        case .recoveredFromPages: LocalizedStringResource("notice.recoveredFromPages")
-        case .repairWaitingForSpace: LocalizedStringResource("notice.repairWaitingForSpace")
-        }
-    }
-}
