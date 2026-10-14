@@ -34,6 +34,19 @@ nonisolated enum DocumentStyle {
         LocalizedStringResource(String.LocalizationValue(nameKeys[type] ?? "type.other"))
     }
 
+    /// "NPWP · Kantor" for one-line rows. A blank label counts as none.
+    static func name(_ type: DocumentType, label: String?) -> LocalizedStringResource {
+        guard let label = shownLabel(label) else { return name(type) }
+        return "type.withLabel \(String(localized: name(type))) \(label)"
+    }
+
+    static func shownLabel(_ label: String?) -> String? {
+        guard let trimmed = label?.trimmingCharacters(in: .whitespacesAndNewlines), !trimmed.isEmpty else {
+            return nil
+        }
+        return trimmed
+    }
+
     /// Asset catalog names, each with a light and a dark variant.
     static func tileColours(_ type: DocumentType) -> (background: String, foreground: String) {
         let family =

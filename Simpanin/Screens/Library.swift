@@ -66,7 +66,7 @@ final class Library {
             let sample = SampleDocument(number: samples)
             await save {
                 _ = try await self.store.createDocument(
-                    type: sample.type, label: nil, expiry: sample.expiry, pinned: false, fields: sample.fields,
+                    type: sample.type, label: sample.label, expiry: sample.expiry, pinned: false, fields: sample.fields,
                     pages: [sample.page])
             }
         }

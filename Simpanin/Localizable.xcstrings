@@ -1101,6 +1101,17 @@
         }
       }
     },
+    "type.withLabel %@ %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ · %2$@"
+          }
+        }
+      }
+    },
     "unlock.faceID" : {
       "extractionState" : "manual",
       "localizations" : {

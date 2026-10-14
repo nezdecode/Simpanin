@@ -31,6 +31,12 @@ struct DocumentPresentationTests {
         #expect(String(localized: DocumentStyle.name(type)) == name)
     }
 
+    @Test func nameWithLabel() {
+        #expect(String(localized: DocumentStyle.name(.npwp, label: "Kantor")) == "NPWP · Kantor")
+        #expect(String(localized: DocumentStyle.name(.ktp, label: nil)) == "KTP")
+        #expect(String(localized: DocumentStyle.name(.ktp, label: "  ")) == "KTP")
+    }
+
     @Test func aTypeFromANewerVersionReadsAsOther() {
         #expect(String(localized: DocumentStyle.name(DocumentType(rawValue: "visa"))) == "Lainnya")
     }
