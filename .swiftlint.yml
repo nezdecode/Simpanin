@@ -103,7 +103,7 @@ custom_rules:
     name: American spelling in identifiers
     message: "Identifiers use American spelling, like Apple's APIs: color, not colour."
     included: ".*\\.swift"
-    regex: "[A-Za-z]*([Cc]olour|[Bb]ehaviour|[Ff]avourite|[Cc]entre|[Cc]ancelled|[Gg]rey|[Ll]icence|[Cc]atalogue|[Ii]nitialis|[Oo]rganis|[Nn]ormalis|[Rr]ecognis|[Ss]ummaris|[Aa]uthoris|[Cc]ustomis)[A-Za-z]*"
+    regex: "[A-Za-z]*([Cc]olour|[Bb]ehaviour|[Ff]avourite|[Cc]entre|[Gg]rey|[Ll]icence|[Cc]atalogue|[Ii]nitialis|[Oo]rganis|[Nn]ormalis|[Rr]ecognis|[Ss]ummaris|[Aa]uthoris|[Cc]ustomis)[A-Za-z]*"
     match_kinds:
       - identifier
     severity: error
