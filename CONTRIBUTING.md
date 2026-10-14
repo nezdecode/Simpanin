@@ -57,7 +57,15 @@ Add a comment when the code can't say it for itself: why something is done this 
 
 ## Commits
 
-Write a short subject in the imperative ("Add page reordering"), and a body that says why when it isn't obvious. Keep moves and reformatting in their own commits, separate from changes in behaviour, so each diff is easy to review.
+Commit messages follow [Conventional Commits](https://www.conventionalcommits.org): `type(scope): subject`, for example `fix(lock): keep the vault locked when the phone locks during the prompt`.
+
+- **Types:** `feat` (something new for the user), `fix` (a bug), `test` (tests only), `refactor` (no change in behaviour), `docs`, `style` (formatting), `build` (project, signing, entitlements), `ci`, `chore`.
+- **Scopes:** `vaultcore`, `keychain`, `lock`, `screens`, `debug`, `app` (anything else in the app target). Leave the scope out when a change spans several.
+- **Subject:** imperative and lowercase, no full stop, at most about 72 characters.
+- **Body:** say why, when it isn't obvious.
+- **Breaking changes:** a change to the on-disk format, a key derivation label, an associated-data string or a Keychain value gets a `!` after the type and a `BREAKING CHANGE:` footer. These need a migration and a fixture test (see Code).
+
+Keep moves and reformatting in their own commits, separate from changes in behaviour, so each diff is easy to review.
 
 ## Branches and pull requests
 
