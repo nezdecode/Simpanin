@@ -39,7 +39,7 @@ final class LockController {
     var screenCaptured = false
     var contentHidden: Bool { state != .unlocked || coverShown || screenCaptured }
 
-    var relockTimeout: TimeInterval
+    private(set) var relockTimeout: TimeInterval
     private let vault: any VaultOpening
     private let clock: any VaultClock
     private let passcode: @MainActor () -> PasscodeState
@@ -92,6 +92,13 @@ final class LockController {
         }
         backgroundedAt = nil
         if returning, state == .locked || retriesOnReturn { await unlock() }
+    }
+
+    /// Saves the Kunci otomatis choice and applies it at once, so the stored choice and the
+    /// running lock can't drift apart.
+    func setAutoLock(_ choice: AutoLock, in defaults: UserDefaults = .standard) {
+        choice.store(in: defaults)
+        relockTimeout = choice.seconds
     }
 
     func sceneDidBecomeInactive() {
