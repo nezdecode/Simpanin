@@ -1,5 +1,5 @@
 //
-//  MainView.swift
+//  LibraryView.swift
 //  Simpanin
 //
 //  Created by Inez Amanda on 15/10/26.
@@ -14,7 +14,7 @@ import VaultCore
 
 /// The unlocked app: the document list, Baru dihapus and Settings. The list shows only the type
 /// and the expiry, never a name or a number: those stay sealed until a document is opened.
-struct MainView: View {
+struct LibraryView: View {
     let vault: AppVault
     let lock: LockController
     @State private var library: Library
