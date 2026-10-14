@@ -81,7 +81,7 @@ struct LibraryView: View {
             .task { await library.reload() }
             .alert(
                 library.saveError.map { Text(RecoveryContent($0).message) } ?? Text(verbatim: ""),
-                isPresented: Binding(get: { library.saveError != nil }, set: { if !$0 { library.saveError = nil } })
+                isPresented: Binding(isPresent: $library.saveError)
             ) {
                 Button {
                     library.saveError = nil
@@ -157,10 +157,7 @@ struct LibraryView: View {
                         }
                     }
                 }
-                .foregroundStyle(Color(.onWarning))
-                .padding(14)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color(.warning), in: .rect(cornerRadius: 16))
+                .noticeCard()
             }
         }
     }
@@ -171,10 +168,7 @@ struct LibraryView: View {
         if let first = attention.first {
             let document = library.documents[first]
             HStack(spacing: 12) {
-                Image(systemName: "clock")
-                    .frame(width: 36, height: 36)
-                    .background(Color(.warningIcon), in: .circle)
-                    .accessibilityHidden(true)
+                IconBadge(symbol: "clock", tint: Color(.onWarning), background: Color(.warningIcon))
                 VStack(alignment: .leading, spacing: 2) {
                     Text(DocumentStyle.name(document.type)).font(.headline)
                     Text(ExpiryText.text(type: document.type, expiry: document.expiry, today: today))
@@ -182,11 +176,8 @@ struct LibraryView: View {
                         Text("banner.more \(attention.count - 1)").font(.subheadline)
                     }
                 }
-                Spacer(minLength: 0)
             }
-            .foregroundStyle(Color(.onWarning))
-            .padding(14)
-            .background(Color(.warning), in: .rect(cornerRadius: 16))
+            .noticeCard()
             .accessibilityElement(children: .combine)
         }
     }
@@ -225,12 +216,9 @@ struct DocumentTile: View {
 struct EmptyLibraryView: View {
     var body: some View {
         VStack(spacing: 12) {
-            Image(systemName: "lock.shield")
-                .font(.system(size: 26))
-                .foregroundStyle(Color(.onAccent))
-                .frame(width: 52, height: 52)
-                .background(Color.accentColor, in: .circle)
-                .accessibilityHidden(true)
+            IconBadge(
+                symbol: "lock.shield", size: 52, symbolFont: .system(size: 26), tint: Color(.onAccent),
+                background: .accentColor)
             Text("empty.title").font(.title3.bold())
             Text("empty.body").foregroundStyle(.secondary).multilineTextAlignment(.center)
         }

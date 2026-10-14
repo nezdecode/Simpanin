@@ -37,7 +37,6 @@ final class LibraryModel {
     private(set) var deleted: [Document] = []
     /// The message for a failed save, if any.
     var saveError: RecoveryScreen?
-    private let logger = Logger(subsystem: "com.inez.Simpanin", category: "library")
     private let store: any DocumentStoring
 
     init(store: any DocumentStoring) {
@@ -77,7 +76,7 @@ final class LibraryModel {
             try await change()
         } catch {
             // Only the kind of error; never an id, a field or a path.
-            logger.error("Save failed: \(ErrorSummary.describe(error), privacy: .public)")
+            Logger.library.error("Save failed: \(ErrorSummary.describe(error), privacy: .public)")
             saveError = RecoveryMapping.screen(forSaveError: error)
         }
         await reload()

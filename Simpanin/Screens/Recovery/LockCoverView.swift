@@ -36,12 +36,9 @@ struct LockedView: View {
         VStack(spacing: 0) {
             Spacer()
             VStack(spacing: 16) {
-                Image(systemName: "lock.shield")
-                    .font(.system(size: 44))
-                    .foregroundStyle(Color(.lockIcon))
-                    .frame(width: 88, height: 88)
-                    .background(Color(.lockIconBackground), in: .rect(cornerRadius: 22))
-                    .accessibilityHidden(true)
+                IconBadge(
+                    symbol: "lock.shield", size: 88, symbolFont: .system(size: 44), tint: Color(.lockIcon),
+                    background: Color(.lockIconBackground), outline: .rounded(22))
                 Text("lock.title").font(.title.bold())
                 Text("lock.subtitle")
                     .foregroundStyle(Color(.lockSecondaryText))
@@ -95,12 +92,9 @@ struct RecoveryView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Spacer(minLength: 40)
-            Image(systemName: tone.symbol)
-                .font(.system(size: 30, weight: .semibold))
-                .foregroundStyle(tone.colour)
-                .frame(width: 64, height: 64)
-                .background(tone.colour.opacity(0.14), in: .circle)
-                .accessibilityHidden(true)
+            IconBadge(
+                symbol: tone.symbol, size: 64, symbolFont: .system(size: 30, weight: .semibold), tint: tone.colour,
+                background: tone.colour.opacity(0.14))
             Text(content.message)
                 .font(.title2.bold())
                 .accessibilityIdentifier("recovery.message")
@@ -131,32 +125,31 @@ struct RecoveryView: View {
     }
 
     @ViewBuilder private var actionButton: some View {
-        switch content.action {
-        case .retry:
-            primary(ScreenText.retry) { Task { await lock.unlock() } }
-        case .openSettings:
-            primary(ScreenText.openSettings) {
-                if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
+        Group {
+            switch content.action {
+            case .retry:
+                button(ScreenText.retry) { Task { await lock.unlock() } }
+            case .openSettings:
+                button(ScreenText.openSettings) {
+                    if let url = SystemLinks.settings { openURL(url) }
+                }
+            case .startNewVault:
+                // Not red: starting a new vault deletes nothing.
+                button(ScreenText.startNewVault) { startingNewVault = true }
+            case .openAppStore:
+                button(ScreenText.openAppStore) {
+                    if let url = SystemLinks.appStore { openURL(url) }
+                }
+            case .dismiss:
+                EmptyView()
             }
-        case .startNewVault:
-            // Not red: starting a new vault deletes nothing.
-            primary(ScreenText.startNewVault) { startingNewVault = true }
-        case .openAppStore:
-            primary(ScreenText.openAppStore) {
-                if let url = URL(string: "itms-apps://apps.apple.com") { openURL(url) }
-            }
-        case .dismiss:
-            EmptyView()
         }
+        .buttonStyle(.fullWidth)
+        .accessibilityIdentifier("recovery.action")
     }
 
-    private func primary(_ title: LocalizedStringResource, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title).font(.headline).frame(maxWidth: .infinity, minHeight: 50)
-        }
-        .buttonStyle(.borderedProminent)
-        .buttonBorderShape(.roundedRectangle(radius: 14))
-        .accessibilityIdentifier("recovery.action")
+    private func button(_ title: LocalizedStringResource, action: @escaping () -> Void) -> some View {
+        Button(action: action) { Text(title) }
     }
 
     /// The design's four tones follow what the user has to do, not how bad the error is.

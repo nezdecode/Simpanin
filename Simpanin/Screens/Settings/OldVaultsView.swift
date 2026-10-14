@@ -26,7 +26,9 @@ struct OldVaultsView: View {
                 }
                 ForEach(model.vaults, id: \.folder) { old in
                     HStack(spacing: 12) {
-                        OldVaultIcon(symbol: "archivebox", tint: .secondary, background: Color(.systemGray5))
+                        IconBadge(
+                            symbol: "archivebox", tint: .secondary, background: Color(.systemGray5),
+                            outline: .rounded(8))
                         VStack(alignment: .leading, spacing: 2) {
                             if let moved = OldVaultText.movedAt(folderName: old.folder.lastPathComponent) {
                                 Text(OldVaultText.title(moved))
@@ -57,8 +59,9 @@ struct OldVaultsView: View {
                 }
                 ForEach(model.unreadable, id: \.folder) { folder in
                     HStack(spacing: 12) {
-                        OldVaultIcon(
-                            symbol: "exclamationmark.triangle", tint: Color(.onWarning), background: Color(.warning))
+                        IconBadge(
+                            symbol: "exclamationmark.triangle", tint: Color(.onWarning), background: Color(.warning),
+                            outline: .rounded(8))
                         VStack(alignment: .leading, spacing: 2) {
                             Text("oldVaults.unreadableTitle")
                             Text(
@@ -85,7 +88,7 @@ struct OldVaultsView: View {
         .task { await model.reload() }
         .confirmationDialog(
             Text("oldVaults.deleteConfirm"),
-            isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }),
+            isPresented: Binding(isPresent: $pendingDelete),
             titleVisibility: .visible
         ) {
             Button(role: .destructive) {
@@ -97,20 +100,5 @@ struct OldVaultsView: View {
         } message: {
             Text("oldVaults.deleteMessage")
         }
-    }
-}
-
-/// The rounded square in front of a Data lama row.
-struct OldVaultIcon: View {
-    let symbol: String
-    let tint: Color
-    let background: Color
-
-    var body: some View {
-        Image(systemName: symbol)
-            .foregroundStyle(tint)
-            .frame(width: 36, height: 36)
-            .background(background, in: .rect(cornerRadius: 8))
-            .accessibilityHidden(true)
     }
 }
