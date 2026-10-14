@@ -87,7 +87,7 @@ Commit messages follow [Conventional Commits](https://www.conventionalcommits.or
 - **Types:** `feat` (something new for the user), `fix` (a bug), `test` (tests only), `refactor` (no change in behaviour), `docs`, `style` (formatting), `build` (project, signing, entitlements), `ci`, `chore`.
 - **Scopes:** `vaultcore`, `keychain`, `lock`, `screens`, `debug`, `app` (anything else in the app target). Leave the scope out when a change spans several.
 - **Subject:** imperative and lowercase, no full stop, at most about 72 characters.
-- **Body:** say why, when it isn't obvious.
+- **Body:** say why, when it isn't obvious. Break lines only where you mean a break, like a new paragraph or a separate point. Don't break inside a sentence to keep lines short: GitHub keeps those breaks, and the text turns choppy.
 - **Breaking changes:** a change to the on-disk format, a key derivation label, an associated-data string or a Keychain value gets a `!` after the type and a `BREAKING CHANGE:` footer. These need a migration and a fixture test (see Code).
 
 Keep moves and reformatting in their own commits, separate from changes in behaviour, so each diff is easy to review.
