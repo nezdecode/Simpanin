@@ -21,8 +21,8 @@ struct LockedView: View {
             Spacer()
             VStack(spacing: 16) {
                 IconBadge(
-                    symbol: "lock.shield", size: 88, symbolFont: .system(size: 44), tint: Color(.lockIcon),
-                    background: Color(.lockIconBackground), outline: .rounded(22))
+                    systemImage: "lock.shield", size: 88, symbolFont: .system(size: 44), tint: Color(.lockIcon),
+                    background: Color(.lockIconBackground), outline: .roundedRectangle(cornerRadius: 22))
                 Text("lock.title").font(.title.bold())
                 Text("lock.subtitle")
                     .foregroundStyle(Color(.lockSecondaryText))
@@ -38,7 +38,7 @@ struct LockedView: View {
                         Label {
                             Text(ScreenText.open)
                         } icon: {
-                            Image(systemName: method.symbol)
+                            Image(systemName: method.systemImage)
                         }
                         .font(.headline)
                         .frame(maxWidth: .infinity, minHeight: 54)

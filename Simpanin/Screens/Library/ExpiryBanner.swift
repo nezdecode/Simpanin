@@ -22,7 +22,7 @@ struct ExpiryBanner: View {
         if let first = attention.first {
             let document = documents[first]
             HStack(spacing: 12) {
-                IconBadge(symbol: "clock", tint: Color(.onWarning), background: Color(.warningIcon))
+                IconBadge(systemImage: "clock", tint: Color(.onWarning), background: Color(.warningIcon))
                 VStack(alignment: .leading, spacing: 2) {
                     Text(DocumentStyle.name(document.type)).font(.headline)
                     Text(ExpiryText.text(type: document.type, expiry: document.expiry, today: today))

@@ -1,5 +1,5 @@
 //
-//  IndonesianDateTests.swift
+//  IndonesianDateFormatTests.swift
 //  SimpaninTests
 //
 //  Created by Inez Amanda on 15/10/26.
@@ -14,27 +14,27 @@ import Testing
 
 @testable import Simpanin
 
-@Suite("Indonesian dates")
-struct IndonesianDateTests {
+@Suite("Indonesian date formats")
+struct IndonesianDateFormatTests {
     /// 14 Oct 2026, 02:12 UTC, which is 09.12 in Jakarta.
     let moment = Date(timeIntervalSince1970: 1_791_943_920)
     let jakarta = TimeZone(identifier: "Asia/Jakarta")!
 
     @Test func formats() {
-        #expect(IndonesianDate.dayMonthYear(moment, timeZone: jakarta) == "14 Okt 2026")
-        #expect(IndonesianDate.dayMonth(moment, timeZone: jakarta) == "14 Okt")
-        #expect(IndonesianDate.time(moment, timeZone: jakarta) == "09.12")
+        #expect(moment.formatted(.indonesianDate(timeZone: jakarta)) == "14 Okt 2026")
+        #expect(moment.formatted(.indonesianDayMonth(timeZone: jakarta)) == "14 Okt")
+        #expect(moment.formatted(.indonesianTime(timeZone: jakarta)) == "09.12")
     }
 
     @Test func theTimeZoneDecidesTheDay() {
         // 23:30 UTC on 13 Oct is already 14 Oct in Jakarta.
         let lateNight = Date(timeIntervalSince1970: 1_791_934_200)
-        #expect(IndonesianDate.dayMonthYear(lateNight, timeZone: .gmt) == "13 Okt 2026")
-        #expect(IndonesianDate.dayMonthYear(lateNight, timeZone: jakarta) == "14 Okt 2026")
+        #expect(lateNight.formatted(.indonesianDate(timeZone: .gmt)) == "13 Okt 2026")
+        #expect(lateNight.formatted(.indonesianDate(timeZone: jakarta)) == "14 Okt 2026")
     }
 
-    @Test func utcCalendarIsGregorianInUTC() {
-        #expect(IndonesianDate.utcCalendar.identifier == .gregorian)
-        #expect(IndonesianDate.utcCalendar.timeZone == .gmt)
+    @Test func gregorianUTC() {
+        #expect(Calendar.gregorianUTC.identifier == .gregorian)
+        #expect(Calendar.gregorianUTC.timeZone == .gmt)
     }
 }

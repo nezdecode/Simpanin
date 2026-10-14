@@ -27,9 +27,9 @@ struct RecoveryView: View {
         VStack(alignment: .leading, spacing: 16) {
             Spacer(minLength: 40)
             IconBadge(
-                symbol: content.tone.symbol, size: 64, symbolFont: .system(size: 30, weight: .semibold),
-                tint: toneColour,
-                background: toneColour.opacity(0.14))
+                systemImage: content.tone.systemImage, size: 64, symbolFont: .system(size: 30, weight: .semibold),
+                tint: toneColor,
+                background: toneColor.opacity(0.14))
             Text(content.message)
                 .font(.title2.bold())
                 .accessibilityIdentifier("recovery.message")
@@ -91,7 +91,7 @@ struct RecoveryView: View {
             .buttonStyle(.fullWidth(emphasis))
     }
 
-    private var toneColour: Color {
+    private var toneColor: Color {
         switch content.tone {
         case .needsAction, .update: .accentColor
         case .decision: Color(.onWarning)

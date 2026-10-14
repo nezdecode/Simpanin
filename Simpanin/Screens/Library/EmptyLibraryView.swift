@@ -16,7 +16,7 @@ struct EmptyLibraryView: View {
     var body: some View {
         VStack(spacing: 12) {
             IconBadge(
-                symbol: "lock.shield", size: 52, symbolFont: .system(size: 26), tint: Color(.onAccent),
+                systemImage: "lock.shield", size: 52, symbolFont: .system(size: 26), tint: Color(.onAccent),
                 background: .accentColor)
             Text("empty.title").font(.title3.bold())
             Text("empty.body").foregroundStyle(.secondary).multilineTextAlignment(.center)

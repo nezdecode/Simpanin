@@ -23,7 +23,7 @@ nonisolated struct RecoveryContent: Equatable, Sendable {
     enum Tone: Equatable, Sendable {
         case needsAction, temporary, decision, update
 
-        var symbol: String {
+        var systemImage: String {
             switch self {
             case .needsAction: "lock"
             case .temporary: "arrow.clockwise"

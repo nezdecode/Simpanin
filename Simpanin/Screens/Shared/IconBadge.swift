@@ -16,10 +16,10 @@ import SwiftUI
 struct IconBadge: View {
     enum Outline {
         case circle
-        case rounded(CGFloat)
+        case roundedRectangle(cornerRadius: CGFloat)
     }
 
-    let symbol: String
+    let systemImage: String
     var size: CGFloat = 36
     /// nil keeps the surrounding font.
     var symbolFont: Font?
@@ -28,14 +28,14 @@ struct IconBadge: View {
     var outline: Outline = .circle
 
     var body: some View {
-        let image = Image(systemName: symbol)
+        let image = Image(systemName: systemImage)
             .font(symbolFont)
             .foregroundStyle(tint)
             .frame(width: size, height: size)
         Group {
             switch outline {
             case .circle: image.background(background, in: .circle)
-            case .rounded(let radius): image.background(background, in: .rect(cornerRadius: radius))
+            case .roundedRectangle(let radius): image.background(background, in: .rect(cornerRadius: radius))
             }
         }
         .accessibilityHidden(true)

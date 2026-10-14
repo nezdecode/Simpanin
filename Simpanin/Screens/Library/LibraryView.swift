@@ -67,7 +67,8 @@ struct LibraryView: View {
                     NavigationLink {
                         RecentlyDeletedView(library: library)
                     } label: {
-                        GroupedRow(title: "list.recentlyDeleted", value: "\(library.deleted.count)", symbol: "trash")
+                        GroupedRow(
+                            title: "list.recentlyDeleted", value: "\(library.deleted.count)", systemImage: "trash")
                     }
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("list.recentlyDeleted")

@@ -27,7 +27,7 @@ struct OldVaultsView: View {
                 ForEach(model.vaults, id: \.folder) { old in
                     OldVaultRow(vault: old) { pendingDelete = old }
                 }
-                ForEach(model.unreadable, id: \.folder) { folder in
+                ForEach(model.unreadable, id: \.url) { folder in
                     UnreadableFolderRow(folder: folder)
                 }
             } header: {

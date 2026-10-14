@@ -18,13 +18,13 @@ struct UnreadableFolderRow: View {
     var body: some View {
         HStack(spacing: 12) {
             IconBadge(
-                symbol: "exclamationmark.triangle", tint: Color(.onWarning), background: Color(.warning),
-                outline: .rounded(8))
+                systemImage: "exclamationmark.triangle", tint: Color(.onWarning), background: Color(.warning),
+                outline: .roundedRectangle(cornerRadius: 8))
             VStack(alignment: .leading, spacing: 2) {
                 Text("oldVaults.unreadableTitle")
                 Text(
                     OldVaultText.unreadableDetail(
-                        folderName: folder.folder.lastPathComponent, sizeInBytes: folder.sizeInBytes)
+                        folderName: folder.url.lastPathComponent, sizeInBytes: folder.sizeInBytes)
                 )
                 .font(.footnote)
                 .foregroundStyle(.secondary)

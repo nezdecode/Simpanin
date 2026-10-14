@@ -43,12 +43,12 @@ struct DocumentPresentationTests {
 
     /// Every type's tile colours have a dark variant. The asset symbols make sure they exist.
     @MainActor @Test(arguments: names.map(\.0))
-    func tileColoursExist(_ type: DocumentType) {
-        let colours = DocumentStyle.tileColours(type)
-        for resource in [colours.background, colours.foreground] {
-            let colour = UIColor(resource: resource)
-            let light = colour.resolvedColor(with: UITraitCollection(userInterfaceStyle: .light))
-            let dark = colour.resolvedColor(with: UITraitCollection(userInterfaceStyle: .dark))
+    func tileColorsExist(_ type: DocumentType) {
+        let colors = DocumentStyle.tileColors(type)
+        for resource in [colors.background, colors.foreground] {
+            let color = UIColor(resource: resource)
+            let light = color.resolvedColor(with: UITraitCollection(userInterfaceStyle: .light))
+            let dark = color.resolvedColor(with: UITraitCollection(userInterfaceStyle: .dark))
             #expect(light != dark, "\(type.rawValue) has no dark variant")
         }
     }

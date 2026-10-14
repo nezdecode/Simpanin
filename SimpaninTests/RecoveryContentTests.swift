@@ -68,7 +68,7 @@ struct RecoveryContentTests {
         let symbols: [RecoveryContent.Tone: String] = [
             .needsAction: "lock", .temporary: "arrow.clockwise", .decision: "questionmark", .update: "arrow.up",
         ]
-        for (tone, symbol) in symbols { #expect(tone.symbol == symbol) }
+        for (tone, symbol) in symbols { #expect(tone.systemImage == symbol) }
     }
 
     @Test func waysOut() {

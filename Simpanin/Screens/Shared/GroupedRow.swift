@@ -15,11 +15,11 @@ import SwiftUI
 struct GroupedRow: View {
     let title: LocalizedStringResource
     var value: String = ""
-    var symbol: String?
+    var systemImage: String?
 
     var body: some View {
         HStack(spacing: 12) {
-            if let symbol { Image(systemName: symbol).foregroundStyle(.secondary).accessibilityHidden(true) }
+            if let systemImage { Image(systemName: systemImage).foregroundStyle(.secondary).accessibilityHidden(true) }
             Text(title)
             Spacer()
             Text(verbatim: value).foregroundStyle(.secondary)

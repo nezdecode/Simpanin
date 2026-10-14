@@ -33,7 +33,7 @@ struct OldVaultsTests {
         await model.reload()
         #expect(model.vaults == [old])
         // The fake folder doesn't exist on disk, so its size reads as 0.
-        #expect(model.unreadable == [OldVaultsModel.UnreadableFolder(folder: broken, sizeInBytes: 0)])
+        #expect(model.unreadable == [OldVaultsModel.UnreadableFolder(url: broken, sizeInBytes: 0)])
     }
 
     @Test func folderSizeCountsEveryFile() throws {
@@ -52,7 +52,7 @@ struct OldVaultsTests {
         let model = OldVaultsModel(store: store, folder: folder)
         await model.reload()
         #expect(model.vaults == [old])
-        #expect(!OldVaultsModel.sizeText(old.sizeInBytes).isEmpty)
+        #expect(!old.sizeInBytes.formatted(.byteCount(style: .file)).isEmpty)
     }
 
     @Test func deletingRemovesItThroughVaultCore() async {
@@ -82,7 +82,7 @@ struct OldVaultsTests {
     }
 
     @Test func unreadableFolderShowsSizeAndDate() {
-        let size = OldVaultsModel.sizeText(12_000_000)
+        let size = 12_000_000.formatted(.byteCount(style: .file))
         #expect(
             String(
                 localized: OldVaultText.unreadableDetail(

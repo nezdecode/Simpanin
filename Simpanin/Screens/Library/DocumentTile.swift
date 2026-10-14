@@ -12,14 +12,14 @@
 import SwiftUI
 import VaultCore
 
-/// A document on the list: its type and expiry, in the type's colours.
+/// A document on the list: its type and expiry, in the type's colors.
 struct DocumentTile: View {
     let document: Document
     let today: CalendarDate
     let wide: Bool
 
     var body: some View {
-        let colours = DocumentStyle.tileColours(document.type)
+        let colors = DocumentStyle.tileColors(document.type)
         VStack(alignment: .leading, spacing: 6) {
             Text(DocumentStyle.name(document.type))
                 .font(.footnote.weight(.bold))
@@ -31,11 +31,11 @@ struct DocumentTile: View {
             Text(ExpiryText.text(type: document.type, expiry: document.expiry, today: today))
                 .font(.footnote)
         }
-        .foregroundStyle(Color(colours.foreground))
+        .foregroundStyle(Color(colors.foreground))
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
         .frame(maxWidth: .infinity, minHeight: wide ? 0 : 104, alignment: .leading)
-        .background(Color(colours.background), in: .rect(cornerRadius: 18))
+        .background(Color(colors.background), in: .rect(cornerRadius: 18))
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("document.row")
     }

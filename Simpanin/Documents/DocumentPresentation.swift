@@ -21,7 +21,7 @@ extension DocumentType {
     nonisolated static let simD = DocumentType(rawValue: "sim-d")
 }
 
-/// A type's name and tile colours. The colours only help tell types apart; the name is always
+/// A type's name and tile colors. The colours only help tell types apart; the name is always
 /// shown too.
 nonisolated enum DocumentStyle {
     private static let nameKeys: [DocumentType: String] = [
@@ -49,7 +49,7 @@ nonisolated enum DocumentStyle {
     }
 
     /// Asset catalog colours, each with a light and a dark variant.
-    @MainActor static func tileColours(_ type: DocumentType) -> (background: ColorResource, foreground: ColorResource) {
+    @MainActor static func tileColors(_ type: DocumentType) -> (background: ColorResource, foreground: ColorResource) {
         switch type {
         case .ktp: (.tileKTPBackground, .tileKTPForeground)
         case .sim, .simA, .simB1, .simB2, .simC, .simD: (.tileSIMBackground, .tileSIMForeground)
@@ -97,7 +97,7 @@ nonisolated enum ExpiryText {
     }
 
     static func days(from start: CalendarDate, to end: CalendarDate) -> Int {
-        let calendar = IndonesianDate.utcCalendar
+        let calendar = Calendar.gregorianUTC
         guard let startDate = calendar.date(from: start.components), let endDate = calendar.date(from: end.components)
         else { return 0 }
         return calendar.dateComponents([.day], from: startDate, to: endDate).day ?? 0
@@ -121,13 +121,13 @@ extension CalendarDate {
 
     /// The day in Indonesian, for example "17 Agu 2030". Read as UTC, so no time zone moves it.
     nonisolated var displayText: String {
-        guard let date = IndonesianDate.utcCalendar.date(from: components) else { return string }
-        return IndonesianDate.dayMonthYear(date, timeZone: .gmt)
+        guard let date = Calendar.gregorianUTC.date(from: components) else { return string }
+        return date.formatted(.indonesianDate(timeZone: .gmt))
     }
 
     /// The day and month in Indonesian, for example "3 Mar".
     nonisolated var dayAndMonthText: String {
-        guard let date = IndonesianDate.utcCalendar.date(from: components) else { return string }
-        return IndonesianDate.dayMonth(date, timeZone: .gmt)
+        guard let date = Calendar.gregorianUTC.date(from: components) else { return string }
+        return date.formatted(.indonesianDayMonth(timeZone: .gmt))
     }
 }

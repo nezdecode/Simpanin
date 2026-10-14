@@ -20,8 +20,8 @@ struct OldVaultRow: View {
     var body: some View {
         HStack(spacing: 12) {
             IconBadge(
-                symbol: "archivebox", tint: .secondary, background: Color(.systemGray5),
-                outline: .rounded(8))
+                systemImage: "archivebox", tint: .secondary, background: Color(.systemGray5),
+                outline: .roundedRectangle(cornerRadius: 8))
             VStack(alignment: .leading, spacing: 2) {
                 if let moved = OldVaultText.movedAt(folderName: vault.folder.lastPathComponent) {
                     Text(OldVaultText.title(moved))
@@ -29,7 +29,7 @@ struct OldVaultRow: View {
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 } else {
-                    Text(verbatim: OldVaultsModel.sizeText(vault.sizeInBytes))
+                    Text(verbatim: vault.sizeInBytes.formatted(.byteCount(style: .file)))
                 }
             }
             Spacer(minLength: 0)
