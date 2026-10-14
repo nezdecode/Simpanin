@@ -32,6 +32,7 @@ struct LockCoverView: View {
                             Text(ScreenText.open)
                         }
                         .buttonStyle(.borderedProminent)
+                        .accessibilityIdentifier("lock.open")
                     }
                 }
             }
@@ -55,6 +56,7 @@ struct RecoveryView: View {
         VStack(spacing: 24) {
             Image(systemName: "exclamationmark.lock.fill").font(.system(size: 48))
             Text(content.message).multilineTextAlignment(.center)
+                .accessibilityIdentifier("recovery.message")
             switch content.action {
             case .retry:
                 Button {
@@ -63,6 +65,7 @@ struct RecoveryView: View {
                     Text(ScreenText.retry)
                 }
                 .buttonStyle(.borderedProminent)
+                .accessibilityIdentifier("recovery.action")
             case .openSettings:
                 Button {
                     if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
@@ -70,6 +73,7 @@ struct RecoveryView: View {
                     Text(ScreenText.openSettings)
                 }
                 .buttonStyle(.borderedProminent)
+                .accessibilityIdentifier("recovery.action")
             case .startNewVault:
                 Button {
                     startingNewVault = true
@@ -77,6 +81,7 @@ struct RecoveryView: View {
                     Text(ScreenText.startNewVault)
                 }
                 .buttonStyle(.borderedProminent)
+                .accessibilityIdentifier("recovery.action")
             case .openAppStore:
                 Button {
                     if let url = URL(string: "itms-apps://apps.apple.com") { openURL(url) }
@@ -84,6 +89,7 @@ struct RecoveryView: View {
                     Text(ScreenText.openAppStore)
                 }
                 .buttonStyle(.borderedProminent)
+                .accessibilityIdentifier("recovery.action")
             case .dismiss:
                 EmptyView()
             }
@@ -111,6 +117,7 @@ struct StartNewVaultView: View {
                     TextField(StartNewVaultModel.confirmationWord, text: $model.typed)
                         .textInputAutocapitalization(.characters)
                         .autocorrectionDisabled()
+                        .accessibilityIdentifier("startNew.field")
                 }
                 if model.failed {
                     Text("startNew.failed").foregroundStyle(.red)
@@ -124,6 +131,7 @@ struct StartNewVaultView: View {
                     Text(ScreenText.startNewVault)
                 }
                 .disabled(!model.canConfirm)
+                .accessibilityIdentifier("startNew.confirm")
             }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

@@ -65,6 +65,7 @@ struct MainView: View {
                     } label: {
                         Text("list.recentlyDeleted")
                     }
+                    .accessibilityIdentifier("list.recentlyDeleted")
                 }
             }
             .navigationTitle(Text("list.title"))
@@ -75,6 +76,7 @@ struct MainView: View {
                     } label: {
                         Text("button.lock")
                     }
+                    .accessibilityIdentifier("list.lock")
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     NavigationLink {
@@ -82,6 +84,7 @@ struct MainView: View {
                     } label: {
                         Image(systemName: "gearshape")
                     }
+                    .accessibilityIdentifier("list.settings")
                 }
                 #if DEBUG
                     ToolbarItem(placement: .bottomBar) {
@@ -90,6 +93,7 @@ struct MainView: View {
                         } label: {
                             Text("debug.addSample")
                         }
+                        .accessibilityIdentifier("list.addSample")
                     }
                 #endif
             }
@@ -136,6 +140,8 @@ struct DocumentRow: View {
                 Text("list.noExpiry").font(.subheadline).foregroundStyle(.secondary)
             }
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("document.row")
     }
 }
 
@@ -173,6 +179,7 @@ struct SettingsView: View {
             } label: {
                 Text("settings.oldVaults")
             }
+            .accessibilityIdentifier("settings.oldVaults")
             #if DEBUG
                 NavigationLink {
                     DeviceChecksView(vault: vault, lock: lock)
