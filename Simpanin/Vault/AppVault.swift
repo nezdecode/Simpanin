@@ -9,7 +9,6 @@
 //  file, You can obtain one at https://mozilla.org/MPL/2.0/.
 //
 
-import Crypto
 import Foundation
 import VaultCore
 
@@ -116,26 +115,3 @@ nonisolated final class AppVault: Sendable {
         }
     #endif
 }
-
-#if DEBUG
-    /// Keeps vault keys in memory, for previews and tests.
-    actor PreviewKeyStore: KeyStore {
-        private var keys: [VaultID: SymmetricKey] = [:]
-
-        func readVaultKey(for vaultID: VaultID) async throws -> SymmetricKey {
-            guard let key = keys[vaultID] else { throw KeyStoreError.itemNotFound }
-            return key
-        }
-
-        func createVaultKey(for vaultID: VaultID) async throws -> SymmetricKey {
-            guard keys[vaultID] == nil else { throw KeyStoreError.itemAlreadyExists }
-            let key = SymmetricKey(size: .bits256)
-            keys[vaultID] = key
-            return key
-        }
-
-        func deleteVaultKey(for vaultID: VaultID) async throws {
-            guard keys.removeValue(forKey: vaultID) != nil else { throw KeyStoreError.itemNotFound }
-        }
-    }
-#endif
