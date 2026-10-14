@@ -122,6 +122,116 @@
         }
       }
     },
+    "expiry.expired %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sudah habis sejak %@"
+          }
+        }
+      }
+    },
+    "expiry.lifetime" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seumur hidup"
+          }
+        }
+      }
+    },
+    "expiry.none" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tanpa masa berlaku"
+          }
+        }
+      }
+    },
+    "expiry.soon %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Habis dalam %lld hari"
+          }
+        }
+      }
+    },
+    "expiry.tax %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pajak sampai %@"
+          }
+        }
+      }
+    },
+    "expiry.taxExpired %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pajak sudah habis sejak %@"
+          }
+        }
+      }
+    },
+    "expiry.taxSoon %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pajak habis dalam %lld hari"
+          }
+        }
+      }
+    },
+    "expiry.taxToday" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pajak habis hari ini"
+          }
+        }
+      }
+    },
+    "expiry.today" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Habis hari ini"
+          }
+        }
+      }
+    },
+    "expiry.valid %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Berlaku sampai %@"
+          }
+        }
+      }
+    },
     "list.empty" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -503,6 +613,61 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "SIM"
+          }
+        }
+      }
+    },
+    "type.simA" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SIM A"
+          }
+        }
+      }
+    },
+    "type.simB1" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SIM B1"
+          }
+        }
+      }
+    },
+    "type.simB2" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SIM B2"
+          }
+        }
+      }
+    },
+    "type.simC" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SIM C"
+          }
+        }
+      }
+    },
+    "type.simD" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SIM D"
           }
         }
       }

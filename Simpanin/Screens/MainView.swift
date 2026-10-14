@@ -248,7 +248,7 @@ extension DocumentType {
 
 extension CalendarDate {
     /// The day in Indonesian, for example "17 Agu 2030". Read as UTC, so no time zone moves it.
-    var displayText: String {
+    nonisolated var displayText: String {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = .gmt
         guard let date = calendar.date(from: DateComponents(year: year, month: month, day: day)) else { return string }
