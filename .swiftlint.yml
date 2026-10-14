@@ -45,7 +45,7 @@ identifier_name:
     - kk  # Kartu Keluarga, a document type
     - t0  # a test's start time
 
-file_header:  # Xcode's header plus the MPL notice, see CONTRIBUTING.md
+file_header:  # Xcode's header plus the MPL notice, see CODING.md
   required_pattern: |
     \/\/
     \/\/  SWIFTLINT_CURRENT_FILENAME
@@ -64,4 +64,46 @@ custom_rules:
     message: "VaultCore imports only Foundation and Crypto."
     included: "Packages/VaultCore/Sources/.*\\.swift"
     regex: "^\\s*(@\\w+\\s+)?import\\s+(?!(Foundation|Crypto)\\b)\\w+"
+    severity: error
+  # The rules below check the app. They match paths, and the repository folder itself may be
+  # called Simpanin, so they include everything under it and exclude the tests and VaultCore.
+  color_by_name:
+    name: Colour by name
+    message: "Use the asset catalog's generated symbol, Color(.name): a mistyped name compiles and shows nothing."
+    included: "/Simpanin/.*\\.swift"
+    excluded: "/(SimpaninTests|SimpaninUITests|Packages)/"
+    regex: "\\b(Color\\(|UIColor\\(named: )\""
+    excluded_match_kinds: [comment, doccomment]
+    severity: error
+  vault_file_names:
+    name: Vault file names
+    message: "VaultCore owns its file names; use VaultStore.headerFileName or ask VaultStore."
+    included: "/Simpanin/.*\\.swift"
+    excluded: "/(SimpaninTests|SimpaninUITests|Packages)/"
+    regex: "\"(vault\\.json|index\\.enc|index\\.prev\\.enc)\""
+    excluded_match_kinds: [comment, doccomment]
+    severity: error
+  hand_built_dates:
+    name: Hand-built date formats
+    message: "Use the FormatStyles in Extensions/Date+Indonesian.swift; the device's own locale and formats are not what Simpanin shows."
+    included: "/Simpanin/.*\\.swift"
+    excluded: "/(SimpaninTests|SimpaninUITests|Packages|Extensions)/"
+    regex: "(\\bDateFormatter\\(\\)|Locale\\(identifier: \"id([-_]ID)?\"\\)|\\.formatted\\((date|time):)"
+    excluded_match_kinds: [comment, doccomment]
+    severity: error
+  no_print:
+    name: No print
+    message: "Use Logger, and never log field values, names, numbers, keys or file contents."
+    included: "/(Simpanin|Packages/VaultCore/Sources)/.*\\.swift"
+    excluded: "/(SimpaninTests|SimpaninUITests|Tests)/"
+    regex: "\\b(print|debugPrint|dump|NSLog)\\("
+    excluded_match_kinds: [comment, doccomment, string]
+    severity: error
+  british_identifiers:
+    name: American spelling in identifiers
+    message: "Identifiers use American spelling, like Apple's APIs: color, not colour."
+    included: ".*\\.swift"
+    regex: "[A-Za-z]*([Cc]olour|[Bb]ehaviour|[Ff]avourite|[Cc]entre|[Cc]ancelled|[Gg]rey|[Ll]icence|[Cc]atalogue|[Ii]nitialis|[Oo]rganis|[Nn]ormalis|[Rr]ecognis|[Ss]ummaris|[Aa]uthoris|[Cc]ustomis)[A-Za-z]*"
+    match_kinds:
+      - identifier
     severity: error
