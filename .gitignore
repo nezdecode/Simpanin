@@ -58,3 +58,7 @@ Packages/*/.swiftpm/
 # Backup copy: ~/Developer/iOSDev/Simpanin-private/
 /docs/
 /CLAUDE.md
+
+# Claude Code agents and settings. The reviewer reads the private design doc,
+# so it stays private like CLAUDE.md.
+/.claude/
