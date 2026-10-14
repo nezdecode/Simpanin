@@ -97,8 +97,7 @@ nonisolated enum ExpiryText {
     }
 
     static func days(from start: CalendarDate, to end: CalendarDate) -> Int {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = .gmt
+        let calendar = IndonesianDate.utcCalendar
         guard let startDate = calendar.date(from: start.components), let endDate = calendar.date(from: end.components)
         else { return 0 }
         return calendar.dateComponents([.day], from: startDate, to: endDate).day ?? 0
@@ -122,21 +121,13 @@ extension CalendarDate {
 
     /// The day in Indonesian, for example "17 Agu 2030". Read as UTC, so no time zone moves it.
     nonisolated var displayText: String {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = .gmt
-        guard let date = calendar.date(from: components) else { return string }
-        var style = Date.FormatStyle(date: .abbreviated, time: .omitted, locale: Locale(identifier: "id_ID"))
-        style.timeZone = .gmt
-        return date.formatted(style)
+        guard let date = IndonesianDate.utcCalendar.date(from: components) else { return string }
+        return IndonesianDate.dayMonthYear(date, timeZone: .gmt)
     }
 
     /// The day and month in Indonesian, for example "3 Mar".
     nonisolated var dayAndMonthText: String {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = .gmt
-        guard let date = calendar.date(from: components) else { return string }
-        var style = Date.FormatStyle(locale: Locale(identifier: "id_ID")).day().month(.abbreviated)
-        style.timeZone = .gmt
-        return date.formatted(style)
+        guard let date = IndonesianDate.utcCalendar.date(from: components) else { return string }
+        return IndonesianDate.dayMonth(date, timeZone: .gmt)
     }
 }
