@@ -1,501 +1,512 @@
 {
-  "sourceLanguage": "id",
-  "strings": {
-    "button.cancel": {
-      "extractionState": "manual",
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Batal"
+  "sourceLanguage" : "id",
+  "strings" : {
+    "button.cancel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Batal"
           }
         }
       }
     },
-    "button.delete": {
-      "extractionState": "manual",
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hapus"
+    "button.delete" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hapus"
           }
         }
       }
     },
-    "button.lock": {
-      "extractionState": "manual",
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kunci"
+    "button.lock" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kunci"
           }
         }
       }
     },
-    "button.ok": {
-      "extractionState": "manual",
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Oke"
+    "button.ok" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Oke"
           }
         }
       }
     },
-    "button.open": {
-      "extractionState": "manual",
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Buka"
+    "button.open" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buka"
           }
         }
       }
     },
-    "button.openAppStore": {
-      "extractionState": "manual",
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Buka App Store"
+    "button.openAppStore" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buka App Store"
           }
         }
       }
     },
-    "button.openSettings": {
-      "extractionState": "manual",
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Buka Pengaturan"
+    "button.openSettings" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buka Pengaturan"
           }
         }
       }
     },
-    "button.restore": {
-      "extractionState": "manual",
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pulihkan"
+    "button.restore" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pulihkan"
           }
         }
       }
     },
-    "button.retry": {
-      "extractionState": "manual",
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Coba lagi"
+    "button.retry" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Coba lagi"
           }
         }
       }
     },
-    "button.startNewVault": {
-      "extractionState": "manual",
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mulai vault baru"
+    "button.startNewVault" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mulai vault baru"
           }
         }
       }
     },
-    "debug.addSample": {
-      "extractionState": "manual",
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tambah dokumen contoh"
+    "debug.addSample" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tambah dokumen contoh"
           }
         }
       }
     },
-    "list.empty": {
-      "extractionState": "manual",
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Belum ada dokumen"
+    "list.empty" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Belum ada dokumen"
           }
         }
       }
     },
-    "list.expiry %@": {
-      "extractionState": "manual",
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Berlaku sampai %@"
+    "list.expiry %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Berlaku sampai %@"
           }
         }
       }
     },
-    "list.noExpiry": {
-      "extractionState": "manual",
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tanpa masa berlaku"
+    "list.noExpiry" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tanpa masa berlaku"
           }
         }
       }
     },
-    "list.recentlyDeleted": {
-      "extractionState": "manual",
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Baru dihapus"
+    "list.recentlyDeleted" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Baru dihapus"
           }
         }
       }
     },
-    "list.recentlyDeletedEmpty": {
-      "extractionState": "manual",
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tidak ada dokumen yang baru dihapus"
+    "list.recentlyDeletedEmpty" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidak ada dokumen yang baru dihapus"
           }
         }
       }
     },
-    "list.title": {
-      "extractionState": "manual",
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dokumen"
+    "list.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dokumen"
           }
         }
       }
     },
-    "notice.newestChangeMayBeLost": {
-      "extractionState": "manual",
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Perubahan terakhir mungkin belum tersimpan. Periksa dokumen yang baru kamu ubah."
+    "notice.newestChangeMayBeLost" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Perubahan terakhir mungkin belum tersimpan. Periksa dokumen yang baru kamu ubah."
           }
         }
       }
     },
-    "notice.recoveredFromPages": {
-      "extractionState": "manual",
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vault dipulihkan dari gambar. Nomor, nama, dan tanggal perlu diisi ulang, dan dokumen yang sudah dihapus mungkin muncul kembali."
+    "notice.recoveredFromPages" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vault dipulihkan dari gambar. Nomor, nama, dan tanggal perlu diisi ulang, dan dokumen yang sudah dihapus mungkin muncul kembali."
           }
         }
       }
     },
-    "notice.repairWaitingForSpace": {
-      "extractionState": "manual",
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Penyimpanan HP hampir penuh. Beberapa perbaikan akan disimpan setelah ada ruang."
+    "notice.repairWaitingForSpace" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Penyimpanan HP hampir penuh. Beberapa perbaikan akan disimpan setelah ada ruang."
           }
         }
       }
     },
-    "oldVaults.deleteConfirm": {
-      "extractionState": "manual",
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hapus data lama ini? Kunci vault lamanya juga ikut dihapus. Ini tidak bisa dibatalkan."
+    "oldVaults.deleteConfirm" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hapus data lama ini? Kunci vault lamanya juga ikut dihapus. Ini tidak bisa dibatalkan."
           }
         }
       }
     },
-    "oldVaults.empty": {
-      "extractionState": "manual",
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tidak ada data lama"
+    "oldVaults.empty" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidak ada data lama"
           }
         }
       }
     },
-    "oldVaults.row %@": {
-      "extractionState": "manual",
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vault lama, %@"
+    "oldVaults.row %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vault lama, %@"
           }
         }
       }
     },
-    "recovery.cannotOpenNow": {
-      "extractionState": "manual",
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vault tidak bisa dibuka sekarang. Coba lagi nanti."
+    "recovery.cannotOpenNow" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vault tidak bisa dibuka sekarang. Coba lagi nanti."
           }
         }
       }
     },
-    "recovery.keyMissing": {
-      "extractionState": "manual",
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kunci vault tidak ditemukan. Ini bisa terjadi setelah memindahkan data ke HP baru."
+    "recovery.keyMissing" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kunci vault tidak ditemukan. Ini bisa terjadi setelah memindahkan data ke HP baru."
           }
         }
       }
     },
-    "recovery.passcodeNeeded": {
-      "extractionState": "manual",
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Simpanin butuh passcode HP untuk mengunci dokumenmu."
+    "recovery.passcodeNeeded" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Simpanin butuh passcode HP untuk mengunci dokumenmu."
           }
         }
       }
     },
-    "recovery.passcodeTurnedOff": {
-      "extractionState": "manual",
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pasang passcode lagi untuk membuka vault."
+    "recovery.passcodeTurnedOff" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pasang passcode lagi untuk membuka vault."
           }
         }
       }
     },
-    "recovery.storageFullOnOpen": {
-      "extractionState": "manual",
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Penyimpanan HP penuh. Kosongkan ruang untuk mulai memakai Simpanin."
+    "recovery.storageFullOnOpen" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Penyimpanan HP penuh. Kosongkan ruang untuk mulai memakai Simpanin."
           }
         }
       }
     },
-    "recovery.storageFullOnSave": {
-      "extractionState": "manual",
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Penyimpanan HP penuh. Perubahan belum tersimpan, data lama aman."
+    "recovery.storageFullOnSave" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Penyimpanan HP penuh. Perubahan belum tersimpan, data lama aman."
           }
         }
       }
     },
-    "recovery.unlockPhoneAndRetry": {
-      "extractionState": "manual",
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Buka kunci HP, lalu coba lagi."
+    "recovery.unlockPhoneAndRetry" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buka kunci HP, lalu coba lagi."
           }
         }
       }
     },
-    "recovery.updateApp": {
-      "extractionState": "manual",
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Versi Simpanin ini terlalu lama untuk vault ini. Perbarui app."
+    "recovery.updateApp" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Versi Simpanin ini terlalu lama untuk vault ini. Perbarui app."
           }
         }
       }
     },
-    "recovery.vaultUnreadable": {
-      "extractionState": "manual",
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vault tidak bisa dibuka."
+    "recovery.vaultUnreadable" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vault tidak bisa dibuka."
           }
         }
       }
     },
-    "settings.oldVaults": {
-      "extractionState": "manual",
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Data lama"
+    "settings.oldVaults" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Data lama"
           }
         }
       }
     },
-    "settings.title": {
-      "extractionState": "manual",
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pengaturan"
+    "settings.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pengaturan"
           }
         }
       }
     },
-    "startNew.explanation": {
-      "extractionState": "manual",
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vault lama dipindahkan ke Data lama, tidak dihapus. Kamu bisa menghapusnya nanti di Pengaturan."
+    "setup.failed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Simpanin tidak bisa disiapkan"
           }
         }
       }
     },
-    "startNew.failed": {
-      "extractionState": "manual",
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vault lama belum bisa dipindahkan. Coba lagi."
+    "startNew.explanation" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vault lama dipindahkan ke Data lama, tidak dihapus. Kamu bisa menghapusnya nanti di Pengaturan."
           }
         }
       }
     },
-    "startNew.instruction %@": {
-      "extractionState": "manual",
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ketik %@ untuk melanjutkan."
+    "startNew.failed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vault lama belum bisa dipindahkan. Coba lagi."
           }
         }
       }
     },
-    "type.bpjs": {
-      "extractionState": "manual",
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "BPJS"
+    "startNew.instruction %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ketik %@ untuk melanjutkan."
           }
         }
       }
     },
-    "type.kk": {
-      "extractionState": "manual",
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kartu Keluarga"
+    "type.bpjs" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BPJS"
           }
         }
       }
     },
-    "type.ktp": {
-      "extractionState": "manual",
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "KTP"
+    "type.kk" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kartu Keluarga"
           }
         }
       }
     },
-    "type.npwp": {
-      "extractionState": "manual",
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "NPWP"
+    "type.ktp" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "KTP"
           }
         }
       }
     },
-    "type.other": {
-      "extractionState": "manual",
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lainnya"
+    "type.npwp" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "NPWP"
           }
         }
       }
     },
-    "type.passport": {
-      "extractionState": "manual",
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Paspor"
+    "type.other" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lainnya"
           }
         }
       }
     },
-    "type.sim": {
-      "extractionState": "manual",
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "SIM"
+    "type.passport" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paspor"
           }
         }
       }
     },
-    "type.stnk": {
-      "extractionState": "manual",
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "STNK"
+    "type.sim" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SIM"
+          }
+        }
+      }
+    },
+    "type.stnk" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "STNK"
           }
         }
       }
     }
   },
-  "version": "1.0"
+  "version" : "1.0"
 }
