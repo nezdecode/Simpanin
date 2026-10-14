@@ -10,7 +10,7 @@ Simpanin is a privacy-first iOS app for keeping personal documents such as KTP, 
 
 ## Development
 
-Read [CONTRIBUTING.md](CONTRIBUTING.md) first. It covers setup, the privacy rules and code style.
+Read [CONTRIBUTING.md](CONTRIBUTING.md) first. It covers setup, the privacy rules and the pull request process; [CODING.md](CODING.md) covers how code is written.
 
 Run the core tests on a Mac (no simulator needed):
 
