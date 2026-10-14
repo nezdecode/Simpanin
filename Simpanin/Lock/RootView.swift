@@ -30,50 +30,36 @@ struct RootView: View {
     }
 
     var body: some View {
-        ContentView(vault: vault)
-            .overlay {
-                if lock.contentHidden { LockCoverView(lock: lock) }
-            }
-            .background(SceneCaptureReader { lock.screenCaptured = $0 })
-            .onChange(of: scenePhase, initial: true) { _, phase in
-                switch phase {
-                case .active: Task { await lock.sceneDidBecomeActive() }
-                case .inactive: lock.sceneDidBecomeInactive()
-                case .background: lock.sceneDidEnterBackground()
-                @unknown default: break
-                }
-            }
-            .task {
-                let name = UIApplication.protectedDataWillBecomeUnavailableNotification
-                for await _ in NotificationCenter.default.notifications(named: name) {
-                    await lock.protectedDataWillBecomeUnavailable()
-                }
-            }
-            .task {
-                let name = UIApplication.protectedDataDidBecomeAvailableNotification
-                for await _ in NotificationCenter.default.notifications(named: name) {
-                    await lock.protectedDataDidBecomeAvailable()
-                }
-            }
-    }
-}
-
-/// The lock cover. Part 4 replaces the placeholder recovery text with the real screens.
-struct LockCoverView: View {
-    let lock: LockController
-
-    var body: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "lock.fill").font(.largeTitle)
-            if case .recovery(let screen) = lock.state {
-                Text(String(describing: screen)).font(.footnote).foregroundStyle(.secondary)
-            }
-            if lock.state != .unlocking {
-                Button("Buka") { Task { await lock.unlock() } }
-                    .buttonStyle(.borderedProminent)
+        Group {
+            if lock.state == .unlocked {
+                MainView(vault: vault, lock: lock)
+            } else {
+                Color.clear
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(.background)
+        .overlay {
+            if lock.contentHidden { LockCoverView(vault: vault, lock: lock) }
+        }
+        .background(SceneCaptureReader { lock.screenCaptured = $0 })
+        .onChange(of: scenePhase, initial: true) { _, phase in
+            switch phase {
+            case .active: Task { await lock.sceneDidBecomeActive() }
+            case .inactive: lock.sceneDidBecomeInactive()
+            case .background: lock.sceneDidEnterBackground()
+            @unknown default: break
+            }
+        }
+        .task {
+            let name = UIApplication.protectedDataWillBecomeUnavailableNotification
+            for await _ in NotificationCenter.default.notifications(named: name) {
+                await lock.protectedDataWillBecomeUnavailable()
+            }
+        }
+        .task {
+            let name = UIApplication.protectedDataDidBecomeAvailableNotification
+            for await _ in NotificationCenter.default.notifications(named: name) {
+                await lock.protectedDataDidBecomeAvailable()
+            }
+        }
     }
 }

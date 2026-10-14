@@ -43,6 +43,8 @@ nonisolated enum RecoveryScreen: Equatable, Sendable {
     case storageFullOnOpen
     /// "Penyimpanan HP penuh. Perubahan belum tersimpan, data lama aman."
     case storageFullOnSave
+    /// Any other failed save, except a lock: "Perubahan belum tersimpan. Coba lagi."
+    case saveFailed
 }
 
 /// What the lock screen does after an attempt to open the vault.
@@ -53,6 +55,16 @@ nonisolated enum LockOutcome: Equatable, Sendable {
     /// Show the normal prompt again.
     case promptAgain
     case recovery(RecoveryScreen)
+}
+
+/// An error as it may be logged: the VaultError case, which carries only a Keychain status,
+/// or the domain and code of any other error. Its message and details can hold file paths.
+nonisolated enum ErrorSummary {
+    static func describe(_ error: any Error) -> String {
+        if let error = error as? VaultError { return String(describing: error) }
+        let error = error as NSError
+        return "\(error.domain) \(error.code)"
+    }
 }
 
 /// The design doc's recovery screens table as a pure function, so every row is tested.
@@ -117,9 +129,13 @@ nonisolated enum RecoveryMapping {
         }
     }
 
-    /// Only a full disk has its own screen for a failed save.
+    /// A save never fails quietly. A lock is the one exception: the cover already explains it.
     static func screen(forSaveError error: any Error) -> RecoveryScreen? {
-        (error as? VaultError) == .storageFull ? .storageFullOnSave : nil
+        switch error as? VaultError {
+        case .storageFull: .storageFullOnSave
+        case .locked: nil
+        default: .saveFailed
+        }
     }
 
     private static func notices(_ report: OpenReport) -> Set<VaultNotice> {

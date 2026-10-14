@@ -119,8 +119,20 @@ struct RecoveryMappingTests {
 
     // MARK: Saves
 
-    @Test func storageFullOnASave() {
+    @Test func saveFailures() {
         #expect(RecoveryMapping.screen(forSaveError: VaultError.storageFull) == .storageFullOnSave)
-        #expect(RecoveryMapping.screen(forSaveError: VaultError.documentDeleted) == nil)
+        // The lock cover already explains a save cut short by locking.
+        #expect(RecoveryMapping.screen(forSaveError: VaultError.locked) == nil)
+        #expect(RecoveryMapping.screen(forSaveError: VaultError.documentDeleted) == .saveFailed)
+        #expect(RecoveryMapping.screen(forSaveError: CocoaError(.fileWriteUnknown)) == .saveFailed)
+    }
+
+    /// What reaches the log: the error's kind, never a path, id or value.
+    @Test func errorSummaryLeavesOutPathsAndValues() {
+        let withPath = CocoaError(.fileReadNoSuchFile, userInfo: [NSFilePathErrorKey: "/Vault/pages/abc.enc"])
+        let summary = ErrorSummary.describe(withPath)
+        #expect(summary == "NSCocoaErrorDomain 260")
+        #expect(!summary.contains("/") && !summary.contains("abc"))
+        #expect(ErrorSummary.describe(VaultError.vaultKeyUnavailable(status: -128)).contains("-128"))
     }
 }

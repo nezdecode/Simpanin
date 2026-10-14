@@ -22,7 +22,7 @@ struct SimpaninApp: App {
                 RootView(vault: vault)
             } else {
                 // Only a broken build gets here: the entitlements or Info.plist values are missing.
-                ContentUnavailableView("Simpanin tidak bisa disiapkan", systemImage: "exclamationmark.triangle")
+                ContentUnavailableView("setup.failed", systemImage: "exclamationmark.triangle")
             }
         }
     }

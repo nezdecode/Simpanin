@@ -51,6 +51,13 @@ final class LockController {
     private var waitingForProtectedData = false
     private var leftForegroundDuringPrompt = false
     private var failuresInARow = 0
+    /// Bumped by every lock, so an attempt that was waiting for the vault can tell it lost.
+    private var lockCount = 0
+
+    #if DEBUG
+        /// For the device checks: each open attempt and lock event, as statuses only.
+        private(set) var attemptLog: [String] = []
+    #endif
 
     init(
         vault: any VaultOpening, clock: any VaultClock = SystemClock(), relockTimeout: TimeInterval = 60,
@@ -68,6 +75,12 @@ final class LockController {
 
     // MARK: - Scene phase
 
+    /// The passcode screens send the user to Settings, so coming back retries by itself.
+    private var retriesOnReturn: Bool {
+        guard case .recovery(let screen) = state else { return false }
+        return RecoveryContent(screen).action == .openSettings
+    }
+
     /// Prompts only at launch and on a return from the background. The prompt itself makes the
     /// app inactive and active again, so prompting on every activation would loop after a cancel.
     func sceneDidBecomeActive() async {
@@ -78,7 +91,7 @@ final class LockController {
             await lock()
         }
         backgroundedAt = nil
-        if returning, state == .locked { await unlock() }
+        if returning, state == .locked || retriesOnReturn { await unlock() }
     }
 
     func sceneDidBecomeInactive() {
@@ -93,6 +106,9 @@ final class LockController {
     }
 
     func protectedDataWillBecomeUnavailable() async {
+        #if DEBUG
+            attemptLog.append("phone locked")
+        #endif
         await lock()
     }
 
@@ -117,24 +133,55 @@ final class LockController {
         }
         state = .unlocking
         leftForegroundDuringPrompt = false
+        let lockCountAtStart = lockCount
         let result: Result<OpenReport, any Error>
         do {
             result = .success(try await vault.open())
         } catch {
             result = .failure(error)
         }
+        // A lock that came in meanwhile (the user, or the phone locking) wins over the result. The
+        // phone may lock before the app leaves the foreground, and the open may even finish after
+        // the lock reached the store, so lock the store again and keep the cover.
+        guard lockCount == lockCountAtStart else {
+            #if DEBUG
+                attemptLog.append("open: \(Self.describe(result)) -> dropped, locked meanwhile")
+            #endif
+            await vault.lock()
+            state = .locked
+            return
+        }
         let outcome = RecoveryMapping.outcome(
             of: result, passcode: passcode(), failuresInARow: failuresInARow,
             leftForegroundDuringPrompt: leftForegroundDuringPrompt)
+        #if DEBUG
+            attemptLog.append("open: \(Self.describe(result)) -> \(outcome)")
+        #endif
         await apply(outcome)
     }
 
+    /// Notices are shown once: dismissing one hides it until the next open reports it again.
+    func dismiss(_ notice: VaultNotice) {
+        notices.remove(notice)
+    }
+
     func lock() async {
+        lockCount += 1
         await vault.lock()
         state = .locked
         notices = []
         failuresInARow = 0
     }
+
+    #if DEBUG
+        /// Statuses only: VaultError cases carry no ids or values, other errors show their type.
+        private static func describe(_ result: Result<OpenReport, any Error>) -> String {
+            switch result {
+            case .success: "opened"
+            case .failure(let error): ErrorSummary.describe(error)
+            }
+        }
+    #endif
 
     private func apply(_ outcome: LockOutcome) async {
         switch outcome {
