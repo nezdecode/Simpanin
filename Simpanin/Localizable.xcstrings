@@ -298,6 +298,17 @@
         }
       }
     },
+    "recovery.saveFailed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Perubahan belum tersimpan. Coba lagi."
+          }
+        }
+      }
+    },
     "recovery.storageFullOnOpen" : {
       "extractionState" : "manual",
       "localizations" : {

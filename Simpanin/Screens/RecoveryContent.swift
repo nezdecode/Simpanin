@@ -44,6 +44,7 @@ nonisolated struct RecoveryContent: Equatable, Sendable {
         case .updateApp: (message, action) = (Self.text("recovery.updateApp"), .openAppStore)
         case .storageFullOnOpen: (message, action) = (Self.text("recovery.storageFullOnOpen"), .retry)
         case .storageFullOnSave: (message, action) = (Self.text("recovery.storageFullOnSave"), .dismiss)
+        case .saveFailed: (message, action) = (Self.text("recovery.saveFailed"), .dismiss)
         }
     }
 

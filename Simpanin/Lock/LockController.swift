@@ -178,8 +178,7 @@ final class LockController {
         private static func describe(_ result: Result<OpenReport, any Error>) -> String {
             switch result {
             case .success: "opened"
-            case .failure(let error as VaultError): String(describing: error)
-            case .failure(let error): String(describing: type(of: error))
+            case .failure(let error): ErrorSummary.describe(error)
             }
         }
     #endif

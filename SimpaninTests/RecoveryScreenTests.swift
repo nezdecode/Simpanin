@@ -29,6 +29,7 @@ struct RecoveryScreenTests {
         (.updateApp, "Versi Simpanin ini terlalu lama untuk vault ini. Perbarui app."),
         (.storageFullOnOpen, "Penyimpanan HP penuh. Kosongkan ruang untuk mulai memakai Simpanin."),
         (.storageFullOnSave, "Penyimpanan HP penuh. Perubahan belum tersimpan, data lama aman."),
+        (.saveFailed, "Perubahan belum tersimpan. Coba lagi."),
     ]
 
     @Test(arguments: texts)
@@ -65,6 +66,7 @@ struct RecoveryScreenTests {
         #expect(RecoveryContent(.storageFullOnOpen).action == .retry)
         #expect(RecoveryContent(.updateApp).action == .openAppStore)
         #expect(RecoveryContent(.storageFullOnSave).action == .dismiss)
+        #expect(RecoveryContent(.saveFailed).action == .dismiss)
     }
 }
 

@@ -12,6 +12,7 @@
 import Foundation
 import Observation
 import VaultCore
+import os
 
 /// What the screens need from VaultStore's document calls, so tests can stand in for it.
 nonisolated protocol DocumentStoring: Sendable {
@@ -32,8 +33,9 @@ extension VaultStore: DocumentStoring {}
 final class Library {
     private(set) var documents: [Document] = []
     private(set) var deleted: [Document] = []
-    /// Set when a save fails on a full disk. Other failures have no screen yet.
+    /// The message for a failed save, if any.
     var saveError: RecoveryScreen?
+    private let logger = Logger(subsystem: "com.inez.Simpanin", category: "library")
     private let store: any DocumentStoring
 
     init(store: any DocumentStoring) {
@@ -72,6 +74,8 @@ final class Library {
         do {
             try await change()
         } catch {
+            // Only the kind of error; never an id, a field or a path.
+            logger.error("Save failed: \(ErrorSummary.describe(error), privacy: .public)")
             saveError = RecoveryMapping.screen(forSaveError: error)
         }
         await reload()

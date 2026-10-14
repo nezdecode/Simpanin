@@ -95,7 +95,7 @@ struct MainView: View {
             }
             .task { await library.reload() }
             .alert(
-                Text(RecoveryContent(.storageFullOnSave).message),
+                library.saveError.map { Text(RecoveryContent($0).message) } ?? Text(verbatim: ""),
                 isPresented: Binding(get: { library.saveError != nil }, set: { if !$0 { library.saveError = nil } })
             ) {
                 Button {

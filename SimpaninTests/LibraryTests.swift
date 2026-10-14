@@ -96,6 +96,18 @@ struct LibraryTests {
         #expect(library.saveError == .storageFullOnSave)
         #expect(library.documents.isEmpty)
     }
+
+    @Test func otherSaveFailuresSaySoButALockDoesNot() async {
+        let store = FakeDocuments()
+        let library = Library(store: store)
+        await store.setFailure(.fileUnavailable)
+        await library.addSample()
+        #expect(library.saveError == .saveFailed)
+        library.saveError = nil
+        await store.setFailure(.locked)
+        await library.addSample()
+        #expect(library.saveError == nil)
+    }
 }
 
 @MainActor
