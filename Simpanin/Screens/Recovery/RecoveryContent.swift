@@ -13,17 +13,6 @@ import Foundation
 import Observation
 import VaultCore
 
-/// Button texts shared by several screens. Every text is in Localizable.xcstrings.
-nonisolated enum ScreenText {
-    static let open = LocalizedStringResource("button.open")
-    static let startNewVault = LocalizedStringResource("button.startNewVault")
-    static let retry = LocalizedStringResource("button.retry")
-    static let openSettings = LocalizedStringResource("button.openSettings")
-    static let openAppStore = LocalizedStringResource("button.openAppStore")
-    static let okay = LocalizedStringResource("button.ok")
-    static let cancel = LocalizedStringResource("button.cancel")
-}
-
 /// A recovery screen's text and its way out, from the design doc's recovery table.
 nonisolated struct RecoveryContent: Equatable, Sendable {
     enum Action: Equatable, Sendable {
@@ -79,51 +68,5 @@ extension VaultNotice {
         case .recoveredFromPages: LocalizedStringResource("notice.recoveredFromPages")
         case .repairWaitingForSpace: LocalizedStringResource("notice.repairWaitingForSpace")
         }
-    }
-}
-
-/// What the screens need from VaultStore's quarantine calls, so tests can stand in for it.
-nonisolated protocol QuarantineStoring: Sendable {
-    func quarantineVault(to quarantineDirectory: URL) async throws -> URL?
-    func quarantinedVaults(in quarantineDirectory: URL) async throws -> QuarantineListing
-    func deleteQuarantinedVault(_ vault: QuarantinedVault) async throws
-}
-
-extension VaultStore: QuarantineStoring {}
-
-/// "Mulai vault baru": typing the word moves the old vault aside, unchanged, then opens a new
-/// one. Nothing is deleted; the old files stay under "Data lama".
-@MainActor @Observable
-final class StartNewVaultModel {
-    static let confirmationWord = "MULAI BARU"
-
-    var typed = ""
-    private(set) var failed = false
-    private let store: any QuarantineStoring
-    private let quarantineFolder: URL
-    private let lock: LockController
-
-    init(store: any QuarantineStoring, quarantineFolder: URL, lock: LockController) {
-        self.store = store
-        self.quarantineFolder = quarantineFolder
-        self.lock = lock
-    }
-
-    static func matches(_ text: String) -> Bool {
-        text.trimmingCharacters(in: .whitespaces).uppercased() == confirmationWord
-    }
-
-    var canConfirm: Bool { Self.matches(typed) }
-
-    func confirm() async {
-        guard canConfirm else { return }
-        do {
-            _ = try await store.quarantineVault(to: quarantineFolder)
-        } catch {
-            failed = true
-            return
-        }
-        failed = false
-        await lock.unlock()
     }
 }

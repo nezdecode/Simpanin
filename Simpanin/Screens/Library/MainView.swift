@@ -260,9 +260,3 @@ struct GroupedRow: View {
         .contentShape(.rect)
     }
 }
-
-extension Bundle {
-    var shortVersion: String {
-        object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
-    }
-}
