@@ -17,6 +17,7 @@
     /// DEBUG only. Runs the open device checks and shows a report to copy and send back.
     struct DeviceChecksView: View {
         let vault: AppVault?
+        let lock: LockController
         @State private var lines: [DeviceCheckLine] = []
         @State private var running = false
 
@@ -38,7 +39,13 @@
             ]
         }
 
-        private var report: String { DeviceChecks.report(device: deviceLines, lines: lines) }
+        /// The lock's own log survives the locking, unlike this screen's state.
+        private var report: String {
+            let lockLines = lock.attemptLog.enumerated().map {
+                DeviceCheckLine(label: "lock \($0.offset + 1)", result: $0.element)
+            }
+            return DeviceChecks.report(device: deviceLines, lines: lines + lockLines)
+        }
 
         var body: some View {
             Form {
@@ -71,6 +78,17 @@
                     Button("It showed \"\(KeychainKeyStore.promptReason)\"") { note("reason text shown", "yes") }
                     Button("It didn't show that text") { note("reason text shown", "no") }
                 }
+                Section {
+                    Button("Lock, then open again in 5 seconds") { lockThenOpen() }
+                } header: {
+                    Text("7. Lock the phone during open")
+                } footer: {
+                    Text(
+                        "The vault locks now and opens again after 5 seconds. As soon as the prompt appears, "
+                            + "press the side button. Then unlock the phone, open Simpanin, come back here "
+                            + "and copy the report. The lock lines show what came back."
+                    )
+                }
                 Section("Report") {
                     Text(report).font(.caption.monospaced()).textSelection(.enabled)
                     Button("Copy report") { UIPasteboard.general.string = report }
@@ -79,6 +97,16 @@
             }
             .navigationTitle("Device checks")
             .disabled(running)
+        }
+
+        /// Runs on after the vault locks and this screen disappears, through the real controller.
+        private func lockThenOpen() {
+            let lock = lock
+            Task {
+                await lock.lock()
+                try? await Task.sleep(for: .seconds(5))
+                await lock.unlock()
+            }
         }
 
         private func note(_ label: String, _ result: String) {

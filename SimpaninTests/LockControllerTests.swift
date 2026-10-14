@@ -248,6 +248,19 @@ struct LockControllerTests {
         #expect(await vault.openCount == 1)
     }
 
+    @Test func debugLogRecordsEachAttemptWithoutIdsOrValues() async throws {
+        let vault = FakeVault([Self.unavailable(-128), .success(OpenReport())])
+        let controller = makeController(vault)
+        await controller.sceneDidBecomeActive()
+        await controller.unlock()
+        await controller.protectedDataWillBecomeUnavailable()
+        let log = controller.attemptLog
+        try #require(log.count == 3)
+        #expect(log[0].contains("-128") && log[0].contains("lockCover"))
+        #expect(log[1].contains("opened") && log[1].contains("unlocked"))
+        #expect(log[2].contains("phone locked"))
+    }
+
     @Test func noticesFromOpening() async {
         var report = OpenReport()
         report.repairWaitingForSpace = true

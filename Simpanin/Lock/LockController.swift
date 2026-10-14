@@ -52,6 +52,11 @@ final class LockController {
     private var leftForegroundDuringPrompt = false
     private var failuresInARow = 0
 
+    #if DEBUG
+        /// For the device checks: each open attempt and lock event, as statuses only.
+        private(set) var attemptLog: [String] = []
+    #endif
+
     init(
         vault: any VaultOpening, clock: any VaultClock = SystemClock(), relockTimeout: TimeInterval = 60,
         passcode: @escaping @MainActor () -> PasscodeState = { PasscodeState.current() },
@@ -99,6 +104,9 @@ final class LockController {
     }
 
     func protectedDataWillBecomeUnavailable() async {
+        #if DEBUG
+            attemptLog.append("phone locked")
+        #endif
         await lock()
     }
 
@@ -132,6 +140,9 @@ final class LockController {
         let outcome = RecoveryMapping.outcome(
             of: result, passcode: passcode(), failuresInARow: failuresInARow,
             leftForegroundDuringPrompt: leftForegroundDuringPrompt)
+        #if DEBUG
+            attemptLog.append("open: \(Self.describe(result)) -> \(outcome)")
+        #endif
         await apply(outcome)
     }
 
@@ -146,6 +157,17 @@ final class LockController {
         notices = []
         failuresInARow = 0
     }
+
+    #if DEBUG
+        /// Statuses only: VaultError cases carry no ids or values, other errors show their type.
+        private static func describe(_ result: Result<OpenReport, any Error>) -> String {
+            switch result {
+            case .success: "opened"
+            case .failure(let error as VaultError): String(describing: error)
+            case .failure(let error): String(describing: type(of: error))
+            }
+        }
+    #endif
 
     private func apply(_ outcome: LockOutcome) async {
         switch outcome {

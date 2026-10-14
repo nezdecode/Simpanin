@@ -78,7 +78,7 @@ struct MainView: View {
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     NavigationLink {
-                        SettingsView(vault: vault)
+                        SettingsView(vault: vault, lock: lock)
                     } label: {
                         Image(systemName: "gearshape")
                     }
@@ -164,6 +164,7 @@ struct RecentlyDeletedView: View {
 
 struct SettingsView: View {
     let vault: AppVault
+    let lock: LockController
 
     var body: some View {
         List {
@@ -174,7 +175,7 @@ struct SettingsView: View {
             }
             #if DEBUG
                 NavigationLink {
-                    DeviceChecksView(vault: vault)
+                    DeviceChecksView(vault: vault, lock: lock)
                 } label: {
                     Text(verbatim: "Device checks")
                 }
