@@ -124,7 +124,7 @@ struct RecoveryView: View {
         }
     }
 
-    @ViewBuilder private var actionButton: some View {
+    private var actionButton: some View {
         Group {
             switch content.action {
             case .retry:
@@ -134,8 +134,9 @@ struct RecoveryView: View {
                     if let url = SystemLinks.settings { openURL(url) }
                 }
             case .startNewVault:
-                // Not red: starting a new vault deletes nothing.
-                button(ScreenText.startNewVault) { startingNewVault = true }
+                // A decision rather than the obvious next step, so the softer button. Not red:
+                // starting a new vault deletes nothing.
+                button(ScreenText.startNewVault, emphasis: .secondary) { startingNewVault = true }
             case .openAppStore:
                 button(ScreenText.openAppStore) {
                     if let url = SystemLinks.appStore { openURL(url) }
@@ -144,12 +145,15 @@ struct RecoveryView: View {
                 EmptyView()
             }
         }
-        .buttonStyle(.fullWidth)
         .accessibilityIdentifier("recovery.action")
     }
 
-    private func button(_ title: LocalizedStringResource, action: @escaping () -> Void) -> some View {
+    private func button(
+        _ title: LocalizedStringResource, emphasis: FullWidthButtonStyle.Emphasis = .primary,
+        action: @escaping () -> Void
+    ) -> some View {
         Button(action: action) { Text(title) }
+            .buttonStyle(.fullWidth(emphasis))
     }
 
     /// The design's four tones follow what the user has to do, not how bad the error is.
