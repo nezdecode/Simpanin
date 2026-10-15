@@ -67,13 +67,13 @@ struct AutoLockTests {
     @Test func settingTheChoiceSavesAndAppliesIt() {
         let defaults = defaults()
         let controller = LockController(
-            vault: FakeVault([]), clock: FixedClock(), passcode: { .set }, vaultExists: { true },
+            vault: FakeVault([]), clock: FixedClock(), settings: defaults, passcode: { .set }, vaultExists: { true },
             protectedDataAvailable: { true })
-        controller.setAutoLock(.fiveMinutes, in: defaults)
+        controller.setAutoLock(.fiveMinutes)
         #expect(controller.autoLock == .fiveMinutes)
         #expect(controller.relockTimeout == 300)
         #expect(AutoLock.stored(in: defaults) == .fiveMinutes)
-        controller.setAutoLock(.immediately, in: defaults)
+        controller.setAutoLock(.immediately)
         #expect(controller.autoLock == .immediately)
         #expect(controller.relockTimeout == 0)
         #expect(AutoLock.stored(in: defaults) == .immediately)
@@ -83,9 +83,10 @@ struct AutoLockTests {
         let clock = FixedClock()
         let vault = FakeVault([])
         let controller = LockController(
-            vault: vault, clock: clock, passcode: { .set }, vaultExists: { true }, protectedDataAvailable: { true })
+            vault: vault, clock: clock, settings: defaults(), passcode: { .set }, vaultExists: { true },
+            protectedDataAvailable: { true })
         await controller.sceneDidBecomeActive()
-        controller.setAutoLock(.immediately, in: defaults())
+        controller.setAutoLock(.immediately)
         controller.sceneDidEnterBackground()
         clock.advance(by: 1)
         await controller.sceneDidBecomeActive()

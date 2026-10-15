@@ -52,7 +52,7 @@ nonisolated final class AppVault: Sendable {
         #if DEBUG
             if UITestSetup.isActive {
                 let vault = preview()
-                UITestSetup.forgetSettings()
+                UITestSetup.resetSettings()
                 UITestSetup.addBrokenOldVault(to: vault.locations.quarantine)
                 return vault
             }

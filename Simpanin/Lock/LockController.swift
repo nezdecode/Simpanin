@@ -42,6 +42,8 @@ final class LockController {
     /// The one place the Kunci otomatis choice lives while the app runs; Settings reads it here,
     /// so the screen can't show a different choice than the lock uses.
     private(set) var autoLock: AutoLock
+    /// Where the choice is saved. UI tests pass their own store, so they never touch the app's.
+    private let settings: UserDefaults
     var relockTimeout: TimeInterval { autoLock.seconds }
     private let vault: any VaultOpening
     private let clock: any VaultClock
@@ -64,6 +66,7 @@ final class LockController {
 
     init(
         vault: any VaultOpening, clock: any VaultClock = SystemClock(), autoLock: AutoLock = .oneMinute,
+        settings: UserDefaults = .standard,
         passcode: @escaping @MainActor () -> PasscodeState = { PasscodeState.current() },
         vaultExists: @escaping @MainActor () -> Bool,
         protectedDataAvailable: @escaping @MainActor () -> Bool
@@ -71,6 +74,7 @@ final class LockController {
         self.vault = vault
         self.clock = clock
         self.autoLock = autoLock
+        self.settings = settings
         self.passcode = passcode
         self.vaultExists = vaultExists
         self.protectedDataAvailable = protectedDataAvailable
@@ -99,8 +103,8 @@ final class LockController {
 
     /// Saves the Kunci otomatis choice and applies it at once, so the stored choice and the
     /// running lock can't drift apart.
-    func setAutoLock(_ choice: AutoLock, in defaults: UserDefaults = .standard) {
-        choice.store(in: defaults)
+    func setAutoLock(_ choice: AutoLock) {
+        choice.store(in: settings)
         autoLock = choice
     }
 
