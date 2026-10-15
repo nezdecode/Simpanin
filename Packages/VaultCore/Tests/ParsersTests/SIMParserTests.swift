@@ -36,10 +36,10 @@ struct SIMParserTests {
     }
 
     /// The card from July 2024: bilingual labels above their values, the NIK as the number, and the
-    /// expiry under the QR code.
+    /// expiry under the QR code. Dates as real cards print them.
     static func newCard(
         classLine: String = "A", number: String = "0012341708900001", name: String = "BUDI CONTOH",
-        birth: String = "JAKARTA, 17 AGUSTUS 1990", sex: String = "PRIA", expiry: String = "21/12/2028"
+        birth: String = "JAKARTA, 17-08-1990", sex: String = "PRIA", expiry: String = "29-07-2029"
     ) -> [String] {
         [
             "INDONESIA", "DRIVING LICENSE", "SURAT IZIN MENGEMUDI", number, classLine, "Mobil Penumpang Pribadi/",
@@ -67,7 +67,7 @@ struct SIMParserTests {
         #expect(result.fields.values[FieldKey.simNumber] == "0012341708900001")
         #expect(result.fields.values[FieldKey.name] == "BUDI CONTOH")
         #expect(result.fields.values[FieldKey.birthDate] == "1990-08-17")
-        #expect(result.expiry == CalendarDate(year: 2028, month: 12, day: 21))
+        #expect(result.expiry == CalendarDate(year: 2029, month: 7, day: 29))
         #expect(result.needsCheck.isEmpty)
         #expect(!result.typeNeedsCheck)
         #expect(!result.expiryNeedsCheck)
@@ -78,6 +78,14 @@ struct SIMParserTests {
             let result = try #require(parse(Self.newCard(birth: birth)))
             #expect(result.fields.values[FieldKey.birthDate] == "1990-08-17", "\(birth)")
             #expect(result.needsCheck.isEmpty, "\(birth)")
+        }
+    }
+
+    @Test func expiryWithAnySeparator() throws {
+        for expiry in ["29-07-2029", "29/07/2029", "29.07.2029"] {
+            let result = try #require(parse(Self.newCard(expiry: expiry)))
+            #expect(result.expiry == CalendarDate(year: 2029, month: 7, day: 29), "\(expiry)")
+            #expect(!result.expiryNeedsCheck, "\(expiry)")
         }
     }
 
@@ -135,7 +143,7 @@ struct SIMParserTests {
 
     /// On a new card the number is a NIK, so it's checked like one.
     @Test func aNewNumberIsCheckedAgainstTheBirthDateAndSex() throws {
-        let wrongDate = try #require(parse(Self.newCard(birth: "JAKARTA, 18 AGUSTUS 1990")))
+        let wrongDate = try #require(parse(Self.newCard(birth: "JAKARTA, 18-08-1990")))
         #expect(wrongDate.needsCheck == [FieldKey.simNumber, FieldKey.birthDate])
         let woman = try #require(parse(Self.newCard(number: "0012345708900002", sex: "WANITA")))
         #expect(woman.needsCheck.isEmpty)
@@ -183,6 +191,15 @@ struct SIMParserTests {
     @Test func aNameThatWrapsIsMarked() throws {
         var lines = Self.oldCard()
         lines.insert("SANTOSO", at: 6)
+        let result = try #require(parse(lines))
+        #expect(result.fields.values[FieldKey.name] == "BUDI CONTOH")
+        #expect(result.needsCheck == [FieldKey.name])
+    }
+
+    @Test func aNameThatWrapsOnANewCardIsMarked() throws {
+        var lines = Self.newCard()
+        let name = try #require(lines.firstIndex(of: "BUDI CONTOH"))
+        lines.insert("SANTOSO", at: name + 1)
         let result = try #require(parse(lines))
         #expect(result.fields.values[FieldKey.name] == "BUDI CONTOH")
         #expect(result.needsCheck == [FieldKey.name])
