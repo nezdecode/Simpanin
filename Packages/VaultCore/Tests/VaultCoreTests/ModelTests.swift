@@ -106,6 +106,13 @@ struct ModelTests {
         for (type, id) in ids { #expect(type.rawValue == id) }
     }
 
+    /// Field keys are stored in every document, so they never change.
+    @Test func fieldKeysNeverChange() {
+        #expect(FieldKey.nik == "nik")
+        #expect(FieldKey.name == "name")
+        #expect(FieldKey.birthDate == "birthDate")
+    }
+
     @Test func simClassesAreAllSIMs() {
         #expect(
             DocumentType.simClasses == [

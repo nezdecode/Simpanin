@@ -113,6 +113,15 @@ extension CalendarDate: Codable {
     }
 }
 
+/// The keys of `DocumentFields`. They're stored in every document, so they never change, and each
+/// is named for what the value means rather than the document it came from: `name` is the same key
+/// on a KTP, a SIM and a passport.
+public enum FieldKey {
+    public static let nik = "nik"
+    public static let name = "name"
+    public static let birthDate = "birthDate"
+}
+
 /// A document's fields, like number, name and dates. They never go in the projection and
 /// are never logged.
 public struct DocumentFields: Hashable, Sendable, Codable {
