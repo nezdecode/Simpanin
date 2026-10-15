@@ -84,7 +84,7 @@ Before building a view, a style or a helper, check `Components/` and `Extensions
 ## 6. Values
 
 - **Identifiers of stored data, and the values they store, never change once a build has shipped**, because changing one orphans what's already stored. Two kinds:
-  - **Constants in code, defined once**: the Keychain service (`KeychainKeyStore.service`), file and folder names (`VaultLocations`, `VaultStore.headerFileName`), settings keys, and the raw values an enum stores (`AutoLock`'s cases spell theirs out, so renaming a case can't reset anyone's choice).
+  - **Constants in code, defined once**: the Keychain service (`KeychainKeyStore.service`), file and folder names (`VaultLocations`, `VaultStore.headerFileName`), settings keys, and the raw values an enum stores in the app (`AutoLock`'s cases spell theirs out, and a test pins them and their key, so renaming can't reset anyone's choice). VaultCore's JSON keys are pinned by the fixture tests instead (section 9).
   - **Build settings, read from Info.plist** (`AppConfiguration`) so they always match the entitlements: the Keychain access group and the App Group. A debug build may use its own values, but a configuration's values never change after it ships.
 - **Everything else about the build comes from `Bundle.main`**, like the bundle identifier for the log subsystem.
 - **Document type ids** (`ktp`, `sim-a`) are stored in every vault and never renamed; only their display names change. The base types are in VaultCore (`DocumentType` in `Models.swift`); types only the app knows are in `Documents/DocumentType+Simpanin.swift`. Add a new one next to its kind.
@@ -103,7 +103,7 @@ The privacy rules in `CONTRIBUTING.md` apply everywhere. In code that means:
 Some of these describe features that aren't built yet (the document screen, sharing, copying a number). They're the rules for when they are.
 
 - **Decrypted data lives in memory only while it's on screen.** Only the open document is decrypted. Its fields and pages are let go when its screen closes and when the vault locks, and never kept in a cache, a static or a long-lived model.
-- **Nothing decrypted touches the disk**: no image cache, no `URLCache`. Where a system API needs a file (sharing a PDF, Quick Look), it goes in its own folder in `tmp`, deleted when the share sheet closes and again at the next launch, in case the app was stopped in between.
+- **Nothing decrypted touches the disk**: no image cache, no `URLCache`. Where a system API needs a file (sharing a PDF, Quick Look), it goes in its own folder in `tmp`, deleted when the share sheet or preview closes and again at the next launch, in case the app was stopped in between. Which viewers make their own copy is still to be checked on a device.
 - **Secrets live in the Keychain only**, never in `UserDefaults`, a file or a log.
 - **A copied number is local-only and expires** after about 60 seconds, so it doesn't reach other devices or stay on the clipboard.
 - **The screen is covered** when the app leaves the foreground and while the screen is recorded or mirrored (`LockController.contentHidden`, built).
