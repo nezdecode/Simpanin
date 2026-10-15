@@ -14,9 +14,10 @@ Simpanin has two parts: a core that keeps documents safe, and an app around it.
 | --- | --- |
 | `App/` | The entry point, `RootView` (lock cover or app) and the build configuration. |
 | `Vault/` | The platform side of VaultCore (`KeychainKeyStore`, `DataProtectionFileProtector`) and `AppVault`, which creates the one `VaultStore`. |
-| `Lock/` | `LockController`, `RecoveryMapping` and the lock settings every screen relies on. |
+| `Lock/` | `LockController`, `RecoveryMapping`, the lock settings every screen relies on, and how errors are summarised for the log (`ErrorSummary`). |
 | `Documents/` | How a document reads: `DocumentStyle`, `ExpiryText`, date display. |
 | `Screens/<Area>/` | One folder per screen or flow, with its views and models side by side. |
+| `Screens/` (root) | Texts several screens share (`ScreenText`). |
 | `Components/` | Views and styles several screens use. |
 | `Extensions/` | Extensions on system types. |
 | `Debug/` | DEBUG-only tools. |
@@ -33,7 +34,7 @@ A folder grows subfolders when it passes about eight files, split by part of the
 
 ## 2. Files and names
 
-- **One main type per file, named after it.** `LibraryModel.swift`, `LibraryView.swift`, `DocumentTile.swift`. Types that belong to the main type stay with it, even when other files use them: the protocol it depends on (`DocumentStoring` in `LibraryModel.swift`), a value it returns or holds (`RecoveryScreen` from `RecoveryMapping`, `VaultLocations` in `AppVault.swift`). A type that is its own idea gets its own file (`VaultNotice`, `PurgeCountdown`).
+- **One main type per file, named after it.** `LibraryModel.swift`, `LibraryView.swift`, `DocumentTile.swift`. Types that belong to the main type stay with it, even when other files use them: the protocol it depends on (`DocumentStoring` in `LibraryModel.swift`), a value it returns or holds (`RecoveryScreen` from `RecoveryMapping`, `VaultLocations` in `AppVault.swift`). A type that is its own idea, or that several main types share, gets its own file (`VaultNotice`; `QuarantineStoring`, which two models depend on).
 - **A screen's model ends in `Model`, its view in `View`.** A screen is `XModel` + `XView`. Objects every screen shares are named for their job: `LockController`, `AppVault`. Rows and parts of a screen are named for what they show: `OldVaultRow`, `ExpiryBanner`.
 - **Extensions go in `Type+Purpose.swift`**: `Date+Indonesian.swift`, `Logger+Simpanin.swift`.
 - **Follow Apple's [API Design Guidelines](https://www.swift.org/documentation/api-design-guidelines/)** and use SwiftUI's own words: `systemImage` for an SF Symbol name, `onDelete` / `onRestore` for callbacks, `.roundedRectangle(cornerRadius:)` rather than a bare number.
@@ -82,8 +83,8 @@ Before building a view, a style or a helper, check `Components/` and `Extensions
 
 ## 6. Values
 
-- **Identifiers of stored data never change once a build has shipped**, because changing one orphans what's already stored. Two kinds:
-  - **Constants in code, defined once**: the Keychain service (`KeychainKeyStore.service`), file and folder names (`VaultLocations`, `VaultStore.headerFileName`), settings keys.
+- **Identifiers of stored data, and the values they store, never change once a build has shipped**, because changing one orphans what's already stored. Two kinds:
+  - **Constants in code, defined once**: the Keychain service (`KeychainKeyStore.service`), file and folder names (`VaultLocations`, `VaultStore.headerFileName`), settings keys, and the raw values an enum stores (`AutoLock`'s cases spell theirs out, so renaming a case can't reset anyone's choice).
   - **Build settings, read from Info.plist** (`AppConfiguration`) so they always match the entitlements: the Keychain access group and the App Group. A debug build may use its own values, but a configuration's values never change after it ships.
 - **Everything else about the build comes from `Bundle.main`**, like the bundle identifier for the log subsystem.
 - **Document type ids** (`ktp`, `sim-a`) are stored in every vault and never renamed; only their display names change. The base types are in VaultCore (`DocumentType` in `Models.swift`); types only the app knows are in `Documents/DocumentType+Simpanin.swift`. Add a new one next to its kind.
@@ -99,12 +100,14 @@ The privacy rules in `CONTRIBUTING.md` apply everywhere. In code that means:
 
 ## 8. Security and memory
 
-- **Decrypted data lives in memory only while it's on screen.** Only the open document is decrypted; its fields and pages are let go when the screen closes and when the vault locks. Never keep them in a cache, a static or a long-lived model.
-- **Nothing decrypted touches the disk.** No image cache, no `URLCache`, no files in `tmp`, except a watermarked share copy that's deleted once it's shared.
+Some of these describe features that aren't built yet (the document screen, sharing, copying a number). They're the rules for when they are.
+
+- **Decrypted data lives in memory only while it's on screen.** Only the open document is decrypted. Its fields and pages are let go when its screen closes and when the vault locks, and never kept in a cache, a static or a long-lived model.
+- **Nothing decrypted touches the disk**: no image cache, no `URLCache`. Where a system API needs a file (sharing a PDF, Quick Look), it goes in its own folder in `tmp`, deleted when the share sheet closes and again at the next launch, in case the app was stopped in between.
 - **Secrets live in the Keychain only**, never in `UserDefaults`, a file or a log.
-- **A copied number is local-only and expires** (about 60 seconds), so it doesn't reach other devices or stay on the clipboard.
-- **The screen is covered** when the app leaves the foreground and while the screen is recorded or mirrored (`LockController.contentHidden`).
-- **Work tied to a view uses `.task`**, which SwiftUI cancels when the view goes away, rather than a loose `Task {}`. A closure that a model keeps must not capture `self` strongly when that makes a cycle; prefer passing values in.
+- **A copied number is local-only and expires** after about 60 seconds, so it doesn't reach other devices or stay on the clipboard.
+- **The screen is covered** when the app leaves the foreground and while the screen is recorded or mirrored (`LockController.contentHidden`, built).
+- **Work tied to a view's lifetime uses `.task`**, which SwiftUI cancels when the view goes away. A button action starting a `Task` is fine. A closure that a model keeps must not capture `self` strongly when that makes a cycle; prefer passing values in.
 - **No new dependency** without asking first (see `CONTRIBUTING.md`); every dependency can read what the app reads.
 
 ## 9. Formats
