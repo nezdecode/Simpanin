@@ -46,8 +46,17 @@ struct OldVaultsTests {
 
         await store.setFailure(.storageFull)
         await model.delete(old)
-        #expect(model.deleteError == .storageFullOnSave)
+        #expect(model.deleteFailed)
         #expect(model.vaults == [old])
+    }
+
+    /// Data lama holds old vaults, not documents, and a failed delete says only what's true even
+    /// after a partial delete: the folder is still there and deleting again finishes the job.
+    @Test func dataLamaErrorTexts() {
+        #expect(String(localized: OldVaultText.loadFailedTitle) == "Data lama tidak bisa dimuat sekarang.")
+        #expect(String(localized: OldVaultText.deleteFailedTitle) == "Data lama belum terhapus.")
+        #expect(String(localized: OldVaultText.deleteFailedMessage) == "Coba lagi.")
+        #expect(String(localized: ScreenText.okay) == "Oke")
     }
 
     @Test func listsUnreadableFoldersToo() async {

@@ -14,6 +14,8 @@ import SwiftUI
 /// Shown instead of a list that couldn't load, so a failure never looks like an empty vault. It
 /// only says the app changed nothing, which is true; it can't promise the documents are safe.
 struct LoadFailedView: View {
+    /// "Dokumen tidak bisa dimuat sekarang." unless a screen lists something else.
+    var title: LocalizedStringResource = Self.title
     let onRetry: () -> Void
 
     static let title = LocalizedStringResource("load.failedTitle")
@@ -24,7 +26,7 @@ struct LoadFailedView: View {
             IconBadge(
                 systemImage: "arrow.counterclockwise", size: 64, symbolFont: .system(size: 28, weight: .medium),
                 tint: .primary, background: Color(.systemGray5))
-            Text(Self.title).font(.title3.bold()).multilineTextAlignment(.center)
+            Text(title).font(.title3.bold()).multilineTextAlignment(.center)
                 .accessibilityAddTraits(.isHeader)
             Text(Self.message).foregroundStyle(.secondary).multilineTextAlignment(.center)
             Button(action: onRetry) {

@@ -28,8 +28,9 @@ final class OldVaultsModel {
     private(set) var unreadable: [UnreadableFolder] = []
     /// Loading failed; the screen says so instead of "Tidak ada data lama".
     private(set) var loadFailed = false
-    /// The message for a delete that failed, if any.
-    var deleteError: RecoveryScreen?
+    /// A delete failed. One message fits every cause, even a partial delete where the old key is
+    /// gone but the folder isn't: the folder still shows, and deleting again finishes the job.
+    var deleteFailed = false
 
     /// Everything Data lama takes up, for the size shown in Settings.
     var totalSizeInBytes: Int64 {
@@ -73,7 +74,7 @@ final class OldVaultsModel {
             try await store.deleteQuarantinedVault(vault)
         } catch {
             Logger.library.error("Data lama delete failed: \(ErrorSummary.describe(error), privacy: .public)")
-            deleteError = RecoveryMapping.screen(forSaveError: error)
+            deleteFailed = true
         }
         await reload()
     }

@@ -23,7 +23,7 @@ struct OldVaultsView: View {
             if model.loadFailed {
                 // Scrolls, so "Coba lagi" stays reachable at the largest text sizes.
                 ScrollView {
-                    LoadFailedView { Task { await model.reload() } }
+                    LoadFailedView(title: OldVaultText.loadFailedTitle) { Task { await model.reload() } }
                         .padding(.top, 80)
                 }
                 .background(Color(.systemGroupedBackground))
@@ -66,15 +66,14 @@ struct OldVaultsView: View {
         } message: {
             Text("oldVaults.deleteMessage")
         }
-        .alert(
-            model.deleteError.map { Text(RecoveryContent($0).message) } ?? Text(verbatim: ""),
-            isPresented: Binding(isPresent: Bindable(model).deleteError)
-        ) {
+        .alert(Text(OldVaultText.deleteFailedTitle), isPresented: Bindable(model).deleteFailed) {
             Button {
-                model.deleteError = nil
+                model.deleteFailed = false
             } label: {
                 Text(ScreenText.okay)
             }
+        } message: {
+            Text(OldVaultText.deleteFailedMessage)
         }
     }
 }

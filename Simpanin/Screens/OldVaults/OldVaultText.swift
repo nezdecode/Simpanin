@@ -14,6 +14,10 @@ import Foundation
 /// The texts of a "Data lama" entry. VaultCore names each folder after the moment it was moved
 /// aside, in UTC (`yyyyMMdd-HHmmss`, plus "-2", "-3" when the name was taken).
 nonisolated enum OldVaultText {
+    static let loadFailedTitle = LocalizedStringResource("oldVaults.loadFailedTitle")
+    static let deleteFailedTitle = LocalizedStringResource("oldVaults.deleteFailedTitle")
+    static let deleteFailedMessage = LocalizedStringResource("oldVaults.deleteFailedMessage")
+
     /// VaultCore's fixed folder-name format, in UTC. Display goes through `.indonesianDate`.
     private static let folderNameDate = Date.ParseStrategy(
         format: """
