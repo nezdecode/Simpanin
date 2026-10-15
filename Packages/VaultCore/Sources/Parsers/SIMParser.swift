@@ -27,7 +27,8 @@ public enum SIMParser {
         let firstField = lines.firstIndex {
             numberedField($0)?.number == 1 || LabeledLines.rest(after: "Nama/Name", in: $0) != nil
         }
-        let (type, typeNeedsCheck) = simClass(in: lines[..<(firstField ?? lines.endIndex)])
+        let (type, classNeedsCheck) = simClass(in: lines[..<(firstField ?? lines.endIndex)])
+        let typeNeedsCheck = classNeedsCheck || firstField == nil
 
         let number = readNumber(in: lines, digits: expectedDigits(lines))
         if let text = number.text { fields[FieldKey.simNumber] = text }
@@ -55,7 +56,9 @@ public enum SIMParser {
 
         if let nikDate {
             if let birth, !nikDate.matches(birth) { needsCheck.formUnion([FieldKey.simNumber, FieldKey.birthDate]) }
-            if let woman = isWoman(lines), woman != nikDate.woman { needsCheck.insert(FieldKey.simNumber) }
+            if let woman = isWoman(sexField(in: lines)), woman != nikDate.woman {
+                needsCheck.insert(FieldKey.simNumber)
+            }
         }
 
         let (expiry, expiryNeedsCheck) = readExpiry(
@@ -181,9 +184,19 @@ public enum SIMParser {
         return (type, corrected)
     }
 
+    /// The "3." line on an older card, or the lines under "Jenis Kelamin/Sex" up to the next label on a
+    /// newer one, where the blood type may sit beside it.
+    private static func sexField(in lines: [String]) -> String {
+        if let line = lines.first(where: { numberedField($0)?.number == 3 }) { return line }
+        guard let start = lines.firstIndex(where: { $0.uppercased().filter { $0 != " " }.contains("JENISKELAMIN") })
+        else { return "" }
+        let isLabel = { (line: String) in labels.contains { LabeledLines.rest(after: $0, in: line) != nil } }
+        return lines[(start + 1)...].prefix { !isLabel($0) }.joined(separator: " ")
+    }
+
     /// From PRIA or WANITA, the words every SIM uses. nil when neither, or both, can be read.
-    private static func isWoman(_ lines: [String]) -> Bool? {
-        let text = lines.joined(separator: " ").uppercased()
+    private static func isWoman(_ text: String) -> Bool? {
+        let text = text.uppercased()
         let man = text.contains(/\bPRIA\b/)
         let woman = text.contains(/\bWANITA\b/)
         return man == woman ? nil : woman

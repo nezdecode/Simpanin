@@ -120,6 +120,17 @@ struct SIMParserTests {
         #expect(!result.typeNeedsCheck)
     }
 
+    /// Without a readable first field, a blood type could be the only class-like line, so it's marked.
+    @Test func withNoFieldReadTheClassIsMarked() throws {
+        var lines = Self.newCard(classLine: "")
+        let nameLabel = try #require(lines.firstIndex(of: "Nama/Name"))
+        lines[nameLabel] = "Nana/Nane"
+        let blood = try #require(lines.firstIndex(of: "O"))
+        lines[blood] = "A"
+        let result = try #require(parse(lines))
+        #expect(result.typeNeedsCheck)
+    }
+
     // MARK: The number
 
     /// On a new card the number is a NIK, so it's checked like one.
@@ -132,6 +143,14 @@ struct SIMParserTests {
         #expect(manWithAWomansDay.needsCheck == [FieldKey.simNumber])
         let womanWithAMansDay = try #require(parse(Self.newCard(sex: "WANITA")))
         #expect(womanWithAMansDay.needsCheck == [FieldKey.simNumber])
+    }
+
+    /// The sex is read from its own field, so a word in the address doesn't hide a mismatch.
+    @Test func theSexIsReadOnlyFromItsField() throws {
+        var lines = Self.newCard(sex: "WANITA")
+        let address = try #require(lines.firstIndex(of: "JL. CONTOH NO. 1"))
+        lines[address] = "JL. PRIA SEJATI NO. 1"
+        #expect(try #require(parse(lines)).needsCheck == [FieldKey.simNumber])
     }
 
     /// An old number isn't a NIK, so there's nothing to compare it with.
