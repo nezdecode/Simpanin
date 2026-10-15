@@ -15,10 +15,6 @@ import VaultCore
 /// Reads a KTP from its recognised text lines. It fills in what it can and marks what the user
 /// should look at again; it never guesses silently.
 public enum KTPParser {
-    public static let nik = "nik"
-    public static let name = "name"
-    public static let birthDate = "birthDate"
-
     /// nil when the lines don't look like a KTP: there's no NIK label.
     public static func parse(_ lines: [String], today: CalendarDate) -> ParsedDocument? {
         guard lines.contains(where: { label("NIK", startsLine: $0) != nil }) else { return nil }
@@ -29,40 +25,40 @@ public enum KTPParser {
         if let found = value(of: "NIK", in: lines) {
             let (digits, corrected) = digits(from: found.text)
             number = digits
-            fields[nik] = number
-            if found.fromNextLine || corrected { needsCheck.insert(nik) }
+            fields[FieldKey.nik] = number
+            if found.fromNextLine || corrected { needsCheck.insert(FieldKey.nik) }
         }
         let nikDate = birthDate(inNIK: number)
-        if nikDate == nil { needsCheck.insert(nik) }
+        if nikDate == nil { needsCheck.insert(FieldKey.nik) }
         if let nikDate, let woman = isWoman(value(of: "Jenis Kelamin", in: lines)?.text), woman != nikDate.woman {
-            needsCheck.insert(nik)
+            needsCheck.insert(FieldKey.nik)
         }
 
         if let found = value(of: "Nama", in: lines) {
-            fields[name] = found.text
+            fields[FieldKey.name] = found.text
             // A misread character is only marked, since what it should have been can't be known.
             if found.fromNextLine || found.continues || !looksLikeAName(found.text) {
-                needsCheck.insert(name)
+                needsCheck.insert(FieldKey.name)
             }
         } else {
-            needsCheck.insert(name)
+            needsCheck.insert(FieldKey.name)
         }
 
         let birthText = value(of: "Tempat/Tgl Lahir", in: lines)
         let birth = birthText.flatMap { date(in: $0.text) }
         if let birth {
-            fields[birthDate] = birth.string
+            fields[FieldKey.birthDate] = birth.string
             // The NIK only holds the last two digits of the year, so a misread century passes the cross-check.
             let plausible = birth.year >= 1900 && birth <= today
-            if birthText?.fromNextLine == true || !plausible { needsCheck.insert(birthDate) }
+            if birthText?.fromNextLine == true || !plausible { needsCheck.insert(FieldKey.birthDate) }
         } else {
-            needsCheck.insert(birthDate)
+            needsCheck.insert(FieldKey.birthDate)
         }
 
         if let birth, let nikDate,
             (nikDate.day, nikDate.month, nikDate.year) != (birth.day, birth.month, birth.year % 100)
         {
-            needsCheck.formUnion([nik, birthDate])
+            needsCheck.formUnion([FieldKey.nik, FieldKey.birthDate])
         }
         // A KTP is valid for life, so it has no expiry.
         return ParsedDocument(type: .ktp, fields: DocumentFields(fields), expiry: nil, needsCheck: needsCheck)
