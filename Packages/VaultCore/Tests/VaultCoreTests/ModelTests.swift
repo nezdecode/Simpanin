@@ -93,6 +93,31 @@ struct ModelTests {
         #expect(decoded == header)
     }
 
+    // MARK: Document types
+
+    /// Type ids are stored in every vault, so they never change.
+    @Test func documentTypeIdsNeverChange() {
+        let ids: [DocumentType: String] = [
+            .ktp: "ktp", .kk: "kk", .sim: "sim", .stnk: "stnk", .passport: "passport", .npwp: "npwp",
+            .bpjs: "bpjs", .other: "other", .simA: "sim-a", .simB1: "sim-b1", .simB2: "sim-b2", .simC: "sim-c",
+            .simC1: "sim-c1", .simC2: "sim-c2", .simD: "sim-d", .simD1: "sim-d1", .simAUmum: "sim-a-umum",
+            .simB1Umum: "sim-b1-umum", .simB2Umum: "sim-b2-umum",
+        ]
+        for (type, id) in ids { #expect(type.rawValue == id) }
+    }
+
+    @Test func simClassesAreAllSIMs() {
+        #expect(
+            DocumentType.simClasses == [
+                .simA, .simB1, .simB2, .simC, .simC1, .simC2, .simD, .simD1, .simAUmum, .simB1Umum, .simB2Umum,
+            ])
+        #expect(DocumentType.simClasses.allSatisfy { $0.isSIM })
+        #expect(DocumentType.sim.isSIM)
+        for type in [DocumentType.ktp, .kk, .stnk, .passport, .npwp, .bpjs, .other, DocumentType(rawValue: "visa")] {
+            #expect(!type.isSIM, "\(type.rawValue)")
+        }
+    }
+
     // MARK: index.enc plaintext
 
     @Test func indexJSONHasDesignDocFields() throws {
