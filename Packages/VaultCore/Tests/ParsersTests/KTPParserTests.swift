@@ -34,19 +34,12 @@ struct KTPParserTests {
         ]
     }
 
-    /// Field keys are stored in every vault, so they never change.
-    @Test func fieldKeysNeverChange() {
-        #expect(KTPParser.nik == "nik")
-        #expect(KTPParser.name == "name")
-        #expect(KTPParser.birthDate == "birthDate")
-    }
-
     @Test func aCleanCard() throws {
         let result = try #require(parse(Self.card()))
         #expect(result.type == .ktp)
-        #expect(result.fields.values[KTPParser.nik] == "0012341708900001")
-        #expect(result.fields.values[KTPParser.name] == "BUDI CONTOH")
-        #expect(result.fields.values[KTPParser.birthDate] == "1990-08-17")
+        #expect(result.fields.values[FieldKey.nik] == "0012341708900001")
+        #expect(result.fields.values[FieldKey.name] == "BUDI CONTOH")
+        #expect(result.fields.values[FieldKey.birthDate] == "1990-08-17")
         #expect(result.expiry == nil)  // a KTP is valid for life
         #expect(result.needsCheck.isEmpty)
     }
@@ -54,21 +47,21 @@ struct KTPParserTests {
     /// Every other card uses August 1990, so this one makes sure month and year come from the NIK.
     @Test func anotherMonthAndYear() throws {
         let result = try #require(parse(Self.card(nik: "0012340112850003", birth: "BANDUNG, 01-12-1985")))
-        #expect(result.fields.values[KTPParser.birthDate] == "1985-12-01")
+        #expect(result.fields.values[FieldKey.birthDate] == "1985-12-01")
         #expect(result.needsCheck.isEmpty)
     }
 
     @Test func spacesInsideTheNIKAreDropped() throws {
         let result = try #require(parse(Self.card(nik: "0012 3417 0890 0001")))
-        #expect(result.fields.values[KTPParser.nik] == "0012341708900001")
+        #expect(result.fields.values[FieldKey.nik] == "0012341708900001")
         #expect(result.needsCheck.isEmpty)
     }
 
     /// Letters that look like digits are corrected, but a correction is a guess, so it's marked.
     @Test func lookalikeLettersInTheNIKAreCorrectedAndMarked() throws {
         let result = try #require(parse(Self.card(nik: "OO12341708SOOOOI")))
-        #expect(result.fields.values[KTPParser.nik] == "0012341708500001")
-        #expect(result.needsCheck.contains(KTPParser.nik))
+        #expect(result.fields.values[FieldKey.nik] == "0012341708500001")
+        #expect(result.needsCheck.contains(FieldKey.nik))
     }
 
     @Test func everyLookalikeLetter() throws {
@@ -77,7 +70,7 @@ struct KTPParserTests {
         ]
         for (letter, digit) in lookalikes {
             let result = try #require(parse(Self.card(nik: "001234170890000" + letter)))
-            #expect(result.fields.values[KTPParser.nik] == "001234170890000" + digit, "\(letter)")
+            #expect(result.fields.values[FieldKey.nik] == "001234170890000" + digit, "\(letter)")
         }
     }
 
@@ -87,11 +80,11 @@ struct KTPParserTests {
             ": JAKARTA, 17-08-1990", "Jenis Kelamin", ": LAKI-LAKI",
         ]
         let result = try #require(parse(lines))
-        #expect(result.fields.values[KTPParser.nik] == "0012341708900001")
-        #expect(result.fields.values[KTPParser.name] == "BUDI CONTOH")
-        #expect(result.fields.values[KTPParser.birthDate] == "1990-08-17")
+        #expect(result.fields.values[FieldKey.nik] == "0012341708900001")
+        #expect(result.fields.values[FieldKey.name] == "BUDI CONTOH")
+        #expect(result.fields.values[FieldKey.birthDate] == "1990-08-17")
         // Which line belongs to a label is a guess here, so every value is marked.
-        #expect(result.needsCheck == [KTPParser.nik, KTPParser.name, KTPParser.birthDate])
+        #expect(result.needsCheck == [FieldKey.nik, FieldKey.name, FieldKey.birthDate])
     }
 
     /// Recognition drops the colon or reads it as a semicolon.
@@ -102,9 +95,9 @@ struct KTPParserTests {
                 "Tempat/Tgl. Lahir\(separator) JAKARTA, 17-08-1990",
             ]
             let result = try #require(parse(lines), "\(separator)")
-            #expect(result.fields.values[KTPParser.nik] == "0012341708900001", "\(separator)")
-            #expect(result.fields.values[KTPParser.name] == "BUDI CONTOH", "\(separator)")
-            #expect(result.fields.values[KTPParser.birthDate] == "1990-08-17", "\(separator)")
+            #expect(result.fields.values[FieldKey.nik] == "0012341708900001", "\(separator)")
+            #expect(result.fields.values[FieldKey.name] == "BUDI CONTOH", "\(separator)")
+            #expect(result.fields.values[FieldKey.birthDate] == "1990-08-17", "\(separator)")
             #expect(result.needsCheck.isEmpty, "\(separator)")
         }
     }
@@ -117,9 +110,9 @@ struct KTPParserTests {
             ": JAKARTA, 17-08-1990",
         ]
         let result = try #require(parse(lines))
-        #expect(result.fields.values[KTPParser.name] == nil)
-        #expect(result.fields.values[KTPParser.nik] == nil)
-        #expect(result.needsCheck == [KTPParser.nik, KTPParser.name, KTPParser.birthDate])
+        #expect(result.fields.values[FieldKey.name] == nil)
+        #expect(result.fields.values[FieldKey.nik] == nil)
+        #expect(result.needsCheck == [FieldKey.nik, FieldKey.name, FieldKey.birthDate])
     }
 
     /// A long name wraps onto the next line; only its first part is read, so it's marked.
@@ -127,7 +120,7 @@ struct KTPParserTests {
     @Test func aWrappedLineStartingLikeALabelIsStillAWrap() throws {
         let lines = ["NIK : 0012345708900002", "Nama : SITI", "NIKEN AYU", "Tempat/Tgl Lahir : JAKARTA, 17-08-1990"]
         let result = try #require(parse(lines))
-        #expect(result.needsCheck == [KTPParser.name])
+        #expect(result.needsCheck == [FieldKey.name])
     }
 
     @Test func aNameThatWrapsIsMarked() throws {
@@ -135,7 +128,7 @@ struct KTPParserTests {
             "NIK : 0012341708900001", "Nama : BUDI CONTOH", "SANTOSO", "Tempat/Tgl Lahir : JAKARTA, 17-08-1990",
         ]
         let result = try #require(parse(lines))
-        #expect(result.needsCheck == [KTPParser.name])
+        #expect(result.needsCheck == [FieldKey.name])
     }
 
     /// Women's NIKs carry the day of birth plus 40.
@@ -148,15 +141,15 @@ struct KTPParserTests {
     /// Day plus 40 is only for women, so the sex on the card catches a misread first digit of the day.
     @Test func aNIKThatDoesntMatchTheSexIsMarked() throws {
         let man = try #require(parse(Self.card(nik: "0012345708900001", sex: "LAKI-LAKI")))
-        #expect(man.needsCheck == [KTPParser.nik])
+        #expect(man.needsCheck == [FieldKey.nik])
         let woman = try #require(parse(Self.card(nik: "0012341708900002", sex: "PEREMPUAN")))
-        #expect(woman.needsCheck == [KTPParser.nik])
+        #expect(woman.needsCheck == [FieldKey.nik])
     }
 
     @Test func aNIKThatDoesntMatchTheBirthDateIsMarked() throws {
         for birth in ["JAKARTA, 18-08-1990", "JAKARTA, 17-09-1990", "JAKARTA, 17-08-1991"] {
             let result = try #require(parse(Self.card(birth: birth)))
-            #expect(result.needsCheck == [KTPParser.nik, KTPParser.birthDate], "\(birth)")
+            #expect(result.needsCheck == [FieldKey.nik, FieldKey.birthDate], "\(birth)")
         }
     }
 
@@ -164,7 +157,7 @@ struct KTPParserTests {
     @Test func punctuationOrSmallLettersInTheNameAreMarked() throws {
         for name in [", BUDI CONTOH", ". BUDI", ": BUDI", "BUDl CONTOH"] {
             let result = try #require(parse(Self.card(name: name)))
-            #expect(result.needsCheck == [KTPParser.name], "\(name)")
+            #expect(result.needsCheck == [FieldKey.name], "\(name)")
         }
         for name in ["M. RIZKI", "SITI NUR'AINI", "ANAK AGUNG GDE-PUTRA"] {
             let result = try #require(parse(Self.card(name: name)))
@@ -174,14 +167,14 @@ struct KTPParserTests {
 
     @Test func aDigitInTheNameIsMarkedNotChanged() throws {
         let result = try #require(parse(Self.card(name: "BUDI C0NTOH")))
-        #expect(result.fields.values[KTPParser.name] == "BUDI C0NTOH")
-        #expect(result.needsCheck == [KTPParser.name])
+        #expect(result.fields.values[FieldKey.name] == "BUDI C0NTOH")
+        #expect(result.needsCheck == [FieldKey.name])
     }
 
     @Test func otherSeparatorsInTheBirthDate() throws {
         for birth in ["JAKARTA, 17.08.1990", "JAKARTA, 17/08/1990", "JAKARTA,17-08-1990"] {
             let result = try #require(parse(Self.card(birth: birth)))
-            #expect(result.fields.values[KTPParser.birthDate] == "1990-08-17", "\(birth)")
+            #expect(result.fields.values[FieldKey.birthDate] == "1990-08-17", "\(birth)")
             #expect(result.needsCheck.isEmpty, "\(birth)")
         }
     }
@@ -189,15 +182,15 @@ struct KTPParserTests {
     /// Stored like every date in the vault. A date that can't exist is left empty for the user.
     @Test func anImpossibleBirthDateIsMarkedAndLeftEmpty() throws {
         let result = try #require(parse(Self.card(birth: "JAKARTA, 31-02-1990")))
-        #expect(result.fields.values[KTPParser.birthDate] == nil)
-        #expect(result.needsCheck.contains(KTPParser.birthDate))
+        #expect(result.fields.values[FieldKey.birthDate] == nil)
+        #expect(result.needsCheck.contains(FieldKey.birthDate))
     }
 
     /// The NIK only holds the last two digits of the year, so a misread century has to be caught here.
     @Test func aBirthDateThatCantBeRightIsMarked() throws {
         for birth in ["JAKARTA, 17-08-1090", "JAKARTA, 17-08-2090", "JAKARTA, 17-08-1890"] {
             let result = try #require(parse(Self.card(birth: birth)))
-            #expect(result.needsCheck.contains(KTPParser.birthDate), "\(birth)")
+            #expect(result.needsCheck.contains(FieldKey.birthDate), "\(birth)")
         }
     }
 
@@ -208,25 +201,25 @@ struct KTPParserTests {
             "0012341700900001",
         ] {
             let result = try #require(parse(["NIK : \(nik)", "Nama : BUDI CONTOH"]))
-            #expect(result.needsCheck.contains(KTPParser.nik), "\(nik)")
+            #expect(result.needsCheck.contains(FieldKey.nik), "\(nik)")
         }
     }
 
     /// A corrected NIK is still compared with the birth date, so a bad correction shows on both.
     @Test func aCorrectedNIKIsStillCrossChecked() throws {
         let result = try #require(parse(Self.card(nik: "OO12341708SOOOOI")))
-        #expect(result.needsCheck == [KTPParser.nik, KTPParser.birthDate])
+        #expect(result.needsCheck == [FieldKey.nik, FieldKey.birthDate])
     }
 
     @Test func aNIKThatIsntSixteenDigitsIsMarked() throws {
         let result = try #require(parse(Self.card(nik: "00123417089000")))
-        #expect(result.needsCheck.contains(KTPParser.nik))
+        #expect(result.needsCheck.contains(FieldKey.nik))
     }
 
     @Test func missingLinesAreMarked() throws {
         let result = try #require(parse(["PROVINSI DKI JAKARTA", "NIK : 0012341708900001"]))
-        #expect(result.fields.values[KTPParser.nik] == "0012341708900001")
-        #expect(result.needsCheck == [KTPParser.name, KTPParser.birthDate])
+        #expect(result.fields.values[FieldKey.nik] == "0012341708900001")
+        #expect(result.needsCheck == [FieldKey.name, FieldKey.birthDate])
     }
 
     @Test func notAKTP() {

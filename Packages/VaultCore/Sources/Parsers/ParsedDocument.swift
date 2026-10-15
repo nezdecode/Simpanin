@@ -20,11 +20,19 @@ public struct ParsedDocument: Sendable, Equatable {
     public var expiry: CalendarDate?
     /// Fields the parser isn't sure about, marked "Periksa lagi" on the review screen.
     public var needsCheck: Set<String>
+    /// The type and the expiry aren't fields, so they're marked here.
+    public var typeNeedsCheck: Bool
+    public var expiryNeedsCheck: Bool
 
-    public init(type: DocumentType, fields: DocumentFields, expiry: CalendarDate?, needsCheck: Set<String>) {
+    public init(
+        type: DocumentType, fields: DocumentFields, expiry: CalendarDate?, needsCheck: Set<String>,
+        typeNeedsCheck: Bool = false, expiryNeedsCheck: Bool = false
+    ) {
         self.type = type
         self.fields = fields
         self.expiry = expiry
         self.needsCheck = needsCheck
+        self.typeNeedsCheck = typeNeedsCheck
+        self.expiryNeedsCheck = expiryNeedsCheck
     }
 }

@@ -39,6 +39,6 @@ Keep moves and reformatting in their own commits, separate from changes in behav
 
 ## Branches and pull requests
 
-Don't commit to `main`. Each piece of work gets its own branch, named after it, like `app/part-4-screens` or `vaultcore/fix-flush`. Keep the small commits on that branch, then open a pull request into `main` that says what changed and which tests you ran.
+Don't commit to `main`. Each piece of work gets its own branch, named `type/scope-topic` with the same types and scopes as commits, like `feat/parsers-sim` or `fix/vaultcore-flush`. When a branch holds several kinds of commits, name it after its main purpose. Branches merged before 15 Oct 2026 used `scope/topic`. Keep the small commits on that branch, then open a pull request into `main` that says what changed and which tests you ran.
 
 Merge with **Create a merge commit**. Don't squash or rebase: notes and reviews refer to commits by their hash, and both of those create new hashes.
