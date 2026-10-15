@@ -28,6 +28,15 @@ struct DocumentStyleTests {
         (.stnk, "STNK"), (.kk, "Kartu Keluarga"), (.npwp, "NPWP"), (.bpjs, "BPJS"), (.other, "Lainnya"),
     ]
 
+    /// VaultCore's list drives this check, so a class added there without a name here fails,
+    /// instead of quietly showing as "Lainnya".
+    @Test func everySIMClassHasItsOwnName() {
+        let other = String(localized: DocumentStyle.name(.other))
+        for type in DocumentType.simClasses {
+            #expect(String(localized: DocumentStyle.name(type)) != other, "\(type.rawValue)")
+        }
+    }
+
     @MainActor @Test func everySIMClassUsesTheSIMColors() {
         for type in DocumentType.simClasses {
             #expect(DocumentStyle.tileColors(type) == DocumentStyle.tileColors(.sim), "\(type.rawValue)")
