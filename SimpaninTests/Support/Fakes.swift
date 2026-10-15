@@ -71,9 +71,11 @@ actor FakeDocuments: DocumentStoring {
     private(set) var createdPages: [[Data]] = []
     private var failure: VaultError?
     private var loadFailure: VaultError?
+    private var binFailure: VaultError?
 
     func setFailure(_ failure: VaultError?) { self.failure = failure }
     func setLoadFailure(_ failure: VaultError?) { loadFailure = failure }
+    func setBinFailure(_ failure: VaultError?) { binFailure = failure }
 
     func documents() async throws -> [Document] {
         if let loadFailure { throw loadFailure }
@@ -81,7 +83,7 @@ actor FakeDocuments: DocumentStoring {
     }
 
     func recentlyDeleted() async throws -> [Document] {
-        if let loadFailure { throw loadFailure }
+        if let failure = loadFailure ?? binFailure { throw failure }
         return bin
     }
 
