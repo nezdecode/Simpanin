@@ -17,24 +17,30 @@ extension String {
     /// or a day, a month name in Indonesian or English, and a year.
     var lastDate: CalendarDate? {
         var found: [(at: String.Index, date: CalendarDate?)] = []
-        for match in matches(of: /(\d{2})[-.\/](\d{2})[-.\/](\d{4})/) {
+        // [0-9], not \d: \d also matches full-width and other digits, which Int can't read.
+        for match in matches(of: /([0-9]{2})[-.\/]([0-9]{2})[-.\/]([0-9]{4})/) {
             let (_, day, month, year) = match.output
-            found.append((match.range.lowerBound, CalendarDate(year: Int(year)!, month: Int(month)!, day: Int(day)!)))
+            found.append((match.range.lowerBound, Self.date(day, Int(month), year)))
         }
-        for match in matches(of: /(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})/) {
+        for match in matches(of: /([0-9]{1,2})\s+([A-Za-z]+)\s+([0-9]{4})/) {
             let (_, day, name, year) = match.output
             guard let month = Self.monthNumbers[name.uppercased()] else { continue }
-            found.append((match.range.lowerBound, CalendarDate(year: Int(year)!, month: month, day: Int(day)!)))
+            found.append((match.range.lowerBound, Self.date(day, month, year)))
         }
         return found.max { $0.at < $1.at }?.date
     }
 
     /// Every dd-mm-yyyy in the text, with -, . or / between. Dates that can't exist are left out.
     var numericDates: [CalendarDate] {
-        matches(of: /(\d{2})[-.\/](\d{2})[-.\/](\d{4})/).compactMap { match in
+        matches(of: /([0-9]{2})[-.\/]([0-9]{2})[-.\/]([0-9]{4})/).compactMap { match in
             let (_, day, month, year) = match.output
-            return CalendarDate(year: Int(year)!, month: Int(month)!, day: Int(day)!)
+            return Self.date(day, Int(month), year)
         }
+    }
+
+    private static func date(_ day: Substring, _ month: Int?, _ year: Substring) -> CalendarDate? {
+        guard let day = Int(day), let month, let year = Int(year) else { return nil }
+        return CalendarDate(year: year, month: month, day: day)
     }
 
     private static let monthNumbers: [String: Int] = [

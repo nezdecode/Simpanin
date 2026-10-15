@@ -205,6 +205,17 @@ struct SIMParserTests {
         #expect(!result.expiryNeedsCheck)
     }
 
+    /// Regex digits include full-width and other scripts, which Int can't read; a scan must never crash.
+    @Test func digitsFromOtherScriptsNeverCrash() throws {
+        let birth = "JAKARTA, \u{FF11}\u{FF17}-08-1990"
+        let sim = try #require(parse(Self.oldCard(birth: birth, expiry: "\u{FF10}\u{FF14}-01-2027")))
+        #expect(sim.needsCheck.contains(FieldKey.birthDate))
+        #expect(sim.expiryNeedsCheck)
+        let ktp = try #require(
+            KTPParser.parse(["NIK : 0012341708900001", "Tempat/Tgl Lahir : \(birth)"], today: Self.today))
+        #expect(ktp.needsCheck.contains(FieldKey.birthDate))
+    }
+
     @Test func notASIM() {
         #expect(parse(["PROVINSI DKI JAKARTA", "NIK : 0012341708900001", "Nama : BUDI CONTOH"]) == nil)
         #expect(parse([]) == nil)
