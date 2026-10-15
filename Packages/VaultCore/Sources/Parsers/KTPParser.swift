@@ -32,7 +32,8 @@ public enum KTPParser {
             fields[nik] = number
             if found.fromNextLine || corrected { needsCheck.insert(nik) }
         }
-        if number.count != 16 || !number.allSatisfy(\.isASCIIDigit) { needsCheck.insert(nik) }
+        let nikDate = birthDate(inNIK: number)
+        if nikDate == nil { needsCheck.insert(nik) }
 
         if let found = value(of: "Nama", in: lines) {
             fields[name] = found.text
@@ -55,7 +56,7 @@ public enum KTPParser {
             needsCheck.insert(birthDate)
         }
 
-        if let birth, !needsCheck.contains(nik), !nikMatches(number, birth) {
+        if let birth, let nikDate, nikDate != (birth.day, birth.month, birth.year % 100) {
             needsCheck.formUnion([nik, birthDate])
         }
         // A KTP is valid for life, so it has no expiry.
@@ -140,12 +141,14 @@ public enum KTPParser {
     }
 
     /// Digits 7 to 12 of a NIK are the date of birth as ddmmyy, with 40 added to the day for women.
-    private static func nikMatches(_ number: String, _ birth: CalendarDate) -> Bool {
+    /// nil when the NIK isn't 16 digits or that date can't exist.
+    private static func birthDate(inNIK number: String) -> (day: Int, month: Int, year: Int)? {
+        guard number.count == 16, number.allSatisfy(\.isASCIIDigit) else { return nil }
         let digits = number.compactMap(\.wholeNumberValue)
-        guard digits.count == 16 else { return false }
         func pair(_ start: Int) -> Int { digits[start] * 10 + digits[start + 1] }
         let day = pair(6) > 40 ? pair(6) - 40 : pair(6)
-        return day == birth.day && pair(8) == birth.month && pair(10) == birth.year % 100
+        guard (1...31).contains(day), (1...12).contains(pair(8)) else { return nil }
+        return (day, pair(8), pair(10))
     }
 }
 

@@ -148,6 +148,20 @@ struct KTPParserTests {
         }
     }
 
+    /// Digits 7 to 12 are a date, day plus 40 for women, so day 99 or month 99 can't be right.
+    @Test func aNIKWithAnImpossibleDateIsMarkedWithoutABirthDate() throws {
+        for nik in ["0012349999900001", "0012343208900001", "0012341713900001", "0012347208900001"] {
+            let result = try #require(parse(["NIK : \(nik)", "Nama : BUDI CONTOH"]))
+            #expect(result.needsCheck.contains(KTPParser.nik), "\(nik)")
+        }
+    }
+
+    /// A corrected NIK is still compared with the birth date, so a bad correction shows on both.
+    @Test func aCorrectedNIKIsStillCrossChecked() throws {
+        let result = try #require(parse(Self.card(nik: "OO12341708SOOOOI")))
+        #expect(result.needsCheck == [KTPParser.nik, KTPParser.birthDate])
+    }
+
     @Test func aNIKThatIsntSixteenDigitsIsMarked() throws {
         let result = try #require(parse(Self.card(nik: "00123417089000")))
         #expect(result.needsCheck.contains(KTPParser.nik))
