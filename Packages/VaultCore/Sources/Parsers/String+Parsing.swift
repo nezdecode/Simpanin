@@ -17,12 +17,13 @@ extension String {
     /// or a day, a month name in Indonesian or English, and a year.
     var lastDate: CalendarDate? {
         var found: [(at: String.Index, date: CalendarDate?)] = []
-        // [0-9], not \d: \d also matches full-width and other digits, which Int can't read.
-        for match in matches(of: /([0-9]{2})[-.\/]([0-9]{2})[-.\/]([0-9]{4})/) {
+        // \d also matches full-width and other digits. Capturing the whole run makes Int fail and the
+        // date come back nil, so it's marked, where [0-9] would skip a digit and read a shorter, wrong date.
+        for match in matches(of: /(\d{2})[-.\/](\d{2})[-.\/](\d{4})/) {
             let (_, day, month, year) = match.output
             found.append((match.range.lowerBound, Self.date(day, Int(month), year)))
         }
-        for match in matches(of: /([0-9]{1,2})\s+([A-Za-z]+)\s+([0-9]{4})/) {
+        for match in matches(of: /(\d+)\s+([A-Za-z]+)\s+(\d{4})/) {
             let (_, day, name, year) = match.output
             guard let month = Self.monthNumbers[name.uppercased()] else { continue }
             found.append((match.range.lowerBound, Self.date(day, month, year)))
@@ -32,7 +33,7 @@ extension String {
 
     /// Every dd-mm-yyyy in the text, with -, . or / between. Dates that can't exist are left out.
     var numericDates: [CalendarDate] {
-        matches(of: /([0-9]{2})[-.\/]([0-9]{2})[-.\/]([0-9]{4})/).compactMap { match in
+        matches(of: /(\d{2})[-.\/](\d{2})[-.\/](\d{4})/).compactMap { match in
             let (_, day, month, year) = match.output
             return Self.date(day, Int(month), year)
         }

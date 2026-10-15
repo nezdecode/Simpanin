@@ -24,8 +24,11 @@ public enum SIMParser {
         var needsCheck: Set<String> = []
 
         // The class is printed above the fields, so a blood type further down is never taken for one.
-        let firstField = lines.firstIndex {
-            numberedField($0)?.number == 1 || LabeledLines.rest(after: "Nama/Name", in: $0) != nil
+        let labeled = hasLabels(lines)
+        let firstField = lines.firstIndex { line in
+            LabeledLines.rest(after: "Nama/Name", in: line) != nil
+                // On a card with labels an address line like "1, RT 001" must not stand in for the name label.
+                || (!labeled && numberedField(line)?.number == 1)
         }
         let (type, classNeedsCheck) = simClass(in: lines[..<(firstField ?? lines.endIndex)])
         let typeNeedsCheck = classNeedsCheck || firstField == nil
@@ -87,10 +90,14 @@ public enum SIMParser {
         return (found.text, needsCheck, nikDate, indices)
     }
 
+    private static func hasLabels(_ lines: [String]) -> Bool {
+        lines.contains { line in labels.contains { LabeledLines.rest(after: $0, in: line) != nil } }
+    }
+
     /// 16 on a card with labels, which has the NIK as its number, and 14 on an older card with numbered
     /// fields. nil when the layout can't be told.
     private static func expectedDigits(_ lines: [String]) -> Int? {
-        let labeled = lines.contains { line in labels.contains { LabeledLines.rest(after: $0, in: line) != nil } }
+        let labeled = hasLabels(lines)
         let numbered = lines.contains { numberedField($0) != nil }
         guard labeled != numbered else { return nil }
         return labeled ? 16 : 14
@@ -184,14 +191,16 @@ public enum SIMParser {
         return (type, corrected)
     }
 
-    /// The "3." line on an older card, or the lines under "Jenis Kelamin/Sex" up to the next label on a
-    /// newer one, where the blood type may sit beside it.
+    /// On a card with labels: the rest of the "Jenis Kelamin/Sex" line and the values under it, up to the
+    /// address, skipping the blood type label beside it. An older card's sex is never needed: its number
+    /// isn't a NIK, and a 16-digit number on it is marked anyway.
     private static func sexField(in lines: [String]) -> String {
-        if let line = lines.first(where: { numberedField($0)?.number == 3 }) { return line }
-        guard let start = lines.firstIndex(where: { $0.uppercased().filter { $0 != " " }.contains("JENISKELAMIN") })
+        guard let start = lines.firstIndex(where: { LabeledLines.rest(after: "Jenis Kelamin/Sex", in: $0) != nil })
         else { return "" }
         let isLabel = { (line: String) in labels.contains { LabeledLines.rest(after: $0, in: line) != nil } }
-        return lines[(start + 1)...].prefix { !isLabel($0) }.joined(separator: " ")
+        let below = lines[(start + 1)...].prefix { LabeledLines.rest(after: "Alamat/Address", in: $0) == nil }
+        let rest = LabeledLines.rest(after: "Jenis Kelamin/Sex", in: lines[start]) ?? ""
+        return ([rest] + below.filter { !isLabel($0) }).joined(separator: " ")
     }
 
     /// From PRIA or WANITA, the words every SIM uses. nil when neither, or both, can be read.

@@ -139,6 +139,19 @@ struct SIMParserTests {
         #expect(result.typeNeedsCheck)
     }
 
+    /// On a card with labels only the name label starts the fields, so an address line like "1, RT 001"
+    /// can't stand in for it and let a blood type through as the class.
+    @Test func onALabelledCardOnlyTheNameLabelStartsTheFields() throws {
+        var lines = Self.newCard(classLine: "X")
+        let nameLabel = try #require(lines.firstIndex(of: "Nama/Name"))
+        lines[nameLabel] = "Nana/Nane"
+        let address = try #require(lines.firstIndex(of: "JL. CONTOH NO. 1"))
+        lines[address] = "1, RT 001/002"
+        let blood = try #require(lines.firstIndex(of: "O"))
+        lines[blood] = "A"
+        #expect(try #require(parse(lines)).typeNeedsCheck)
+    }
+
     // MARK: The number
 
     /// On a new card the number is a NIK, so it's checked like one.
@@ -161,6 +174,15 @@ struct SIMParserTests {
         #expect(try #require(parse(lines)).needsCheck == [FieldKey.simNumber])
     }
 
+    /// Recognition may join the label and its value on one line.
+    @Test func theSexOnTheLabelLineIsRead() throws {
+        var lines = Self.newCard()
+        let label = try #require(lines.firstIndex(of: "Jenis Kelamin/Sex"))
+        lines[label] = "Jenis Kelamin/Sex : WANITA"
+        lines.remove(at: label + 2)
+        #expect(try #require(parse(lines)).needsCheck == [FieldKey.simNumber])
+    }
+
     /// An old number isn't a NIK, so there's nothing to compare it with.
     @Test func anOldNumberIsntCheckedLikeANIK() throws {
         let result = try #require(parse(Self.oldCard(number: "0000-0000-000002", birth: "JAKARTA, 01-12-1985")))
@@ -173,6 +195,15 @@ struct SIMParserTests {
         #expect(newCardOldNumber.needsCheck.contains(FieldKey.simNumber))
         let oldCardNewNumber = try #require(parse(Self.oldCard(number: "0012341708900001")))
         #expect(oldCardNewNumber.needsCheck.contains(FieldKey.simNumber))
+    }
+
+    /// When the layout can't be told, the number's length alone isn't a reason to mark it.
+    @Test func anUnknownLayoutDoesntMarkTheNumbersLength() throws {
+        let neither = ["SURAT IZIN MENGEMUDI", "A", "0000-0000-000001", "BUDI CONTOH", "04-01-2027"]
+        #expect(try #require(parse(neither)).needsCheck.contains(FieldKey.simNumber) == false)
+        var both = Self.oldCard()
+        both.insert("Nama/Name", at: 5)
+        #expect(try #require(parse(both)).needsCheck.contains(FieldKey.simNumber) == false)
     }
 
     @Test func lookalikeLettersInTheNumberAreCorrectedAndMarked() throws {
@@ -273,6 +304,15 @@ struct SIMParserTests {
         let ktp = try #require(
             KTPParser.parse(["NIK : 0012341708900001", "Tempat/Tgl Lahir : \(birth)"], today: Self.today))
         #expect(ktp.needsCheck.contains(FieldKey.birthDate))
+    }
+
+    /// One full-width digit beside an ASCII one must not leave a shorter, wrong date behind.
+    @Test func aDayWithOneDigitFromAnotherScriptIsMarkedNotShortened() throws {
+        for birth in ["JAKARTA, \u{FF12}5 AGUSTUS 1990", "JAKARTA, \u{FF12}5-08-1990"] {
+            let result = try #require(parse(Self.oldCard(birth: birth)))
+            #expect(result.fields.values[FieldKey.birthDate] == nil, "\(birth)")
+            #expect(result.needsCheck.contains(FieldKey.birthDate), "\(birth)")
+        }
     }
 
     @Test func notASIM() {
