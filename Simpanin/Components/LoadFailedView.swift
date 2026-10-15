@@ -18,8 +18,8 @@ struct LoadFailedView: View {
     var title: LocalizedStringResource = Self.title
     let onRetry: () -> Void
 
-    static let title = LocalizedStringResource("load.failedTitle")
-    static let message = LocalizedStringResource("load.failedBody")
+    nonisolated static let title = LocalizedStringResource("load.failedTitle")
+    nonisolated static let message = LocalizedStringResource("load.failedBody")
 
     var body: some View {
         VStack(spacing: 16) {
