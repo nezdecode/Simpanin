@@ -38,10 +38,12 @@ struct LabeledLines {
             let nextIsLabel = next.map(isLabel) ?? true
             if !rest.isEmpty { return Found(text: rest, continues: !nextIsLabel) }
             guard let next, !nextIsLabel else { return nil }
+            let afterNext = index + 2 < lines.count ? lines[index + 2] : nil
             var text = Substring(next.trimmingCharacters(in: .whitespaces))
             if text.first == ":" || text.first == ";" { text = text.dropFirst() }
             let value = text.trimmingCharacters(in: .whitespaces)
-            return value.isEmpty ? nil : Found(text: value, fromNextLine: true)
+            let continues = afterNext.map { !isLabel($0) } ?? false
+            return value.isEmpty ? nil : Found(text: value, fromNextLine: true, continues: continues)
         }
         return nil
     }

@@ -13,13 +13,35 @@ import Foundation
 import VaultCore
 
 extension String {
-    /// The last dd-mm-yyyy in the text (a place usually comes first), with -, . or / between.
+    /// The last date in the text (a place usually comes first): dd-mm-yyyy with -, . or / between,
+    /// or a day, a month name in Indonesian or English, and a year.
     var lastDate: CalendarDate? {
-        guard let match = matches(of: /(\d{2})[-.\/](\d{2})[-.\/](\d{4})/).last,
-            let day = Int(match.1), let month = Int(match.2), let year = Int(match.3)
-        else { return nil }
-        return CalendarDate(year: year, month: month, day: day)
+        var found: [(at: String.Index, date: CalendarDate?)] = []
+        for match in matches(of: /(\d{2})[-.\/](\d{2})[-.\/](\d{4})/) {
+            let (_, day, month, year) = match.output
+            found.append((match.range.lowerBound, CalendarDate(year: Int(year)!, month: Int(month)!, day: Int(day)!)))
+        }
+        for match in matches(of: /(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})/) {
+            let (_, day, name, year) = match.output
+            guard let month = Self.monthNumbers[name.uppercased()] else { continue }
+            found.append((match.range.lowerBound, CalendarDate(year: Int(year)!, month: month, day: Int(day)!)))
+        }
+        return found.max { $0.at < $1.at }?.date
     }
+
+    /// Every dd-mm-yyyy in the text, with -, . or / between. Dates that can't exist are left out.
+    var numericDates: [CalendarDate] {
+        matches(of: /(\d{2})[-.\/](\d{2})[-.\/](\d{4})/).compactMap { match in
+            let (_, day, month, year) = match.output
+            return CalendarDate(year: Int(year)!, month: Int(month)!, day: Int(day)!)
+        }
+    }
+
+    private static let monthNumbers: [String: Int] = [
+        "JANUARI": 1, "JANUARY": 1, "FEBRUARI": 2, "FEBRUARY": 2, "MARET": 3, "MARCH": 3, "APRIL": 4, "MEI": 5,
+        "MAY": 5, "JUNI": 6, "JUNE": 6, "JULI": 7, "JULY": 7, "AGUSTUS": 8, "AUGUST": 8, "SEPTEMBER": 9,
+        "OKTOBER": 10, "OCTOBER": 10, "NOVEMBER": 11, "DESEMBER": 12, "DECEMBER": 12,
+    ]
 
     /// Names are printed in capitals, so anything else (a digit, a small letter, a separator left from
     /// the label) is a misread.
