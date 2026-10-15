@@ -138,6 +138,14 @@ struct KTPParserTests {
         #expect(result.needsCheck.isEmpty)
     }
 
+    /// Day plus 40 is only for women, so the sex on the card catches a misread first digit of the day.
+    @Test func aNIKThatDoesntMatchTheSexIsMarked() throws {
+        let man = try #require(parse(Self.card(nik: "0012345708900001", sex: "LAKI-LAKI")))
+        #expect(man.needsCheck == [KTPParser.nik])
+        let woman = try #require(parse(Self.card(nik: "0012341708900002", sex: "PEREMPUAN")))
+        #expect(woman.needsCheck == [KTPParser.nik])
+    }
+
     @Test func aNIKThatDoesntMatchTheBirthDateIsMarked() throws {
         for birth in ["JAKARTA, 18-08-1990", "JAKARTA, 17-09-1990", "JAKARTA, 17-08-1991"] {
             let result = try #require(parse(Self.card(birth: birth)))

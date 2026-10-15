@@ -34,6 +34,9 @@ public enum KTPParser {
         }
         let nikDate = birthDate(inNIK: number)
         if nikDate == nil { needsCheck.insert(nik) }
+        if let nikDate, let woman = isWoman(value(of: "Jenis Kelamin", in: lines)?.text), woman != nikDate.woman {
+            needsCheck.insert(nik)
+        }
 
         if let found = value(of: "Nama", in: lines) {
             fields[name] = found.text
@@ -56,7 +59,9 @@ public enum KTPParser {
             needsCheck.insert(birthDate)
         }
 
-        if let birth, let nikDate, nikDate != (birth.day, birth.month, birth.year % 100) {
+        if let birth, let nikDate,
+            (nikDate.day, nikDate.month, nikDate.year) != (birth.day, birth.month, birth.year % 100)
+        {
             needsCheck.formUnion([nik, birthDate])
         }
         // A KTP is valid for life, so it has no expiry.
@@ -140,15 +145,23 @@ public enum KTPParser {
         return CalendarDate(year: year, month: month, day: day)
     }
 
+    /// From "Jenis Kelamin", which shares its line with "Gol. Darah". nil when it can't be read.
+    private static func isWoman(_ text: String?) -> Bool? {
+        guard let text = text?.uppercased() else { return nil }
+        if text.contains("PEREMPUAN") { return true }
+        if text.contains("LAKI") { return false }
+        return nil
+    }
+
     /// Digits 7 to 12 of a NIK are the date of birth as ddmmyy, with 40 added to the day for women.
     /// nil when the NIK isn't 16 digits or that date can't exist.
-    private static func birthDate(inNIK number: String) -> (day: Int, month: Int, year: Int)? {
+    private static func birthDate(inNIK number: String) -> (day: Int, month: Int, year: Int, woman: Bool)? {
         guard number.count == 16, number.allSatisfy(\.isASCIIDigit) else { return nil }
         let digits = number.compactMap(\.wholeNumberValue)
         func pair(_ start: Int) -> Int { digits[start] * 10 + digits[start + 1] }
         let day = pair(6) > 40 ? pair(6) - 40 : pair(6)
         guard (1...31).contains(day), (1...12).contains(pair(8)) else { return nil }
-        return (day, pair(8), pair(10))
+        return (day, pair(8), pair(10), pair(6) > 40)
     }
 }
 
