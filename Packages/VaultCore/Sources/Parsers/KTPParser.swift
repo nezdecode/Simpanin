@@ -153,6 +153,8 @@ public enum KTPParser {
         return nil
     }
 
+    // The first two digits, the province, are left unchecked on purpose: test NIKs use 00, which no
+    // real province has, so a province check would either break every test or let real data in.
     /// Digits 7 to 12 of a NIK are the date of birth as ddmmyy, with 40 added to the day for women.
     /// nil when the NIK isn't 16 digits or that date can't exist.
     private static func birthDate(inNIK number: String) -> (day: Int, month: Int, year: Int, woman: Bool)? {
