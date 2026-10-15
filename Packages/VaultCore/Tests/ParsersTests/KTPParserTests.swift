@@ -104,6 +104,16 @@ struct KTPParserTests {
 
     /// Recognition can return the label column before the value column. A label is never taken as a
     /// value, and the card is still a KTP, with everything marked.
+    /// Recognition mixes up l, i, I, 1 and |; a label read as "Tgi" or "NlK" is still that label. Values
+    /// aren't touched: this applies to labels only.
+    @Test func labelsReadWithLookalikeLetters() throws {
+        let lines = ["NlK : 0012341708900001", "Nama : BUDI CONTOH", "Tempat/Tgi Lahir : JAKARTA, 17-08-1990"]
+        let result = try #require(parse(lines))
+        #expect(result.fields.values[FieldKey.nik] == "0012341708900001")
+        #expect(result.fields.values[FieldKey.birthDate] == "1990-08-17")
+        #expect(result.needsCheck.isEmpty)
+    }
+
     @Test func labelsBeforeValuesNeverTakeALabelAsAValue() throws {
         let lines = [
             "PROVINSI DKI JAKARTA", "NIK", "Nama", "Tempat/Tgl Lahir", ": 0012341708900001", ": BUDI CONTOH",
