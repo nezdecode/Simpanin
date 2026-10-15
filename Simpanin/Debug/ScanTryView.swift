@@ -12,6 +12,7 @@
 #if DEBUG
     import Parsers
     import SwiftUI
+    import UniformTypeIdentifiers
     import VaultCore
 
     /// DEBUG only. Scans a document and shows what Vision and the parsers read, so scanning can be tried
@@ -60,18 +61,26 @@
                         ForEach(Array(scan.lines.enumerated()), id: \.offset) { _, line in
                             Text(verbatim: line).font(.caption.monospaced())
                         }
+                        // Local only, so it doesn't reach the Mac through Universal Clipboard.
+                        Button("Copy masked text") {
+                            UIPasteboard.general.setItems(
+                                [[UTType.plainText.identifier: MaskedText.mask(scan.lines)]],
+                                options: [.localOnly: true])
+                        }
                     }
                 }
                 leftoversSection
                 if scan.state != .empty {
                     Button("Drop the scan", role: .destructive) {
                         scan.discard()
+                        DocumentCameraCache.clear()
                         leftovers = nil
                     }
                 }
             }
             .navigationTitle("Coba pindai")
-            .fullScreenCover(isPresented: $cameraShown) {
+            // VisionKit may still write its copies after it hands the pages back, so clear again once it's gone.
+            .fullScreenCover(isPresented: $cameraShown, onDismiss: DocumentCameraCache.clear) {
                 DocumentCamera(
                     onFinish: { pages in
                         cameraShown = false
@@ -85,7 +94,10 @@
                 .ignoresSafeArea()
             }
             .onChange(of: lock.state) { _, state in
-                if state != .unlocked { scan.discard() }
+                if state != .unlocked {
+                    scan.discard()
+                    DocumentCameraCache.clear()
+                }
             }
         }
 
