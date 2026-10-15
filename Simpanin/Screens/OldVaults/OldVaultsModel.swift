@@ -25,6 +25,11 @@ final class OldVaultsModel {
 
     private(set) var vaults: [QuarantinedVault] = []
     private(set) var unreadable: [UnreadableFolder] = []
+
+    /// Everything Data lama takes up, for the size shown in Settings.
+    var totalSizeInBytes: Int64 {
+        vaults.reduce(0) { $0 + $1.sizeInBytes } + unreadable.reduce(0) { $0 + $1.sizeInBytes }
+    }
     private let store: any QuarantineStoring
     private let folder: URL
 
