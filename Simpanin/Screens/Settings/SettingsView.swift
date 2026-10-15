@@ -16,19 +16,18 @@ struct SettingsView: View {
     let vault: AppVault
     let lock: LockController
     let library: LibraryModel
-    @State private var autoLock = AutoLock.stored()
 
     var body: some View {
         Form {
             Section {
-                Picker(selection: $autoLock) {
+                Picker(selection: Binding(get: { lock.autoLock }, set: { lock.setAutoLock($0) })) {
                     ForEach(AutoLock.allCases, id: \.self) { choice in
                         Text(choice.title).tag(choice)
                     }
                 } label: {
                     Text("settings.autoLock")
                 }
-                .onChange(of: autoLock) { _, choice in lock.setAutoLock(choice) }
+                .accessibilityIdentifier("settings.autoLock")
             } header: {
                 Text("settings.security")
             }

@@ -55,9 +55,13 @@ struct AutoLockTests {
     @Test func launchUsesTheStoredChoice() {
         let defaults = defaults()
         AutoLock.fiveMinutes.store(in: defaults)
-        #expect(RootView.makeLock(for: .preview(), defaults: defaults).relockTimeout == 300)
+        let fiveMinutes = RootView.makeLock(for: .preview(), defaults: defaults)
+        #expect(fiveMinutes.autoLock == .fiveMinutes)
+        #expect(fiveMinutes.relockTimeout == 300)
         AutoLock.immediately.store(in: defaults)
-        #expect(RootView.makeLock(for: .preview(), defaults: defaults).relockTimeout == 0)
+        let immediately = RootView.makeLock(for: .preview(), defaults: defaults)
+        #expect(immediately.autoLock == .immediately)
+        #expect(immediately.relockTimeout == 0)
     }
 
     @Test func settingTheChoiceSavesAndAppliesIt() {
@@ -66,9 +70,11 @@ struct AutoLockTests {
             vault: FakeVault([]), clock: FixedClock(), passcode: { .set }, vaultExists: { true },
             protectedDataAvailable: { true })
         controller.setAutoLock(.fiveMinutes, in: defaults)
+        #expect(controller.autoLock == .fiveMinutes)
         #expect(controller.relockTimeout == 300)
         #expect(AutoLock.stored(in: defaults) == .fiveMinutes)
         controller.setAutoLock(.immediately, in: defaults)
+        #expect(controller.autoLock == .immediately)
         #expect(controller.relockTimeout == 0)
         #expect(AutoLock.stored(in: defaults) == .immediately)
     }

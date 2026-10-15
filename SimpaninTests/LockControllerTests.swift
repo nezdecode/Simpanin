@@ -26,7 +26,7 @@ struct LockControllerTests {
         protectedData: @escaping @MainActor () -> Bool = { true }
     ) -> LockController {
         LockController(
-            vault: vault, clock: clock, relockTimeout: 60, passcode: { passcode }, vaultExists: { vaultExists },
+            vault: vault, clock: clock, autoLock: .oneMinute, passcode: { passcode }, vaultExists: { vaultExists },
             protectedDataAvailable: protectedData)
     }
 

@@ -41,6 +41,12 @@
         }
 
         /// A synthetic folder with an unreadable vault.json, dated 2 Oct 2026.
+        /// Every UI test starts from the default settings, whatever an earlier run chose.
+        static func forgetSettings() {
+            guard let domain = Bundle.main.bundleIdentifier else { return }
+            UserDefaults.standard.removePersistentDomain(forName: domain)
+        }
+
         static func addBrokenOldVault(to quarantine: URL) {
             guard ProcessInfo.processInfo.arguments.contains("-SimpaninUITestBrokenOldVault") else { return }
             let folder = quarantine.appending(path: "20261002-031500", directoryHint: .isDirectory)

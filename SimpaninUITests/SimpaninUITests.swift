@@ -76,6 +76,25 @@ final class SimpaninUITests: XCTestCase {
         screenshot("05 data lama")
     }
 
+    /// Inez's report: Settings showed the old choice after going back and opening it again.
+    @MainActor
+    func testKunciOtomatisChoiceIsShownAgain() throws {
+        let app = launch()
+        app.buttons["list.settings"].tap()
+        let picker = app.buttons["settings.autoLock"]
+        XCTAssertTrue(picker.waitForExistence(timeout: 5))
+        XCTAssertTrue(picker.label.contains("Setelah 1 menit"), picker.label)
+        picker.tap()
+        app.buttons["Setelah 5 menit"].tap()
+        XCTAssertTrue(picker.label.contains("Setelah 5 menit"), picker.label)
+
+        app.navigationBars["Pengaturan"].buttons.element(boundBy: 0).tap()
+        XCTAssertTrue(app.buttons["list.settings"].waitForExistence(timeout: 5))
+        app.buttons["list.settings"].tap()
+        XCTAssertTrue(picker.waitForExistence(timeout: 5))
+        XCTAssertTrue(picker.label.contains("Setelah 5 menit"), "shown after reopening: \(picker.label)")
+    }
+
     @MainActor
     func testLockAndOpen() throws {
         let app = launch()
