@@ -13,8 +13,13 @@ import SwiftUI
 
 /// "Mulai vault baru" with its typed confirmation.
 struct StartNewVaultView: View {
-    @State var model: StartNewVaultModel
+    @State private var model: StartNewVaultModel
     @Environment(\.dismiss) private var dismiss
+
+    /// The sheet creates a fresh model each time it opens, so the view owns it from then on.
+    init(model: StartNewVaultModel) {
+        _model = State(initialValue: model)
+    }
 
     var body: some View {
         NavigationStack {
