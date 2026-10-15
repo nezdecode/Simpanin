@@ -36,6 +36,21 @@ struct OldVaultsTests {
         #expect(model.unreadable == [OldVaultsModel.UnreadableFolder(url: broken, sizeInBytes: 0)])
     }
 
+    @Test func totalSizeAddsOldVaultsAndUnreadableFolders() async throws {
+        let store = FakeQuarantine()
+        let base = FileManager.default.temporaryDirectory.appending(path: "Total-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: base) }
+        let broken = base.appending(path: "20261002-031500")
+        try FileManager.default.createDirectory(at: broken, withIntermediateDirectories: true)
+        try Data(count: 7).write(to: broken.appending(path: "vault.bin"))
+        await store.setListing(
+            QuarantineListing(vaults: [entry("20261014-021200", size: 1_000)], unreadableFolders: [broken]))
+        let model = OldVaultsModel(store: store, folder: folder)
+        #expect(model.totalSizeInBytes == 0)
+        await model.reload()
+        #expect(model.totalSizeInBytes == 1_007)
+    }
+
     @Test func folderSizeCountsEveryFile() throws {
         let base = FileManager.default.temporaryDirectory.appending(path: "Size-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: base) }

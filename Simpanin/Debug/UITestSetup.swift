@@ -40,6 +40,19 @@
             }
         }
 
+        private static let settingsName = "SimpaninUITests"
+
+        /// UI tests keep their settings apart from the app's, so a test run never changes the
+        /// owner's own choices, even on a phone.
+        /// Computed rather than stored: UserDefaults isn't Sendable, and every instance with this
+        /// name reads and writes the same store.
+        static var settings: UserDefaults { UserDefaults(suiteName: settingsName) ?? .standard }
+
+        /// Every UI test starts from the default settings, whatever an earlier run chose.
+        static func resetSettings() {
+            settings.removePersistentDomain(forName: settingsName)
+        }
+
         /// A synthetic folder with an unreadable vault.json, dated 2 Oct 2026.
         static func addBrokenOldVault(to quarantine: URL) {
             guard ProcessInfo.processInfo.arguments.contains("-SimpaninUITestBrokenOldVault") else { return }
@@ -58,8 +71,9 @@
                 openFailure.map { ScriptedOpening(store: vault.store, failure: $0.error, times: $0.times) }
                 ?? vault.store
             let passcode = passcode
+            // The same launch path as the app: the lock starts from the stored choice.
             return LockController(
-                vault: opener, passcode: { passcode },
+                vault: opener, autoLock: AutoLock.stored(in: settings), settings: settings, passcode: { passcode },
                 vaultExists: { VaultStore.vaultExists(in: vault.locations.root) },
                 protectedDataAvailable: { true })
         }

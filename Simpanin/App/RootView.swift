@@ -31,7 +31,7 @@ struct RootView: View {
         #endif
         return LockController(
             vault: vault.store,
-            relockTimeout: AutoLock.stored(in: defaults).seconds,
+            autoLock: AutoLock.stored(in: defaults), settings: defaults,
             vaultExists: { VaultStore.vaultExists(in: vault.locations.root) },
             protectedDataAvailable: { UIApplication.shared.isProtectedDataAvailable })
     }
