@@ -53,6 +53,8 @@ A folder grows subfolders when it passes about eight files, split by part of the
 
 **Views stay thin.** They show state and pass on taps. State and logic live in `@MainActor @Observable` models, one per screen or flow. Decisions that can be pure functions are pure functions (`ExpiryText`, `RecoveryContent.tone`), so they're tested without UI. A setting that has to be saved and applied is one call on the model (`LockController.setAutoLock`), not two steps in a view. And a stored setting is applied wherever its owner is created, not only where it changes: a launch once ignored the saved auto-lock choice, so Settings showed one time while the app used another (#9).
 
+**A view never keeps its own copy of state that lives elsewhere.** `@State` is for what only the view knows, like a text field's draft. A stored setting or a model's value is read from the model each time: a copy in `@State` is taken once and goes stale, which made Settings show an old Kunci otomatis choice after it had been changed.
+
 **Small views get only the data they show.** `ExpiryBanner(documents:today:)`, not the whole screen model. Callbacks are named for the event: `onDelete`, `onRestore`, `onDismiss`.
 
 **Pick the right tool to reuse or customise:**
