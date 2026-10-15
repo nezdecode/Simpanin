@@ -34,6 +34,13 @@ struct KTPParserTests {
         ]
     }
 
+    /// Field keys are stored in every vault, so they never change.
+    @Test func fieldKeysNeverChange() {
+        #expect(KTPParser.nik == "nik")
+        #expect(KTPParser.name == "name")
+        #expect(KTPParser.birthDate == "birthDate")
+    }
+
     @Test func aCleanCard() throws {
         let result = try #require(parse(Self.card()))
         #expect(result.type == .ktp)
@@ -41,6 +48,13 @@ struct KTPParserTests {
         #expect(result.fields.values[KTPParser.name] == "BUDI CONTOH")
         #expect(result.fields.values[KTPParser.birthDate] == "1990-08-17")
         #expect(result.expiry == nil)  // a KTP is valid for life
+        #expect(result.needsCheck.isEmpty)
+    }
+
+    /// Every other card uses August 1990, so this one makes sure month and year come from the NIK.
+    @Test func anotherMonthAndYear() throws {
+        let result = try #require(parse(Self.card(nik: "0012340112850003", birth: "BANDUNG, 01-12-1985")))
+        #expect(result.fields.values[KTPParser.birthDate] == "1985-12-01")
         #expect(result.needsCheck.isEmpty)
     }
 
@@ -55,6 +69,16 @@ struct KTPParserTests {
         let result = try #require(parse(Self.card(nik: "OO12341708SOOOOI")))
         #expect(result.fields.values[KTPParser.nik] == "0012341708500001")
         #expect(result.needsCheck.contains(KTPParser.nik))
+    }
+
+    @Test func everyLookalikeLetter() throws {
+        let lookalikes: [(String, String)] = [
+            ("O", "0"), ("o", "0"), ("D", "0"), ("I", "1"), ("l", "1"), ("|", "1"), ("Z", "2"), ("S", "5"), ("B", "8"),
+        ]
+        for (letter, digit) in lookalikes {
+            let result = try #require(parse(Self.card(nik: "001234170890000" + letter)))
+            #expect(result.fields.values[KTPParser.nik] == "001234170890000" + digit, "\(letter)")
+        }
     }
 
     @Test func labelAndValueOnSeparateLines() throws {
@@ -115,8 +139,10 @@ struct KTPParserTests {
     }
 
     @Test func aNIKThatDoesntMatchTheBirthDateIsMarked() throws {
-        let result = try #require(parse(Self.card(birth: "JAKARTA, 18-08-1990")))
-        #expect(result.needsCheck == [KTPParser.nik, KTPParser.birthDate])
+        for birth in ["JAKARTA, 18-08-1990", "JAKARTA, 17-09-1990", "JAKARTA, 17-08-1991"] {
+            let result = try #require(parse(Self.card(birth: birth)))
+            #expect(result.needsCheck == [KTPParser.nik, KTPParser.birthDate], "\(birth)")
+        }
     }
 
     @Test func aDigitInTheNameIsMarkedNotChanged() throws {
