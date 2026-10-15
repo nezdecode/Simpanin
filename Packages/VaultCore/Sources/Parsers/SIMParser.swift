@@ -29,7 +29,7 @@ public enum SIMParser {
         }
         let (type, typeNeedsCheck) = simClass(in: lines[..<(firstField ?? lines.endIndex)])
 
-        let number = readNumber(in: lines)
+        let number = readNumber(in: lines, digits: expectedDigits(lines))
         if let text = number.text { fields[FieldKey.simNumber] = text }
         if number.needsCheck { needsCheck.insert(FieldKey.simNumber) }
         let nikDate = number.nikDate
@@ -68,13 +68,13 @@ public enum SIMParser {
     }
 
     /// The number, where it was read, and the date inside it when it's a NIK.
-    private static func readNumber(in lines: [String]) -> (
+    private static func readNumber(in lines: [String], digits expected: Int?) -> (
         text: String?, needsCheck: Bool, nikDate: NIK.BirthDate?, lines: Set<Int>
     ) {
         let numbers = lines.indices.compactMap { index in number(in: lines[index]).map { (index, $0) } }
         let indices = Set(numbers.map(\.0))
         guard let found = numbers.first?.1 else { return (nil, true, nil, indices) }
-        var needsCheck = found.corrected || numbers.count > 1
+        var needsCheck = found.corrected || numbers.count > 1 || (expected.map { $0 != found.digits.count } ?? false)
         // From July 2024 the number is the holder's NIK, so it's checked like one.
         var nikDate: NIK.BirthDate?
         if found.digits.count == 16 {
@@ -82,6 +82,15 @@ public enum SIMParser {
             if nikDate == nil { needsCheck = true }
         }
         return (found.text, needsCheck, nikDate, indices)
+    }
+
+    /// 16 on a card with labels, which has the NIK as its number, and 14 on an older card with numbered
+    /// fields. nil when the layout can't be told.
+    private static func expectedDigits(_ lines: [String]) -> Int? {
+        let labeled = lines.contains { line in labels.contains { LabeledLines.rest(after: $0, in: line) != nil } }
+        let numbered = lines.contains { numberedField($0) != nil }
+        guard labeled != numbered else { return nil }
+        return labeled ? 16 : 14
     }
 
     /// The expiry has no label: it's the one date left once the number and the birth date are set aside.

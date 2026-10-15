@@ -140,6 +140,14 @@ struct SIMParserTests {
         #expect(result.needsCheck.isEmpty)
     }
 
+    /// The layout says which number to expect: a NIK on a card with labels, 14 digits on a numbered one.
+    @Test func aNumberThatDoesntFitTheLayoutIsMarked() throws {
+        let newCardOldNumber = try #require(parse(Self.newCard(number: "00123417089000")))
+        #expect(newCardOldNumber.needsCheck.contains(FieldKey.simNumber))
+        let oldCardNewNumber = try #require(parse(Self.oldCard(number: "0012341708900001")))
+        #expect(oldCardNewNumber.needsCheck.contains(FieldKey.simNumber))
+    }
+
     @Test func lookalikeLettersInTheNumberAreCorrectedAndMarked() throws {
         let result = try #require(parse(Self.oldCard(number: "OOOO-0000-00000I")))
         #expect(result.fields.values[FieldKey.simNumber] == "0000-0000-000001")
