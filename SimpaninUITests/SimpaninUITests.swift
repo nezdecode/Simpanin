@@ -108,12 +108,23 @@ final class SimpaninUITests: XCTestCase {
     /// A list that couldn't load says so, never "Belum ada dokumen", and "+" waits until it loads.
     @MainActor
     func testAFailedLoadSaysSoAndRetryWorks() throws {
-        let app = launch(["-SimpaninUITestLoadError"])
+        // Two failing loads: the first at launch, the second when the list appears again after Settings.
+        let app = launch(["-SimpaninUITestLoadError", "2"])
         let failed = app.descendants(matching: .any)["load.failed"]
         XCTAssertTrue(failed.waitForExistence(timeout: 5))
         XCTAssertFalse(app.staticTexts["Belum ada dokumen"].exists)
         XCTAssertFalse(app.buttons["list.addSample"].isEnabled)
         screenshot("11 dokumen tidak bisa dimuat")
+
+        // One screen deeper, Baru dihapus mustn't claim to be empty either.
+        app.buttons["list.settings"].tap()
+        let bin = app.buttons["settings.recentlyDeleted"]
+        XCTAssertTrue(bin.waitForExistence(timeout: 5))
+        XCTAssertFalse(bin.label.contains("0"), "Baru dihapus in Settings: \(bin.label)")
+        bin.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["load.failed"].waitForExistence(timeout: 5))
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        app.navigationBars["Pengaturan"].buttons.element(boundBy: 0).tap()
 
         app.buttons["load.retry"].tap()
         XCTAssertTrue(app.staticTexts["Belum ada dokumen"].waitForExistence(timeout: 5))

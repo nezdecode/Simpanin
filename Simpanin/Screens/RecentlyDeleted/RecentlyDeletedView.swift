@@ -17,16 +17,26 @@ struct RecentlyDeletedView: View {
     let library: LibraryModel
 
     var body: some View {
-        List {
-            Section {
-                if library.deleted.isEmpty {
-                    Text("list.recentlyDeletedEmpty").foregroundStyle(.secondary)
+        Group {
+            if library.loadFailed {
+                ScrollView {
+                    LoadFailedView { Task { await library.reload() } }
+                        .padding(.top, 80)
                 }
-                ForEach(library.deleted) { document in
-                    DeletedDocumentRow(document: document) { Task { await library.restore(document.id) } }
+                .background(Color(.systemGroupedBackground))
+            } else {
+                List {
+                    Section {
+                        if library.deleted.isEmpty {
+                            Text("list.recentlyDeletedEmpty").foregroundStyle(.secondary)
+                        }
+                        ForEach(library.deleted) { document in
+                            DeletedDocumentRow(document: document) { Task { await library.restore(document.id) } }
+                        }
+                    } footer: {
+                        Text("deleted.explanation")
+                    }
                 }
-            } footer: {
-                Text("deleted.explanation")
             }
         }
         .navigationTitle(Text("list.recentlyDeleted"))

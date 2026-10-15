@@ -61,10 +61,10 @@
             try? Data("not a vault".utf8).write(to: folder.appending(path: VaultStore.headerFileName))
         }
 
-        /// The store the document list reads, with `-SimpaninUITestLoadError` failing its first load.
+        /// The store the document list reads. `-SimpaninUITestLoadError <n>` fails its first n loads.
         static func documentStore(for vault: AppVault) -> any DocumentStoring {
-            guard ProcessInfo.processInfo.arguments.contains("-SimpaninUITestLoadError") else { return vault.store }
-            return ScriptedDocuments(store: vault.store, failingLoads: 1)
+            guard let count = value(after: "-SimpaninUITestLoadError").flatMap(Int.init) else { return vault.store }
+            return ScriptedDocuments(store: vault.store, failingLoads: count)
         }
 
         static var passcode: PasscodeState {
