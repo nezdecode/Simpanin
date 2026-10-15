@@ -20,11 +20,28 @@ import VaultCore
 /// fields: the list only knows the type, the label and the expiry date.
 @Suite("Document style")
 struct DocumentStyleTests {
+    /// Names as Perpol 5/2021 spells the classes: "SIM BI", not "SIM B1". Only names change, never ids.
     static let names: [(DocumentType, String)] = [
-        (.ktp, "KTP"), (.simA, "SIM A"), (.simB1, "SIM B1"), (.simB2, "SIM B2"), (.simC, "SIM C"),
-        (.simD, "SIM D"), (.sim, "SIM"), (.passport, "Paspor"), (.stnk, "STNK"), (.kk, "Kartu Keluarga"),
-        (.npwp, "NPWP"), (.bpjs, "BPJS"), (.other, "Lainnya"),
+        (.ktp, "KTP"), (.simA, "SIM A"), (.simB1, "SIM BI"), (.simB2, "SIM BII"), (.simC, "SIM C"),
+        (.simC1, "SIM CI"), (.simC2, "SIM CII"), (.simD, "SIM D"), (.simD1, "SIM DI"), (.simAUmum, "SIM A Umum"),
+        (.simB1Umum, "SIM BI Umum"), (.simB2Umum, "SIM BII Umum"), (.sim, "SIM"), (.passport, "Paspor"),
+        (.stnk, "STNK"), (.kk, "Kartu Keluarga"), (.npwp, "NPWP"), (.bpjs, "BPJS"), (.other, "Lainnya"),
     ]
+
+    /// VaultCore's list drives this check, so a class added there without a name here fails,
+    /// instead of quietly showing as "Lainnya".
+    @Test func everySIMClassHasItsOwnName() {
+        let other = String(localized: DocumentStyle.name(.other))
+        for type in DocumentType.simClasses {
+            #expect(String(localized: DocumentStyle.name(type)) != other, "\(type.rawValue)")
+        }
+    }
+
+    @MainActor @Test func everySIMClassUsesTheSIMColors() {
+        for type in DocumentType.simClasses {
+            #expect(DocumentStyle.tileColors(type) == DocumentStyle.tileColors(.sim), "\(type.rawValue)")
+        }
+    }
 
     @Test(arguments: names)
     func typeName(_ type: DocumentType, _ name: String) {

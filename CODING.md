@@ -89,7 +89,7 @@ Before building a view, a style or a helper, check `Components/` and `Extensions
   - **Constants in code, defined once**: the Keychain service (`KeychainKeyStore.service`), file and folder names (`VaultLocations`, `VaultStore.headerFileName`), settings keys, and the raw values an enum stores in the app (`AutoLock`'s cases spell theirs out, and a test pins them and their key, so renaming can't reset anyone's choice). VaultCore's JSON keys are pinned by the fixture tests instead (section 9).
   - **Build settings, read from Info.plist** (`AppConfiguration`) so they always match the entitlements: the Keychain access group and the App Group. A debug build may use its own values, but a configuration's values never change after it ships.
 - **Everything else about the build comes from `Bundle.main`**, like the bundle identifier for the log subsystem.
-- **Document type ids** (`ktp`, `sim-a`) are stored in every vault and never renamed; only their display names change. They all live in VaultCore, in `DocumentType` (`Models.swift`), because VaultCore needs to know them too: reminders, which VaultCore plans, depend on which types are SIMs. The SIM classes now in `Documents/DocumentType+Simpanin.swift` move there with the SIM work.
+- **Document type ids** (`ktp`, `sim-a`) are stored in every vault and never renamed; only their display names change. They all live in VaultCore, in `DocumentType` (`Models.swift`), because VaultCore needs to know them too: reminders, which VaultCore plans, depend on which types are SIMs (`DocumentType.isSIM`, `simClasses`).
 - **Calendar days are calendar days.** Expiry dates are `CalendarDate`s read in UTC (`Calendar.gregorianUTC`), so no time zone moves them.
 
 ## 7. Privacy and honesty in code

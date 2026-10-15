@@ -36,6 +36,28 @@ public struct DocumentType: RawRepresentable, Hashable, Sendable, Codable {
     public static let npwp = DocumentType(rawValue: "npwp")
     public static let bpjs = DocumentType(rawValue: "bpjs")
     public static let other = DocumentType(rawValue: "other")
+
+    // SIM by class (Perpol 5/2021 Pasal 3 ayat (2)). One class is one document with its own expiry.
+    // These ids are stored in every vault: never rename one. `sim` stays for vaults made before them.
+    public static let simA = DocumentType(rawValue: "sim-a")
+    public static let simB1 = DocumentType(rawValue: "sim-b1")
+    public static let simB2 = DocumentType(rawValue: "sim-b2")
+    public static let simC = DocumentType(rawValue: "sim-c")
+    public static let simC1 = DocumentType(rawValue: "sim-c1")
+    public static let simC2 = DocumentType(rawValue: "sim-c2")
+    public static let simD = DocumentType(rawValue: "sim-d")
+    public static let simD1 = DocumentType(rawValue: "sim-d1")
+    public static let simAUmum = DocumentType(rawValue: "sim-a-umum")
+    public static let simB1Umum = DocumentType(rawValue: "sim-b1-umum")
+    public static let simB2Umum = DocumentType(rawValue: "sim-b2-umum")
+
+    /// Every SIM class, private ones first, then the Umum ones.
+    public static let simClasses: [DocumentType] = [
+        .simA, .simB1, .simB2, .simC, .simC1, .simC2, .simD, .simD1, .simAUmum, .simB1Umum, .simB2Umum,
+    ]
+
+    /// A SIM of any class, or the classless `sim` of older vaults.
+    public var isSIM: Bool { self == .sim || Self.simClasses.contains(self) }
 }
 
 /// A day on the calendar with no time or time zone, stored as "YYYY-MM-DD". Expiry
