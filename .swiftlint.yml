@@ -12,10 +12,12 @@ excluded:
   - "**/.build"
   - "**/Package.swift"  # its first line must be swift-tools-version, so it has no header
 
-disabled_rules:  # layout rules that swift-format already decides
+disabled_rules:
+  # Layout rules that swift-format already decides.
   - trailing_comma  # swift-format adds trailing commas to multiline collections
   - opening_brace   # swift-format puts the brace on its own line after a wrapped signature
-  - redundant_string_enum_value  # stored raw values are written out on purpose (see CODING.md, Values)
+  # Stored raw values are written out on purpose (see CODING.md, Values).
+  - redundant_string_enum_value
 
 opt_in_rules:
   - file_header
