@@ -81,18 +81,23 @@ final class SimpaninUITests: XCTestCase {
     func testKunciOtomatisChoiceIsShownAgain() throws {
         let app = launch()
         app.buttons["list.settings"].tap()
-        let picker = app.buttons["settings.autoLock"]
-        XCTAssertTrue(picker.waitForExistence(timeout: 5))
-        XCTAssertTrue(picker.label.contains("Setelah 1 menit"), picker.label)
-        picker.tap()
+        let row = app.buttons["settings.autoLock"]
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        XCTAssertTrue(row.label.contains("Setelah 1 menit"), row.label)
+        row.tap()
+        XCTAssertTrue(app.navigationBars["Kunci otomatis"].waitForExistence(timeout: 5))
         app.buttons["Setelah 5 menit"].tap()
-        XCTAssertTrue(picker.label.contains("Setelah 5 menit"), picker.label)
+        XCTAssertTrue(app.buttons["Setelah 5 menit"].isSelected)
+        screenshot("10 kunci otomatis")
+        app.navigationBars["Kunci otomatis"].buttons.element(boundBy: 0).tap()
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        XCTAssertTrue(row.label.contains("Setelah 5 menit"), row.label)
 
         app.navigationBars["Pengaturan"].buttons.element(boundBy: 0).tap()
         XCTAssertTrue(app.buttons["list.settings"].waitForExistence(timeout: 5))
         app.buttons["list.settings"].tap()
-        XCTAssertTrue(picker.waitForExistence(timeout: 5))
-        XCTAssertTrue(picker.label.contains("Setelah 5 menit"), "shown after reopening: \(picker.label)")
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        XCTAssertTrue(row.label.contains("Setelah 5 menit"), "shown after reopening: \(row.label)")
     }
 
     @MainActor

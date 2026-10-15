@@ -12,6 +12,17 @@
         }
       }
     },
+    "autoLock.footer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Simpanin terkunci kalau kamu keluar dari app lebih lama dari ini. Makin singkat, makin aman."
+          }
+        }
+      }
+    },
     "autoLock.immediately" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -870,13 +881,13 @@
         }
       }
     },
-    "settings.noAccount" : {
+    "settings.noAccount %@" : {
       "extractionState" : "manual",
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Simpanin tidak punya akun, server, atau analitik. Semua dokumen tetap di HP ini."
+            "value" : "Simpanin tidak punya akun, server, atau analitik. Semua dokumen tetap di HP ini. Versi %@"
           }
         }
       }
@@ -888,17 +899,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Data lama"
-          }
-        }
-      }
-    },
-    "settings.privacy" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Privasi"
           }
         }
       }
@@ -921,17 +921,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pengaturan"
-          }
-        }
-      }
-    },
-    "settings.version %@" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Versi %@"
           }
         }
       }

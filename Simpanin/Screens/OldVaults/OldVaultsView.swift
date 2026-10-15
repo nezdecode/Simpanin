@@ -15,7 +15,7 @@ import VaultCore
 /// "Data lama": old vaults moved aside by "Mulai vault baru". Deleting one asks first, because it
 /// also deletes the old vault's Keychain item.
 struct OldVaultsView: View {
-    @State var model: OldVaultsModel
+    let model: OldVaultsModel
     @State private var pendingDelete: QuarantinedVault?
 
     var body: some View {

@@ -16,16 +16,27 @@ struct SettingsView: View {
     let vault: AppVault
     let lock: LockController
     let library: LibraryModel
+    /// Owned here and shared with Data lama, so the size and the list come from one place.
+    @State private var oldVaults: OldVaultsModel
+
+    init(vault: AppVault, lock: LockController, library: LibraryModel) {
+        self.vault = vault
+        self.lock = lock
+        self.library = library
+        _oldVaults = State(initialValue: OldVaultsModel(store: vault.store, folder: vault.locations.quarantine))
+    }
 
     var body: some View {
         Form {
             Section {
-                Picker(selection: Binding(get: { lock.autoLock }, set: { lock.setAutoLock($0) })) {
-                    ForEach(AutoLock.allCases, id: \.self) { choice in
-                        Text(choice.title).tag(choice)
-                    }
+                NavigationLink {
+                    AutoLockView(lock: lock)
                 } label: {
-                    Text("settings.autoLock")
+                    LabeledContent {
+                        Text(lock.autoLock.title)
+                    } label: {
+                        Text("settings.autoLock")
+                    }
                 }
                 .accessibilityIdentifier("settings.autoLock")
             } header: {
@@ -42,21 +53,19 @@ struct SettingsView: View {
                     }
                 }
                 NavigationLink {
-                    OldVaultsView(model: OldVaultsModel(store: vault.store, folder: vault.locations.quarantine))
+                    OldVaultsView(model: oldVaults)
                 } label: {
-                    Text("settings.oldVaults")
+                    LabeledContent {
+                        if oldVaults.totalSizeInBytes > 0 {
+                            Text(verbatim: oldVaults.totalSizeInBytes.formatted(.byteCount(style: .file)))
+                        }
+                    } label: {
+                        Text("settings.oldVaults")
+                    }
                 }
                 .accessibilityIdentifier("settings.oldVaults")
             } header: {
                 Text("settings.data")
-            }
-            Section {
-                Text("settings.deviceOnly")
-                Text("settings.noAccount")
-            } header: {
-                Text("settings.privacy")
-            } footer: {
-                Text("settings.version \(Bundle.main.shortVersion)")
             }
             #if DEBUG
                 Section {
@@ -67,8 +76,22 @@ struct SettingsView: View {
                     }
                 }
             #endif
+            // No Privasi heading until "Cara Simpanin melindungi dokumenmu" exists; a heading with
+            // nothing under it would look broken.
+            Section {
+            } footer: {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("settings.deviceOnly")
+                    Label {
+                        Text("settings.noAccount \(Bundle.main.shortVersion)")
+                    } icon: {
+                        Image(systemName: "checkmark.shield").foregroundStyle(.tint)
+                    }
+                }
+            }
         }
         .navigationTitle(Text("settings.title"))
+        .task { await oldVaults.reload() }
     }
 }
 
