@@ -115,7 +115,7 @@ struct AppVaultTests {
             fileProtector: DataProtectionFileProtector())
         try await store.open()
         _ = try await store.createDocument(
-            type: .ktp, expiry: nil, pinned: false, fields: DocumentFields(["nik": "0012345678901234"]),
+            type: .ktp, expiry: nil, pinned: false, fields: DocumentFields([FieldKey.nik: "0012345678901234"]),
             pages: [Data(repeating: 7, count: 2_000)])
 
         func protection(_ url: URL) throws -> FileProtectionType? {

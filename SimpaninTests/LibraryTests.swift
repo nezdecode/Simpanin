@@ -25,7 +25,7 @@ struct LibraryTests {
         await library.addSample()
         #expect(library.documents.count == 1)
         let fields = try #require(await store.created.first)
-        let nik = try #require(fields.values["nik"])
+        let nik = try #require(fields.values[FieldKey.nik])
         #expect(nik.hasPrefix("00") && nik.count == 16 && nik.allSatisfy(\.isNumber))
         let pages = try #require(await store.createdPages.first)
         #expect(pages.count == 1)

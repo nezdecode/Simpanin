@@ -75,7 +75,7 @@
                 rootDirectory: locations.root, projectionURL: locations.projection, keyStore: PreviewKeyStore(),
                 fileProtector: DataProtectionFileProtector())
             try await store.open()
-            let fields = DocumentFields(["nik": "0012345678901234"])
+            let fields = DocumentFields([FieldKey.nik: "0012345678901234"])
             let id = try await store.createDocument(
                 type: .ktp, expiry: nil, pinned: false, fields: fields, pages: [Data(repeating: 7, count: 2_000)])
             try await store.editDocument(id, type: .ktp, label: nil, expiry: nil, pinned: true, fields: fields)
