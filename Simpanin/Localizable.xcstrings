@@ -386,6 +386,28 @@
         }
       }
     },
+    "load.failedBody" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Simpanin tidak mengubah apa pun. Coba lagi sebentar lagi."
+          }
+        }
+      }
+    },
+    "load.failedTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dokumen tidak bisa dimuat sekarang."
+          }
+        }
+      }
+    },
     "lock.subtitle" : {
       "extractionState" : "manual",
       "localizations" : {

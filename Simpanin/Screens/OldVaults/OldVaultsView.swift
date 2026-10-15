@@ -19,23 +19,31 @@ struct OldVaultsView: View {
     @State private var pendingDelete: QuarantinedVault?
 
     var body: some View {
-        List {
-            Section {
-                if model.vaults.isEmpty && model.unreadable.isEmpty {
-                    Text("oldVaults.empty").foregroundStyle(.secondary)
-                }
-                ForEach(model.vaults, id: \.folder) { old in
-                    OldVaultRow(vault: old) { pendingDelete = old }
-                }
-                ForEach(model.unreadable, id: \.url) { folder in
-                    UnreadableFolderRow(folder: folder)
-                }
-            } header: {
-                Text("oldVaults.explanation").textCase(nil)
-            } footer: {
-                VStack(alignment: .leading, spacing: 8) {
-                    if !model.vaults.isEmpty { Text("oldVaults.footer") }
-                    if !model.unreadable.isEmpty { Text("oldVaults.unreadableFooter") }
+        Group {
+            if model.loadFailed {
+                LoadFailedView { Task { await model.reload() } }
+                    .frame(maxHeight: .infinity)
+                    .background(Color(.systemGroupedBackground))
+            } else {
+                List {
+                    Section {
+                        if model.vaults.isEmpty && model.unreadable.isEmpty {
+                            Text("oldVaults.empty").foregroundStyle(.secondary)
+                        }
+                        ForEach(model.vaults, id: \.folder) { old in
+                            OldVaultRow(vault: old) { pendingDelete = old }
+                        }
+                        ForEach(model.unreadable, id: \.url) { folder in
+                            UnreadableFolderRow(folder: folder)
+                        }
+                    } header: {
+                        Text("oldVaults.explanation").textCase(nil)
+                    } footer: {
+                        VStack(alignment: .leading, spacing: 8) {
+                            if !model.vaults.isEmpty { Text("oldVaults.footer") }
+                            if !model.unreadable.isEmpty { Text("oldVaults.unreadableFooter") }
+                        }
+                    }
                 }
             }
         }
@@ -54,6 +62,16 @@ struct OldVaultsView: View {
             }
         } message: {
             Text("oldVaults.deleteMessage")
+        }
+        .alert(
+            model.deleteError.map { Text(RecoveryContent($0).message) } ?? Text(verbatim: ""),
+            isPresented: Binding(isPresent: Bindable(model).deleteError)
+        ) {
+            Button {
+                model.deleteError = nil
+            } label: {
+                Text(ScreenText.okay)
+            }
         }
     }
 }

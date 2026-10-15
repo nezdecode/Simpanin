@@ -105,6 +105,22 @@ final class SimpaninUITests: XCTestCase {
         XCTAssertTrue(row.label.contains("Setelah 5 menit"), "shown after reopening: \(row.label)")
     }
 
+    /// A list that couldn't load says so, never "Belum ada dokumen", and "+" waits until it loads.
+    @MainActor
+    func testAFailedLoadSaysSoAndRetryWorks() throws {
+        let app = launch(["-SimpaninUITestLoadError"])
+        let failed = app.descendants(matching: .any)["load.failed"]
+        XCTAssertTrue(failed.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.staticTexts["Belum ada dokumen"].exists)
+        XCTAssertFalse(app.buttons["list.addSample"].isEnabled)
+        screenshot("11 dokumen tidak bisa dimuat")
+
+        app.buttons["load.retry"].tap()
+        XCTAssertTrue(app.staticTexts["Belum ada dokumen"].waitForExistence(timeout: 5))
+        XCTAssertFalse(failed.exists)
+        XCTAssertTrue(app.buttons["list.addSample"].isEnabled)
+    }
+
     @MainActor
     func testLockAndOpen() throws {
         let app = launch()
