@@ -112,7 +112,7 @@ final class SimpaninUITests: XCTestCase {
         let app = launch(["-SimpaninUITestLoadError", "2"])
         let failed = app.descendants(matching: .any)["load.failed"]
         XCTAssertTrue(failed.waitForExistence(timeout: 5))
-        XCTAssertFalse(app.staticTexts["Belum ada dokumen"].exists)
+        XCTAssertFalse(app.descendants(matching: .any)["list.empty"].exists)
         XCTAssertFalse(app.buttons["list.addSample"].isEnabled)
         screenshot("11 dokumen tidak bisa dimuat")
 
@@ -127,7 +127,7 @@ final class SimpaninUITests: XCTestCase {
         app.navigationBars["Pengaturan"].buttons.element(boundBy: 0).tap()
 
         app.buttons["load.retry"].tap()
-        XCTAssertTrue(app.staticTexts["Belum ada dokumen"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.descendants(matching: .any)["list.empty"].waitForExistence(timeout: 5))
         XCTAssertFalse(failed.exists)
         XCTAssertTrue(app.buttons["list.addSample"].isEnabled)
     }

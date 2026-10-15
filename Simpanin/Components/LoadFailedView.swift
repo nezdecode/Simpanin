@@ -16,20 +16,21 @@ import SwiftUI
 struct LoadFailedView: View {
     let onRetry: () -> Void
 
+    static let title = LocalizedStringResource("load.failedTitle")
+    static let message = LocalizedStringResource("load.failedBody")
+
     var body: some View {
         VStack(spacing: 16) {
             IconBadge(
                 systemImage: "arrow.counterclockwise", size: 64, symbolFont: .system(size: 28, weight: .medium),
                 tint: .primary, background: Color(.systemGray5))
-            Text("load.failedTitle").font(.title3.bold()).multilineTextAlignment(.center)
-            Text("load.failedBody").foregroundStyle(.secondary).multilineTextAlignment(.center)
+            Text(Self.title).font(.title3.bold()).multilineTextAlignment(.center)
+                .accessibilityAddTraits(.isHeader)
+            Text(Self.message).foregroundStyle(.secondary).multilineTextAlignment(.center)
             Button(action: onRetry) {
-                Text(ScreenText.retry).font(.headline).padding(.horizontal, 16)
+                Text(ScreenText.retry)
             }
-            .buttonStyle(.borderedProminent)
-            .buttonBorderShape(.roundedRectangle(radius: 14))
-            .controlSize(.large)
-            .foregroundStyle(Color(.onAccent))
+            .buttonStyle(.prominent(fillsWidth: false))
             .accessibilityIdentifier("load.retry")
             .padding(.top, 8)
         }

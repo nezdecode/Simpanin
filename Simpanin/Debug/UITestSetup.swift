@@ -85,7 +85,6 @@
         }
     }
 
-    /// Fails the first opens with a chosen error, then opens the real (throwaway) store.
     /// Fails the first loads of the document list, so a test sees the "couldn't load" state and
     /// then "Coba lagi" working. Everything else goes to the real (throwaway) store.
     actor ScriptedDocuments: DocumentStoring {
@@ -120,6 +119,7 @@
         func restore(_ id: DocumentID) async throws { try await store.restore(id) }
     }
 
+    /// Fails the first opens with a chosen error, then opens the real (throwaway) store.
     actor ScriptedOpening: VaultOpening {
         private let store: VaultStore
         private let failure: VaultError

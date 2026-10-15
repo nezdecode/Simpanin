@@ -52,29 +52,29 @@ struct LibraryView: View {
                     if library.loadFailed {
                         LoadFailedView { Task { await library.reload() } }
                             .padding(.top, 80)
+                    } else if library.documents.isEmpty {
+                        EmptyLibraryView()
                     } else {
-                        if library.documents.isEmpty {
-                            EmptyLibraryView()
-                        } else {
-                            ExpiryBanner(documents: library.documents, today: today)
-                            Text("main.allDocuments").font(.title3.weight(.semibold)).padding(.top, 8)
-                            LazyVGrid(columns: columns, spacing: 12) {
-                                ForEach(library.documents) { document in
-                                    DocumentTile(document: document, today: today, wide: typeSize.isAccessibilitySize)
-                                        .contextMenu {
-                                            Button(role: .destructive) {
-                                                Task { await library.delete(document.id) }
-                                            } label: {
-                                                Label {
-                                                    Text("button.delete")
-                                                } icon: {
-                                                    Image(systemName: "trash")
-                                                }
+                        ExpiryBanner(documents: library.documents, today: today)
+                        Text("main.allDocuments").font(.title3.weight(.semibold)).padding(.top, 8)
+                        LazyVGrid(columns: columns, spacing: 12) {
+                            ForEach(library.documents) { document in
+                                DocumentTile(document: document, today: today, wide: typeSize.isAccessibilitySize)
+                                    .contextMenu {
+                                        Button(role: .destructive) {
+                                            Task { await library.delete(document.id) }
+                                        } label: {
+                                            Label {
+                                                Text("button.delete")
+                                            } icon: {
+                                                Image(systemName: "trash")
                                             }
                                         }
-                                }
+                                    }
                             }
                         }
+                    }
+                    if !library.loadFailed {
                         NavigationLink {
                             RecentlyDeletedView(library: library)
                         } label: {

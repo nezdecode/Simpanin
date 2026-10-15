@@ -21,9 +21,12 @@ struct OldVaultsView: View {
     var body: some View {
         Group {
             if model.loadFailed {
-                LoadFailedView { Task { await model.reload() } }
-                    .frame(maxHeight: .infinity)
-                    .background(Color(.systemGroupedBackground))
+                // Scrolls, so "Coba lagi" stays reachable at the largest text sizes.
+                ScrollView {
+                    LoadFailedView { Task { await model.reload() } }
+                        .padding(.top, 80)
+                }
+                .background(Color(.systemGroupedBackground))
             } else {
                 List {
                     Section {
