@@ -24,5 +24,7 @@ struct EmptyLibraryView: View {
         .padding(.vertical, 60)
         .padding(.horizontal, 20)
         .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("list.empty")
     }
 }

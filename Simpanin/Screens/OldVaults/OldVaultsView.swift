@@ -19,23 +19,34 @@ struct OldVaultsView: View {
     @State private var pendingDelete: QuarantinedVault?
 
     var body: some View {
-        List {
-            Section {
-                if model.vaults.isEmpty && model.unreadable.isEmpty {
-                    Text("oldVaults.empty").foregroundStyle(.secondary)
+        Group {
+            if model.loadFailed {
+                // Scrolls, so "Coba lagi" stays reachable at the largest text sizes.
+                ScrollView {
+                    LoadFailedView(title: OldVaultText.loadFailedTitle) { Task { await model.reload() } }
+                        .padding(.top, 80)
                 }
-                ForEach(model.vaults, id: \.folder) { old in
-                    OldVaultRow(vault: old) { pendingDelete = old }
-                }
-                ForEach(model.unreadable, id: \.url) { folder in
-                    UnreadableFolderRow(folder: folder)
-                }
-            } header: {
-                Text("oldVaults.explanation").textCase(nil)
-            } footer: {
-                VStack(alignment: .leading, spacing: 8) {
-                    if !model.vaults.isEmpty { Text("oldVaults.footer") }
-                    if !model.unreadable.isEmpty { Text("oldVaults.unreadableFooter") }
+                .background(Color(.systemGroupedBackground))
+            } else {
+                List {
+                    Section {
+                        if model.vaults.isEmpty && model.unreadable.isEmpty {
+                            Text("oldVaults.empty").foregroundStyle(.secondary)
+                        }
+                        ForEach(model.vaults, id: \.folder) { old in
+                            OldVaultRow(vault: old) { pendingDelete = old }
+                        }
+                        ForEach(model.unreadable, id: \.url) { folder in
+                            UnreadableFolderRow(folder: folder)
+                        }
+                    } header: {
+                        Text("oldVaults.explanation").textCase(nil)
+                    } footer: {
+                        VStack(alignment: .leading, spacing: 8) {
+                            if !model.vaults.isEmpty { Text("oldVaults.footer") }
+                            if !model.unreadable.isEmpty { Text("oldVaults.unreadableFooter") }
+                        }
+                    }
                 }
             }
         }
@@ -54,6 +65,15 @@ struct OldVaultsView: View {
             }
         } message: {
             Text("oldVaults.deleteMessage")
+        }
+        .alert(Text(OldVaultText.deleteFailedTitle), isPresented: Bindable(model).deleteFailed) {
+            Button {
+                model.deleteFailed = false
+            } label: {
+                Text(ScreenText.okay)
+            }
+        } message: {
+            Text(OldVaultText.deleteFailedMessage)
         }
     }
 }

@@ -55,6 +55,14 @@ struct RecoveryContentTests {
         #expect(String(localized: ScreenText.startNewVault) == "Mulai vault baru")
     }
 
+    /// The design's "couldn't load" state, word for word.
+    @Test func loadFailedTexts() {
+        #expect(String(localized: LoadFailedView.title) == "Dokumen tidak bisa dimuat sekarang.")
+        #expect(
+            String(localized: LoadFailedView.message) == "Simpanin tidak mengubah apa pun. Coba lagi sebentar lagi.")
+        #expect(String(localized: ScreenText.retry) == "Coba lagi")
+    }
+
     /// The "Way out" column.
     @Test func tonesFollowWhatTheUserHasToDo() {
         #expect(RecoveryContent(.passcodeNeeded).tone == .needsAction)

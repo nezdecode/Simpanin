@@ -70,11 +70,22 @@ actor FakeDocuments: DocumentStoring {
     private(set) var created: [DocumentFields] = []
     private(set) var createdPages: [[Data]] = []
     private var failure: VaultError?
+    private var loadFailure: VaultError?
+    private var binFailure: VaultError?
 
     func setFailure(_ failure: VaultError?) { self.failure = failure }
+    func setLoadFailure(_ failure: VaultError?) { loadFailure = failure }
+    func setBinFailure(_ failure: VaultError?) { binFailure = failure }
 
-    func documents() async throws -> [Document] { live }
-    func recentlyDeleted() async throws -> [Document] { bin }
+    func documents() async throws -> [Document] {
+        if let loadFailure { throw loadFailure }
+        return live
+    }
+
+    func recentlyDeleted() async throws -> [Document] {
+        if let failure = loadFailure ?? binFailure { throw failure }
+        return bin
+    }
 
     // swiftlint:disable:next function_parameter_count - mirrors VaultStore.createDocument
     func createDocument(
@@ -115,9 +126,11 @@ actor FakeQuarantine: QuarantineStoring {
     private(set) var deleted: [QuarantinedVault] = []
     var listing = QuarantineListing(vaults: [], unreadableFolders: [])
     var failure: VaultError?
+    var listingFailure: (any Error)?
 
     func setListing(_ listing: QuarantineListing) { self.listing = listing }
     func setFailure(_ failure: VaultError?) { self.failure = failure }
+    func setListingFailure(_ failure: (any Error)?) { listingFailure = failure }
 
     func quarantineVault(to quarantineDirectory: URL) async throws -> URL? {
         if let failure { throw failure }
@@ -125,7 +138,10 @@ actor FakeQuarantine: QuarantineStoring {
         return quarantineDirectory.appending(path: "20261015-010000")
     }
 
-    func quarantinedVaults(in quarantineDirectory: URL) async throws -> QuarantineListing { listing }
+    func quarantinedVaults(in quarantineDirectory: URL) async throws -> QuarantineListing {
+        if let listingFailure { throw listingFailure }
+        return listing
+    }
 
     func deleteQuarantinedVault(_ vault: QuarantinedVault) async throws {
         if let failure { throw failure }

@@ -12,6 +12,7 @@
 import Observation
 import SwiftUI
 import VaultCore
+import os
 
 /// "Data lama": old vaults moved aside by "Mulai vault baru". Deleting one also deletes its
 /// Keychain item, through VaultCore.
@@ -25,6 +26,11 @@ final class OldVaultsModel {
 
     private(set) var vaults: [QuarantinedVault] = []
     private(set) var unreadable: [UnreadableFolder] = []
+    /// Loading failed; the screen says so instead of "Tidak ada data lama".
+    private(set) var loadFailed = false
+    /// A delete failed. One message fits every cause, even a partial delete where the old key is
+    /// gone but the folder isn't: the folder still shows, and deleting again finishes the job.
+    var deleteFailed = false
 
     /// Everything Data lama takes up, for the size shown in Settings.
     var totalSizeInBytes: Int64 {
@@ -52,15 +58,24 @@ final class OldVaultsModel {
     }
 
     func reload() async {
-        let listing = try? await store.quarantinedVaults(in: folder)
-        vaults = listing?.vaults ?? []
-        unreadable = (listing?.unreadableFolders ?? []).map {
-            UnreadableFolder(url: $0, sizeInBytes: Self.folderSize($0))
+        do {
+            let listing = try await store.quarantinedVaults(in: folder)
+            vaults = listing.vaults
+            unreadable = listing.unreadableFolders.map { UnreadableFolder(url: $0, sizeInBytes: Self.folderSize($0)) }
+            loadFailed = false
+        } catch {
+            Logger.library.error("Data lama failed to load: \(ErrorSummary.describe(error), privacy: .public)")
+            loadFailed = true
         }
     }
 
     func delete(_ vault: QuarantinedVault) async {
-        try? await store.deleteQuarantinedVault(vault)
+        do {
+            try await store.deleteQuarantinedVault(vault)
+        } catch {
+            Logger.library.error("Data lama delete failed: \(ErrorSummary.describe(error), privacy: .public)")
+            deleteFailed = true
+        }
         await reload()
     }
 }

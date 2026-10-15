@@ -24,6 +24,41 @@ struct OldVaultsTests {
         QuarantinedVault(vaultID: VaultID(), folder: folder.appending(path: name), sizeInBytes: size)
     }
 
+    @Test func aFailedListingSaysSo() async {
+        let store = FakeQuarantine()
+        await store.setListing(QuarantineListing(vaults: [entry("20261014-021200", size: 10)], unreadableFolders: []))
+        let model = OldVaultsModel(store: store, folder: folder)
+        await model.reload()
+        #expect(!model.loadFailed)
+
+        await store.setListingFailure(CocoaError(.fileReadNoPermission))
+        await model.reload()
+        #expect(model.loadFailed)
+        #expect(model.vaults.count == 1)
+    }
+
+    @Test func aFailedDeleteSaysSoAndKeepsTheVault() async {
+        let store = FakeQuarantine()
+        let old = entry("20261014-021200", size: 10)
+        await store.setListing(QuarantineListing(vaults: [old], unreadableFolders: []))
+        let model = OldVaultsModel(store: store, folder: folder)
+        await model.reload()
+
+        await store.setFailure(.storageFull)
+        await model.delete(old)
+        #expect(model.deleteFailed)
+        #expect(model.vaults == [old])
+    }
+
+    /// Data lama holds old vaults, not documents, and a failed delete says only what's true even
+    /// after a partial delete: the folder is still there and deleting again finishes the job.
+    @Test func dataLamaErrorTexts() {
+        #expect(String(localized: OldVaultText.loadFailedTitle) == "Data lama tidak bisa dimuat sekarang.")
+        #expect(String(localized: OldVaultText.deleteFailedTitle) == "Data lama belum terhapus.")
+        #expect(String(localized: OldVaultText.deleteFailedMessage) == "Coba lagi.")
+        #expect(String(localized: ScreenText.okay) == "Oke")
+    }
+
     @Test func listsUnreadableFoldersToo() async {
         let store = FakeQuarantine()
         let old = entry("20261014-021200", size: 48_000_000)

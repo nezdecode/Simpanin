@@ -44,6 +44,49 @@ struct LibraryTests {
         #expect(library.deleted.isEmpty)
     }
 
+    /// A failed load must never look like an empty vault.
+    @Test func aFailedLoadSaysSoAndKeepsTheList() async throws {
+        let store = FakeDocuments()
+        let library = LibraryModel(store: store)
+        await library.addSample()
+        #expect(library.documents.count == 1)
+        #expect(!library.loadFailed)
+
+        await store.setLoadFailure(.locked)
+        await library.reload()
+        #expect(library.loadFailed)
+        #expect(library.documents.count == 1)
+
+        await store.setLoadFailure(nil)
+        await library.reload()
+        #expect(!library.loadFailed)
+    }
+
+    /// If only the bin fails, the list still counts as failed and keeps both halves, so it never
+    /// shows fresh documents next to a bin that pretends to be empty.
+    @Test func aHalfFailedLoadKeepsBothAndRetryRefreshes() async throws {
+        let store = FakeDocuments()
+        let library = LibraryModel(store: store)
+        await library.addSample()
+        await library.addSample()
+        let first = try #require(library.documents.first)
+        await library.delete(first.id)
+        #expect(library.documents.count == 1)
+        #expect(library.deleted.count == 1)
+
+        await store.setBinFailure(.locked)
+        await library.addSample()
+        #expect(library.loadFailed)
+        #expect(library.documents.count == 1)
+        #expect(library.deleted.count == 1)
+
+        await store.setBinFailure(nil)
+        await library.reload()
+        #expect(!library.loadFailed)
+        #expect(library.documents.count == 2)
+        #expect(library.deleted.count == 1)
+    }
+
     @Test func aFullDiskOnASaveShowsItsScreen() async {
         let store = FakeDocuments()
         await store.setFailure(.storageFull)

@@ -23,16 +23,23 @@ struct LibraryView: View {
     init(vault: AppVault, lock: LockController) {
         self.vault = vault
         self.lock = lock
-        _library = State(initialValue: LibraryModel(store: vault.store))
+        _library = State(initialValue: LibraryModel(store: Self.documentStore(for: vault)))
     }
 
     private var today: CalendarDate { CalendarDate.today }
+
+    private static func documentStore(for vault: AppVault) -> any DocumentStoring {
+        #if DEBUG
+            if UITestSetup.isActive { return UITestSetup.documentStore(for: vault) }
+        #endif
+        return vault.store
+    }
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    if !library.documents.isEmpty {
+                    if !library.loadFailed, !library.documents.isEmpty {
                         Label {
                             Text("main.subtitle \(library.documents.count)")
                         } icon: {
@@ -42,7 +49,10 @@ struct LibraryView: View {
                         .foregroundStyle(.secondary)
                     }
                     NoticeList(notices: lock.notices, onDismiss: lock.dismiss)
-                    if library.documents.isEmpty {
+                    if library.loadFailed {
+                        LoadFailedView { Task { await library.reload() } }
+                            .padding(.top, 80)
+                    } else if library.documents.isEmpty {
                         EmptyLibraryView()
                     } else {
                         ExpiryBanner(documents: library.documents, today: today)
@@ -64,15 +74,17 @@ struct LibraryView: View {
                             }
                         }
                     }
-                    NavigationLink {
-                        RecentlyDeletedView(library: library)
-                    } label: {
-                        GroupedRow(
-                            title: "list.recentlyDeleted", value: "\(library.deleted.count)", systemImage: "trash")
+                    if !library.loadFailed {
+                        NavigationLink {
+                            RecentlyDeletedView(library: library)
+                        } label: {
+                            GroupedRow(
+                                title: "list.recentlyDeleted", value: "\(library.deleted.count)", systemImage: "trash")
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("list.recentlyDeleted")
+                        .padding(.top, 8)
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("list.recentlyDeleted")
-                    .padding(.top, 8)
                 }
                 .padding(16)
             }
@@ -137,6 +149,8 @@ struct LibraryView: View {
                         Image(systemName: "plus")
                     }
                 }
+                // Saving while the list can't load would only confuse; it can't harm the vault.
+                .disabled(library.loadFailed)
                 .accessibilityIdentifier("list.addSample")
             }
         #endif

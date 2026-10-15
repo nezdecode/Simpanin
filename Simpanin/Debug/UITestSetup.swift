@@ -61,6 +61,12 @@
             try? Data("not a vault".utf8).write(to: folder.appending(path: VaultStore.headerFileName))
         }
 
+        /// The store the document list reads. `-SimpaninUITestLoadError <n>` fails its first n loads.
+        static func documentStore(for vault: AppVault) -> any DocumentStoring {
+            guard let count = value(after: "-SimpaninUITestLoadError").flatMap(Int.init) else { return vault.store }
+            return ScriptedDocuments(store: vault.store, failingLoads: count)
+        }
+
         static var passcode: PasscodeState {
             value(after: "-SimpaninUITestPasscode") == "notSet" ? .notSet : .set
         }
@@ -77,6 +83,40 @@
                 vaultExists: { VaultStore.vaultExists(in: vault.locations.root) },
                 protectedDataAvailable: { true })
         }
+    }
+
+    /// Fails the first loads of the document list, so a test sees the "couldn't load" state and
+    /// then "Coba lagi" working. Everything else goes to the real (throwaway) store.
+    actor ScriptedDocuments: DocumentStoring {
+        private let store: VaultStore
+        private var failingLoads: Int
+
+        init(store: VaultStore, failingLoads: Int) {
+            self.store = store
+            self.failingLoads = failingLoads
+        }
+
+        func documents() async throws -> [Document] {
+            if failingLoads > 0 {
+                failingLoads -= 1
+                throw VaultError.locked
+            }
+            return try await store.documents()
+        }
+
+        func recentlyDeleted() async throws -> [Document] { try await store.recentlyDeleted() }
+
+        // swiftlint:disable:next function_parameter_count - mirrors VaultStore.createDocument
+        func createDocument(
+            type: DocumentType, label: String?, expiry: CalendarDate?, pinned: Bool, fields: DocumentFields,
+            pages: [Data]
+        ) async throws -> DocumentID {
+            try await store.createDocument(
+                type: type, label: label, expiry: expiry, pinned: pinned, fields: fields, pages: pages)
+        }
+
+        func delete(_ id: DocumentID) async throws { try await store.delete(id) }
+        func restore(_ id: DocumentID) async throws { try await store.restore(id) }
     }
 
     /// Fails the first opens with a chosen error, then opens the real (throwaway) store.

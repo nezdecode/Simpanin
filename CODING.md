@@ -61,13 +61,13 @@ A folder grows subfolders when it passes about eight files, split by part of the
 
 | You want to | Use | Example |
 | --- | --- | --- |
-| Restyle a system control | A style type (`ButtonStyle`, `PrimitiveButtonStyle`, `LabelStyle`) | `.buttonStyle(.fullWidth)` |
+| Restyle a system control | A style type (`ButtonStyle`, `PrimitiveButtonStyle`, `LabelStyle`) | `.buttonStyle(.prominent)` |
 | Reuse a decoration | A `ViewModifier` with a `View` extension | `.noticeCard()` |
 | Build new content | A `View` | `IconBadge` |
 | Format a value | A `FormatStyle` | `date.formatted(.indonesianDate(timeZone:))` |
 | Add a convenience to a system type | An extension | `Binding(isPresent:)`, `URL.appSettings` |
 
-A style type built on a system style keeps what the system gives for free: pressed and disabled looks, Dynamic Type, iOS 26's glass. `FullWidthButtonStyle` wraps `.borderedProminent` for that reason.
+A style type built on a system style keeps what the system gives for free: pressed and disabled looks, Dynamic Type, iOS 26's glass. `ProminentButtonStyle` wraps `.borderedProminent` for that reason.
 
 **Prefer what the platform already has.** Standard toolbar buttons, `Form`, `List`, swipe actions, `.byteCount(style: .file)`. Build our own only when the design needs something the system doesn't do.
 

@@ -386,6 +386,28 @@
         }
       }
     },
+    "load.failedBody" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Simpanin tidak mengubah apa pun. Coba lagi sebentar lagi."
+          }
+        }
+      }
+    },
+    "load.failedTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dokumen tidak bisa dimuat sekarang."
+          }
+        }
+      }
+    },
     "lock.subtitle" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -485,6 +507,28 @@
         }
       }
     },
+    "oldVaults.deleteFailedMessage" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Coba lagi."
+          }
+        }
+      }
+    },
+    "oldVaults.deleteFailedTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Data lama belum terhapus."
+          }
+        }
+      }
+    },
     "oldVaults.deleteMessage" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -536,6 +580,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Menghapus juga menghapus kunci lamanya. Setelah itu dokumen di dalamnya tidak bisa dipulihkan lagi."
+          }
+        }
+      }
+    },
+    "oldVaults.loadFailedTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Data lama tidak bisa dimuat sekarang."
           }
         }
       }

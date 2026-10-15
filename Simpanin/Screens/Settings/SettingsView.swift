@@ -47,16 +47,20 @@ struct SettingsView: View {
                     RecentlyDeletedView(library: library)
                 } label: {
                     LabeledContent {
-                        Text(library.deleted.count, format: .number)
+                        // No count while the list can't load: a 0 would say the bin is empty.
+                        if !library.loadFailed {
+                            Text(library.deleted.count, format: .number)
+                        }
                     } label: {
                         Text("list.recentlyDeleted")
                     }
                 }
+                .accessibilityIdentifier("settings.recentlyDeleted")
                 NavigationLink {
                     OldVaultsView(model: oldVaults)
                 } label: {
                     LabeledContent {
-                        if oldVaults.totalSizeInBytes > 0 {
+                        if !oldVaults.loadFailed, oldVaults.totalSizeInBytes > 0 {
                             Text(verbatim: oldVaults.totalSizeInBytes.formatted(.byteCount(style: .file)))
                         }
                     } label: {

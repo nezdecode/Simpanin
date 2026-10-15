@@ -84,11 +84,11 @@ struct RecoveryView: View {
     }
 
     private func button(
-        _ title: LocalizedStringResource, emphasis: FullWidthButtonStyle.Emphasis = .primary,
+        _ title: LocalizedStringResource, emphasis: ProminentButtonStyle.Emphasis = .primary,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) { Text(title) }
-            .buttonStyle(.fullWidth(emphasis))
+            .buttonStyle(.prominent(emphasis))
     }
 
     private var toneColor: Color {
