@@ -1,5 +1,5 @@
 //
-//  FullWidthButtonStyle.swift
+//  ProminentButtonStyle.swift
 //  Simpanin
 //
 //  Created by Inez Amanda on 14/10/26.
@@ -11,21 +11,24 @@
 
 import SwiftUI
 
-/// The full-width button at the bottom of a screen. It builds on the system's prominent style, so
-/// the button keeps its pressed and disabled looks and iOS 26's glass. Secondary is for a way out
+/// The app's main button. It builds on the system's prominent style, so the button keeps its
+/// pressed and disabled looks and iOS 26's glass. It fills the width at the bottom of a screen, or
+/// fits its title inside a state like "Dokumen tidak bisa dimuat". Secondary is for a way out
 /// that's a decision rather than the obvious next step, like "Mulai vault baru".
-struct FullWidthButtonStyle: PrimitiveButtonStyle {
+struct ProminentButtonStyle: PrimitiveButtonStyle {
     enum Emphasis {
         case primary, secondary
     }
 
     var emphasis: Emphasis = .primary
+    var fillsWidth = true
 
     func makeBody(configuration: Configuration) -> some View {
         Button(role: configuration.role, action: configuration.trigger) {
             configuration.label
                 .font(.headline)
-                .frame(maxWidth: .infinity, minHeight: 50)
+                .padding(.horizontal, fillsWidth ? 0 : 16)
+                .frame(maxWidth: fillsWidth ? .infinity : nil, minHeight: 50)
         }
         .buttonStyle(.borderedProminent)
         .buttonBorderShape(.roundedRectangle(radius: 14))
@@ -34,10 +37,12 @@ struct FullWidthButtonStyle: PrimitiveButtonStyle {
     }
 }
 
-extension PrimitiveButtonStyle where Self == FullWidthButtonStyle {
-    static var fullWidth: FullWidthButtonStyle { FullWidthButtonStyle() }
+extension PrimitiveButtonStyle where Self == ProminentButtonStyle {
+    static var prominent: ProminentButtonStyle { ProminentButtonStyle() }
 
-    static func fullWidth(_ emphasis: FullWidthButtonStyle.Emphasis) -> FullWidthButtonStyle {
-        FullWidthButtonStyle(emphasis: emphasis)
+    static func prominent(
+        _ emphasis: ProminentButtonStyle.Emphasis = .primary, fillsWidth: Bool = true
+    ) -> ProminentButtonStyle {
+        ProminentButtonStyle(emphasis: emphasis, fillsWidth: fillsWidth)
     }
 }
