@@ -120,6 +120,8 @@ public enum FieldKey {
     public static let nik = "nik"
     public static let name = "name"
     public static let birthDate = "birthDate"
+    /// On a SIM made from July 2024 this is the holder's NIK; on older cards it isn't.
+    public static let simNumber = "simNumber"
 }
 
 /// A document's fields, like number, name and dates. They never go in the projection and

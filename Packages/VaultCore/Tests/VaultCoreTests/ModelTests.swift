@@ -111,6 +111,7 @@ struct ModelTests {
         #expect(FieldKey.nik == "nik")
         #expect(FieldKey.name == "name")
         #expect(FieldKey.birthDate == "birthDate")
+        #expect(FieldKey.simNumber == "simNumber")
     }
 
     @Test func simClassesAreAllSIMs() {
