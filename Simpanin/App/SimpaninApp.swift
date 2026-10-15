@@ -25,6 +25,11 @@ struct SimpaninApp: App {
         return result
     }()
 
+    init() {
+        // The app may have been stopped during a scan, before VisionKit's copies were removed.
+        DocumentCameraCache.clear()
+    }
+
     var body: some Scene {
         WindowGroup {
             if let vault = try? vault.get() {

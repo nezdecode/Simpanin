@@ -13,7 +13,8 @@ import SwiftUI
 import VisionKit
 
 /// VisionKit's document camera: finds the page edges, straightens it, and takes several pages. The
-/// pages come back as images in memory; nothing goes to Photos.
+/// pages come back as images in memory; nothing goes to Photos, and the copies VisionKit keeps in Caches
+/// are removed (`DocumentCameraCache`).
 struct DocumentCamera: UIViewControllerRepresentable {
     let onFinish: ([CGImage]) -> Void
     let onCancel: () -> Void
@@ -41,10 +42,13 @@ struct DocumentCamera: UIViewControllerRepresentable {
         func documentCameraViewController(
             _ controller: VNDocumentCameraViewController, didFinishWith scan: VNDocumentCameraScan
         ) {
-            camera.onFinish((0..<scan.pageCount).compactMap { scan.imageOfPage(at: $0).cgImage })
+            let pages = (0..<scan.pageCount).compactMap { Self.inMemory(scan.imageOfPage(at: $0)) }
+            DocumentCameraCache.clear()
+            camera.onFinish(pages)
         }
 
         func documentCameraViewControllerDidCancel(_ controller: VNDocumentCameraViewController) {
+            DocumentCameraCache.clear()
             camera.onCancel()
         }
 
@@ -52,7 +56,17 @@ struct DocumentCamera: UIViewControllerRepresentable {
         func documentCameraViewController(
             _ controller: VNDocumentCameraViewController, didFailWithError error: any Error
         ) {
+            DocumentCameraCache.clear()
             camera.onCancel()
+        }
+
+        /// The camera's images may be backed by its cache files, which are removed next, so each page is
+        /// drawn into a bitmap of its own first. Drawing also applies the page's orientation.
+        private static func inMemory(_ page: UIImage) -> CGImage? {
+            let format = UIGraphicsImageRendererFormat()
+            format.scale = page.scale
+            return UIGraphicsImageRenderer(size: page.size, format: format).image { _ in page.draw(at: .zero) }
+                .cgImage
         }
     }
 }

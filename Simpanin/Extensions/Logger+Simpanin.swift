@@ -19,4 +19,5 @@ extension Logger {
     /// Never log field values, names, numbers, keys or file contents here.
     nonisolated static let launch = Logger(subsystem: subsystem, category: "launch")
     nonisolated static let library = Logger(subsystem: subsystem, category: "library")
+    nonisolated static let scan = Logger(subsystem: subsystem, category: "scan")
 }
