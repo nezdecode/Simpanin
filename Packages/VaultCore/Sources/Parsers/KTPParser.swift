@@ -20,7 +20,7 @@ public enum KTPParser {
     public static let birthDate = "birthDate"
 
     /// nil when the lines don't look like a KTP: there's no NIK label.
-    public static func parse(_ lines: [String]) -> ParsedDocument? {
+    public static func parse(_ lines: [String], today: CalendarDate) -> ParsedDocument? {
         guard lines.contains(where: { label("NIK", startsLine: $0) != nil }) else { return nil }
         var fields: [String: String] = [:]
         var needsCheck: Set<String> = []
@@ -48,7 +48,9 @@ public enum KTPParser {
         let birth = birthText.flatMap { date(in: $0.text) }
         if let birth {
             fields[birthDate] = birth.string
-            if birthText?.fromNextLine == true { needsCheck.insert(birthDate) }
+            // The NIK only holds the last two digits of the year, so a misread century passes the cross-check.
+            let plausible = birth.year >= 1900 && birth <= today
+            if birthText?.fromNextLine == true || !plausible { needsCheck.insert(birthDate) }
         } else {
             needsCheck.insert(birthDate)
         }
