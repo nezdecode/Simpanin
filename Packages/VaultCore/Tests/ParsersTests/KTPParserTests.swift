@@ -9,10 +9,9 @@
 //  file, You can obtain one at https://mozilla.org/MPL/2.0/.
 //
 
+import Parsers
 import Testing
 import VaultCore
-
-@testable import Parsers
 
 /// Synthetic cards only: every NIK starts with 00, a province no real region has.
 @Suite("KTP parser")
@@ -61,6 +60,45 @@ struct KTPParserTests {
         #expect(result.fields.values[KTPParser.nik] == "0012341708900001")
         #expect(result.fields.values[KTPParser.name] == "BUDI CONTOH")
         #expect(result.fields.values[KTPParser.birthDate] == "1990-08-17")
+        // Which line belongs to a label is a guess here, so every value is marked.
+        #expect(result.needsCheck == [KTPParser.nik, KTPParser.name, KTPParser.birthDate])
+    }
+
+    /// Recognition drops the colon or reads it as a semicolon.
+    @Test func labelsWithoutAColon() throws {
+        for separator in ["", " ;", ";"] {
+            let lines = [
+                "NIK\(separator) 0012341708900001", "Nama\(separator) BUDI CONTOH",
+                "Tempat/Tgl. Lahir\(separator) JAKARTA, 17-08-1990",
+            ]
+            let result = try #require(KTPParser.parse(lines), "\(separator)")
+            #expect(result.fields.values[KTPParser.nik] == "0012341708900001", "\(separator)")
+            #expect(result.fields.values[KTPParser.name] == "BUDI CONTOH", "\(separator)")
+            #expect(result.fields.values[KTPParser.birthDate] == "1990-08-17", "\(separator)")
+            #expect(result.needsCheck.isEmpty, "\(separator)")
+        }
+    }
+
+    /// Recognition can return the label column before the value column. A label is never taken as a
+    /// value, and the card is still a KTP, with everything marked.
+    @Test func labelsBeforeValuesNeverTakeALabelAsAValue() throws {
+        let lines = [
+            "PROVINSI DKI JAKARTA", "NIK", "Nama", "Tempat/Tgl Lahir", ": 0012341708900001", ": BUDI CONTOH",
+            ": JAKARTA, 17-08-1990",
+        ]
+        let result = try #require(KTPParser.parse(lines))
+        #expect(result.fields.values[KTPParser.name] == nil)
+        #expect(result.fields.values[KTPParser.nik] == nil)
+        #expect(result.needsCheck == [KTPParser.nik, KTPParser.name, KTPParser.birthDate])
+    }
+
+    /// A long name wraps onto the next line; only its first part is read, so it's marked.
+    @Test func aNameThatWrapsIsMarked() throws {
+        let lines = [
+            "NIK : 0012341708900001", "Nama : BUDI CONTOH", "SANTOSO", "Tempat/Tgl Lahir : JAKARTA, 17-08-1990",
+        ]
+        let result = try #require(KTPParser.parse(lines))
+        #expect(result.needsCheck == [KTPParser.name])
     }
 
     /// Women's NIKs carry the day of birth plus 40.

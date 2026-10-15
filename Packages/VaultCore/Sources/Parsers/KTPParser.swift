@@ -21,25 +21,34 @@ public enum KTPParser {
 
     /// nil when the lines don't look like a KTP: there's no NIK label.
     public static func parse(_ lines: [String]) -> ParsedDocument? {
-        guard let nikText = value(of: "NIK", in: lines) else { return nil }
+        guard lines.contains(where: { label("NIK", startsLine: $0) != nil }) else { return nil }
         var fields: [String: String] = [:]
         var needsCheck: Set<String> = []
 
-        let (number, corrected) = digits(from: nikText)
-        fields[nik] = number
-        if corrected || number.count != 16 || !number.allSatisfy(\.isASCIIDigit) { needsCheck.insert(nik) }
+        var number = ""
+        if let found = value(of: "NIK", in: lines) {
+            let (digits, corrected) = digits(from: found.text)
+            number = digits
+            fields[nik] = number
+            if found.fromNextLine || corrected { needsCheck.insert(nik) }
+        }
+        if number.count != 16 || !number.allSatisfy(\.isASCIIDigit) { needsCheck.insert(nik) }
 
-        if let nameText = value(of: "Nama", in: lines), !nameText.isEmpty {
-            fields[name] = nameText
+        if let found = value(of: "Nama", in: lines) {
+            fields[name] = found.text
             // A digit is a misread letter, but which letter can't be known, so it's only marked.
-            if nameText.contains(where: \.isASCIIDigit) { needsCheck.insert(name) }
+            if found.fromNextLine || found.continues || found.text.contains(where: \.isASCIIDigit) {
+                needsCheck.insert(name)
+            }
         } else {
             needsCheck.insert(name)
         }
 
-        let birth = value(of: "Tempat/Tgl Lahir", in: lines).flatMap(date(in:))
+        let birthText = value(of: "Tempat/Tgl Lahir", in: lines)
+        let birth = birthText.flatMap { date(in: $0.text) }
         if let birth {
             fields[birthDate] = birth.string
+            if birthText?.fromNextLine == true { needsCheck.insert(birthDate) }
         } else {
             needsCheck.insert(birthDate)
         }
@@ -51,26 +60,53 @@ public enum KTPParser {
         return ParsedDocument(type: .ktp, fields: DocumentFields(fields), expiry: nil, needsCheck: needsCheck)
     }
 
-    /// The text after a label, from "Label : value" or from the line after a "Label" line on its own.
-    /// Labels are compared without case, spaces or dots, since recognition drops and adds those.
-    static func value(of label: String, in lines: [String]) -> String? {
-        let key = squeezed(label)
+    /// Every label on the front of a KTP, so a label line is never taken as another label's value.
+    private static let labels = [
+        "NIK", "Nama", "Tempat/Tgl Lahir", "Jenis Kelamin", "Gol Darah", "Alamat", "RT/RW", "Kel/Desa", "Kecamatan",
+        "Agama", "Status Perkawinan", "Pekerjaan", "Kewarganegaraan", "Berlaku Hingga",
+    ]
+
+    private struct Found {
+        var text: String
+        /// The value sat on the line after its label, so which line belongs to it is a guess.
+        var fromNextLine = false
+        /// The line after the value isn't a label, so the value may go on there.
+        var continues = false
+    }
+
+    /// The text after a label, from "Label : value" or from the line after a label on its own. Never
+    /// another label: recognition can return the label column before the value column.
+    private static func value(of wanted: String, in lines: [String]) -> Found? {
         for (index, line) in lines.enumerated() {
-            let parts = line.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: false)
-            guard squeezed(String(parts[0])) == key else { continue }
-            if parts.count == 2 {
-                let text = parts[1].trimmingCharacters(in: .whitespaces)
-                if !text.isEmpty { return text }
-            }
-            guard index + 1 < lines.count else { return nil }
-            let next = lines[index + 1].trimmingCharacters(in: .whitespaces)
-            return next.hasPrefix(":") ? next.dropFirst().trimmingCharacters(in: .whitespaces) : next
+            guard let rest = label(wanted, startsLine: line) else { continue }
+            let next = index + 1 < lines.count ? lines[index + 1] : nil
+            let nextIsLabel = next.map(isLabel) ?? true
+            if !rest.isEmpty { return Found(text: rest, continues: !nextIsLabel) }
+            guard let next, !nextIsLabel else { return nil }
+            var text = Substring(next.trimmingCharacters(in: .whitespaces))
+            if text.first == ":" || text.first == ";" { text = text.dropFirst() }
+            let value = text.trimmingCharacters(in: .whitespaces)
+            return value.isEmpty ? nil : Found(text: value, fromNextLine: true)
         }
         return nil
     }
 
-    private static func squeezed(_ text: String) -> String {
-        text.lowercased().filter { $0 != " " && $0 != "." }
+    private static func isLabel(_ line: String) -> Bool {
+        labels.contains { label($0, startsLine: line) != nil }
+    }
+
+    /// The rest of the line when it starts with the label, or nil. Recognition drops and adds spaces
+    /// and dots, and reads the colon as a semicolon or drops it, so all of those are allowed.
+    private static func label(_ label: String, startsLine line: String) -> String? {
+        let letters = label.filter { $0 != " " && $0 != "." }.map {
+            NSRegularExpression.escapedPattern(for: String($0))
+        }
+        let pattern = "^\\s*" + letters.joined(separator: "[\\s.]*") + "(?:[\\s.]*[:;]|\\s+|$)(.*)$"
+        guard let regex = try? Regex(pattern).ignoresCase(),
+            let match = try? regex.wholeMatch(in: line),
+            let rest = match.output[1].substring
+        else { return nil }
+        return rest.trimmingCharacters(in: .whitespaces)
     }
 
     /// Letters recognition often reads in place of digits on a NIK.
