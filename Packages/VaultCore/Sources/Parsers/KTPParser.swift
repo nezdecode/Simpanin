@@ -40,8 +40,8 @@ public enum KTPParser {
 
         if let found = value(of: "Nama", in: lines) {
             fields[name] = found.text
-            // A digit is a misread letter, but which letter can't be known, so it's only marked.
-            if found.fromNextLine || found.continues || found.text.contains(where: \.isASCIIDigit) {
+            // A misread character is only marked, since what it should have been can't be known.
+            if found.fromNextLine || found.continues || !looksLikeAName(found.text) {
                 needsCheck.insert(name)
             }
         } else {
@@ -143,6 +143,13 @@ public enum KTPParser {
             let day = Int(match.1), let month = Int(match.2), let year = Int(match.3)
         else { return nil }
         return CalendarDate(year: year, month: month, day: day)
+    }
+
+    /// Names are printed in capitals, so anything else (a digit, a small letter, a separator left from
+    /// the label) is a misread.
+    private static func looksLikeAName(_ text: String) -> Bool {
+        guard let first = text.first, ("A"..."Z").contains(first) else { return false }
+        return text.allSatisfy { ("A"..."Z").contains($0) || " .,'-".contains($0) }
     }
 
     /// From "Jenis Kelamin", which shares its line with "Gol. Darah". nil when it can't be read.

@@ -123,6 +123,13 @@ struct KTPParserTests {
     }
 
     /// A long name wraps onto the next line; only its first part is read, so it's marked.
+    /// A wrapped line that only starts with a label's letters isn't a label.
+    @Test func aWrappedLineStartingLikeALabelIsStillAWrap() throws {
+        let lines = ["NIK : 0012345708900002", "Nama : SITI", "NIKEN AYU", "Tempat/Tgl Lahir : JAKARTA, 17-08-1990"]
+        let result = try #require(parse(lines))
+        #expect(result.needsCheck == [KTPParser.name])
+    }
+
     @Test func aNameThatWrapsIsMarked() throws {
         let lines = [
             "NIK : 0012341708900001", "Nama : BUDI CONTOH", "SANTOSO", "Tempat/Tgl Lahir : JAKARTA, 17-08-1990",
@@ -150,6 +157,18 @@ struct KTPParserTests {
         for birth in ["JAKARTA, 18-08-1990", "JAKARTA, 17-09-1990", "JAKARTA, 17-08-1991"] {
             let result = try #require(parse(Self.card(birth: birth)))
             #expect(result.needsCheck == [KTPParser.nik, KTPParser.birthDate], "\(birth)")
+        }
+    }
+
+    /// Names are printed in capitals, so a leftover separator or a small letter is a misread.
+    @Test func punctuationOrSmallLettersInTheNameAreMarked() throws {
+        for name in [", BUDI CONTOH", ". BUDI", ": BUDI", "BUDl CONTOH"] {
+            let result = try #require(parse(Self.card(name: name)))
+            #expect(result.needsCheck == [KTPParser.name], "\(name)")
+        }
+        for name in ["M. RIZKI", "SITI NUR'AINI", "ANAK AGUNG GDE-PUTRA"] {
+            let result = try #require(parse(Self.card(name: name)))
+            #expect(result.needsCheck.isEmpty, "\(name)")
         }
     }
 
@@ -184,7 +203,10 @@ struct KTPParserTests {
 
     /// Digits 7 to 12 are a date, day plus 40 for women, so day 99 or month 99 can't be right.
     @Test func aNIKWithAnImpossibleDateIsMarkedWithoutABirthDate() throws {
-        for nik in ["0012349999900001", "0012343208900001", "0012341713900001", "0012347208900001"] {
+        for nik in [
+            "0012349999900001", "0012343208900001", "0012341713900001", "0012347208900001", "0012340008900001",
+            "0012341700900001",
+        ] {
             let result = try #require(parse(["NIK : \(nik)", "Nama : BUDI CONTOH"]))
             #expect(result.needsCheck.contains(KTPParser.nik), "\(nik)")
         }
