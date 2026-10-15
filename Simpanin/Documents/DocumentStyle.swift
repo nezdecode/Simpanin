@@ -17,9 +17,10 @@ import VaultCore
 /// shown too.
 nonisolated enum DocumentStyle {
     private static let nameKeys: [DocumentType: String] = [
-        .ktp: "type.ktp", .simA: "type.simA", .simB1: "type.simB1", .simB2: "type.simB2", .simC: "type.simC",
-        .simD: "type.simD", .sim: "type.sim", .passport: "type.passport", .stnk: "type.stnk", .kk: "type.kk",
-        .npwp: "type.npwp", .bpjs: "type.bpjs",
+        .ktp: "type.ktp", .sim: "type.sim", .simA: "type.simA", .simB1: "type.simB1", .simB2: "type.simB2",
+        .simC: "type.simC", .simC1: "type.simC1", .simC2: "type.simC2", .simD: "type.simD", .simD1: "type.simD1",
+        .simAUmum: "type.simAUmum", .simB1Umum: "type.simB1Umum", .simB2Umum: "type.simB2Umum",
+        .passport: "type.passport", .stnk: "type.stnk", .kk: "type.kk", .npwp: "type.npwp", .bpjs: "type.bpjs",
     ]
 
     /// A type this build doesn't know, for example from a newer version, reads as "Lainnya".
@@ -42,9 +43,9 @@ nonisolated enum DocumentStyle {
 
     /// Asset catalog colours, each with a light and a dark variant.
     @MainActor static func tileColors(_ type: DocumentType) -> (background: ColorResource, foreground: ColorResource) {
-        switch type {
+        if type.isSIM { return (.tileSIMBackground, .tileSIMForeground) }
+        return switch type {
         case .ktp: (.tileKTPBackground, .tileKTPForeground)
-        case .sim, .simA, .simB1, .simB2, .simC, .simD: (.tileSIMBackground, .tileSIMForeground)
         case .passport: (.tilePassportBackground, .tilePassportForeground)
         case .stnk: (.tileSTNKBackground, .tileSTNKForeground)
         case .kk: (.tileKKBackground, .tileKKForeground)

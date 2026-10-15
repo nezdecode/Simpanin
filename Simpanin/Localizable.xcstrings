@@ -1134,13 +1134,35 @@
         }
       }
     },
+    "type.simAUmum" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SIM A Umum"
+          }
+        }
+      }
+    },
     "type.simB1" : {
       "extractionState" : "manual",
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "SIM B1"
+            "value" : "SIM BI"
+          }
+        }
+      }
+    },
+    "type.simB1Umum" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SIM BI Umum"
           }
         }
       }
@@ -1151,7 +1173,18 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "SIM B2"
+            "value" : "SIM BII"
+          }
+        }
+      }
+    },
+    "type.simB2Umum" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SIM BII Umum"
           }
         }
       }
@@ -1167,6 +1200,28 @@
         }
       }
     },
+    "type.simC1" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SIM CI"
+          }
+        }
+      }
+    },
+    "type.simC2" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SIM CII"
+          }
+        }
+      }
+    },
     "type.simD" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1174,6 +1229,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "SIM D"
+          }
+        }
+      }
+    },
+    "type.simD1" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SIM DI"
           }
         }
       }
