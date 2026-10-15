@@ -52,7 +52,7 @@ file_header:  # Xcode's header plus the MPL notice, see CODING.md
   required_pattern: |
     \/\/
     \/\/  SWIFTLINT_CURRENT_FILENAME
-    \/\/  (Simpanin|SimpaninTests|SimpaninUITests|VaultCore|VaultCoreTests)
+    \/\/  (Simpanin|SimpaninTests|SimpaninUITests|VaultCore|VaultCoreTests|Parsers|ParsersTests)
     \/\/
     \/\/  Created by .+ on \d{1,2}\/\d{1,2}\/\d{2}\.
     \/\/
@@ -65,8 +65,15 @@ custom_rules:
   vaultcore_imports:
     name: VaultCore imports
     message: "VaultCore imports only Foundation and Crypto."
-    included: "Packages/VaultCore/Sources/.*\\.swift"
+    included: "Packages/VaultCore/Sources/VaultCore/.*\\.swift"
     regex: "^\\s*(@\\w+\\s+)?import\\s+(?!(Foundation|Crypto)\\b)\\w+"
+    severity: error
+  # Recognition (Vision) stays in the app, so the parsers are tested on plain text on a Mac.
+  parsers_imports:
+    name: Parsers imports
+    message: "Parsers imports only Foundation and VaultCore."
+    included: "Packages/VaultCore/Sources/Parsers/.*\\.swift"
+    regex: "^\\s*(@\\w+\\s+)?import\\s+(?!(Foundation|VaultCore)\\b)\\w+"
     severity: error
   # The rules below check the app. They match paths, and the repository folder itself may be
   # called Simpanin, so they include everything under it and exclude the tests and VaultCore.

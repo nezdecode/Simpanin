@@ -11,7 +11,8 @@ let package = Package(
         .macOS(.v26),
     ],
     products: [
-        .library(name: "VaultCore", targets: ["VaultCore"])
+        .library(name: "VaultCore", targets: ["VaultCore"]),
+        .library(name: "Parsers", targets: ["Parsers"]),
     ],
     dependencies: [
         // The only third-party dependency allowed. On Apple platforms it re-exports
@@ -27,6 +28,18 @@ let package = Package(
         .testTarget(
             name: "VaultCoreTests",
             dependencies: ["VaultCore"],
+            swiftSettings: [.swiftLanguageMode(.v6)]
+        ),
+        // From recognised text to a document type and its fields. Separate from VaultCore,
+        // which it uses only for the document model, so VaultCore stays small and closed.
+        .target(
+            name: "Parsers",
+            dependencies: ["VaultCore"],
+            swiftSettings: [.swiftLanguageMode(.v6)]
+        ),
+        .testTarget(
+            name: "ParsersTests",
+            dependencies: ["Parsers", "VaultCore"],
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
     ]
