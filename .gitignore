@@ -55,10 +55,8 @@ Packages/*/.swiftpm/
 
 # Private planning docs and agent notes. They hold business plans, personal
 # device test results and private links, so they stay out of the public repo.
-# Backup copy: ~/Developer/iOSDev/Simpanin-private/
 /docs/
 /CLAUDE.md
 
-# Claude Code agents and settings. The reviewer reads the private design doc,
-# so it stays private like CLAUDE.md.
+# Claude Code agents and settings, private like CLAUDE.md.
 /.claude/
