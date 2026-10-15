@@ -14,7 +14,7 @@ import VaultCore
 
 /// A document in Baru dihapus, with the days until it's purged. Swipe to restore.
 struct DeletedDocumentRow: View {
-    let document: Document
+    let document: VaultCore.Document
     let onRestore: () -> Void
 
     var body: some View {

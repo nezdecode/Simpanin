@@ -14,7 +14,7 @@ import VaultCore
 
 /// The document that expires soonest, or already has. Others that need attention are counted.
 struct ExpiryBanner: View {
-    let documents: [Document]
+    let documents: [VaultCore.Document]
     let today: CalendarDate
 
     var body: some View {

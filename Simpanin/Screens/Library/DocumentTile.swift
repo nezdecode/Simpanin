@@ -14,7 +14,7 @@ import VaultCore
 
 /// A document on the list: its type and expiry, in the type's colors.
 struct DocumentTile: View {
-    let document: Document
+    let document: VaultCore.Document
     let today: CalendarDate
     let wide: Bool
 
