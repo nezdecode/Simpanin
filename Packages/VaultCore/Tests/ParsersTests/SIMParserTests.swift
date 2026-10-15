@@ -192,6 +192,21 @@ struct SIMParserTests {
         #expect(result.expiryNeedsCheck)
     }
 
+    /// With the birth line misread, its date is the only one left; it must not pass as the expiry.
+    @Test func aBirthDateIsNeverTakenForTheExpiry() throws {
+        var lines = Self.oldCard(expiry: "")
+        let birth = try #require(lines.firstIndex(of: "2. JAKARTA, 17-08-1990"))
+        lines[birth] = "Z. JAKARTA, 17-08-1990"
+        let result = try #require(parse(lines))
+        #expect(result.expiryNeedsCheck)
+    }
+
+    /// A SIM needs its holder to be at least 17, so an expiry earlier than that is a misread.
+    @Test func anExpiryTooSoonAfterTheBirthDateIsMarked() throws {
+        let result = try #require(parse(Self.oldCard(expiry: "04-01-2005")))
+        #expect(result.expiryNeedsCheck)
+    }
+
     /// A SIM is valid for five years, so an expiry further out is a misread.
     @Test func anExpiryTooFarAheadIsMarked() throws {
         let result = try #require(parse(Self.oldCard(expiry: "04-01-2037")))

@@ -60,7 +60,7 @@ public enum SIMParser {
 
         let (expiry, expiryNeedsCheck) = readExpiry(
             in: lines, setAside: { number.lines.contains($0) || (birthText.map(lines[$0].contains) ?? false) },
-            today: today)
+            birth: birth, today: today)
 
         return ParsedDocument(
             type: type, fields: DocumentFields(fields), expiry: expiry, needsCheck: needsCheck,
@@ -85,13 +85,20 @@ public enum SIMParser {
     }
 
     /// The expiry has no label: it's the one date left once the number and the birth date are set aside.
-    private static func readExpiry(in lines: [String], setAside: (Int) -> Bool, today: CalendarDate) -> (
+    private static func readExpiry(
+        in lines: [String], setAside: (Int) -> Bool, birth: CalendarDate?, today: CalendarDate
+    ) -> (
         CalendarDate?, needsCheck: Bool
     ) {
         let candidates = lines.indices.filter { !setAside($0) }.flatMap { lines[$0].numericDates }
         guard candidates.count == 1, let expiry = candidates.first else { return (nil, true) }
-        // A SIM is valid for five years from issue, so anything further out is a misread.
-        return (expiry, (expiry.year, expiry.month, expiry.day) > (today.year + 5, today.month, today.day))
+        // Without the birth date, its line can't be set aside, so the one date left may be the birth date.
+        guard let birth else { return (expiry, true) }
+        let date = (expiry.year, expiry.month, expiry.day)
+        // A SIM is valid for five years from issue and needs its holder to be 17, so anything outside is a misread.
+        return (
+            expiry, date > (today.year + 5, today.month, today.day) || date < (birth.year + 17, birth.month, birth.day)
+        )
     }
 
     /// The labels on a card from July 2024. Older cards number their fields instead.
