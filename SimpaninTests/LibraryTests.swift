@@ -44,6 +44,24 @@ struct LibraryTests {
         #expect(library.deleted.isEmpty)
     }
 
+    /// A failed load must never look like an empty vault.
+    @Test func aFailedLoadSaysSoAndKeepsTheList() async throws {
+        let store = FakeDocuments()
+        let library = LibraryModel(store: store)
+        await library.addSample()
+        #expect(library.documents.count == 1)
+        #expect(!library.loadFailed)
+
+        await store.setLoadFailure(.locked)
+        await library.reload()
+        #expect(library.loadFailed)
+        #expect(library.documents.count == 1)
+
+        await store.setLoadFailure(nil)
+        await library.reload()
+        #expect(!library.loadFailed)
+    }
+
     @Test func aFullDiskOnASaveShowsItsScreen() async {
         let store = FakeDocuments()
         await store.setFailure(.storageFull)

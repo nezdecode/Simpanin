@@ -37,6 +37,9 @@ final class LibraryModel {
     private(set) var deleted: [Document] = []
     /// The message for a failed save, if any.
     var saveError: RecoveryScreen?
+    /// Loading failed. The screen shows that instead of an empty list, which would say the
+    /// documents are gone.
+    private(set) var loadFailed = false
     private let store: any DocumentStoring
 
     init(store: any DocumentStoring) {
@@ -44,8 +47,16 @@ final class LibraryModel {
     }
 
     func reload() async {
-        documents = (try? await store.documents()) ?? []
-        deleted = (try? await store.recentlyDeleted()) ?? []
+        do {
+            let live = try await store.documents()
+            let bin = try await store.recentlyDeleted()
+            documents = live
+            deleted = bin
+            loadFailed = false
+        } catch {
+            Logger.library.error("Load failed: \(ErrorSummary.describe(error), privacy: .public)")
+            loadFailed = true
+        }
     }
 
     func delete(_ id: DocumentID) async {
