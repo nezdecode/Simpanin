@@ -8,6 +8,8 @@ Simpanin has two parts: a core that keeps documents safe, and an app around it.
 
 **VaultCore** (`Packages/VaultCore`) holds everything about storing documents: encryption, the file format, the order of writes, recovery and purging. It imports only Foundation and Crypto, so its tests run on a Mac without a simulator. It reaches the platform through small protocols (`KeyStore`, `VaultClock`, `FileProtector`) that the app implements. `VaultStore` is an actor and the only way in, and every change goes through its write order. The document model is in `Models.swift`; everything it writes to disk is in `Format.swift`. If logic doesn't need UIKit, SwiftUI, the Keychain or Face ID, it probably belongs here.
 
+**Parsers** (`Packages/VaultCore/Sources/Parsers`) turns recognised text into a document type and its fields, and marks what the user should check again. It's a separate target in the same package: it uses VaultCore's model, but VaultCore never depends on it. Text recognition stays in the app, so the parsers are tested on plain text on a Mac.
+
 **The app** (`Simpanin/`) is organised by topic at the top and by screen inside `Screens/`:
 
 | Folder | Holds |
@@ -46,7 +48,7 @@ A folder grows subfolders when it passes about eight files, split by part of the
 - **Swift 6 with complete strict concurrency.** If you think you need `@unchecked Sendable` or `nonisolated(unsafe)`, explain why in the pull request.
 - **The app's default isolation is the main actor.** A pure helper that a nonisolated type calls needs `nonisolated`; the compiler tells you where.
 - **Calls that can block run off the caller's actor**, like the Keychain while a Face ID prompt is up.
-- **VaultCore imports only Foundation and Crypto.** SwiftLint checks this.
+- **VaultCore imports only Foundation and Crypto, and Parsers only Foundation and VaultCore.** SwiftLint checks both.
 - **Errors are handled, not swallowed.** Map them to what the user sees (`RecoveryMapping`) and log only their domain and code. `(try? load()) ?? []` turns a failure into an empty list, which tells someone storing their ID that it's gone. `try?` is fine only where failing really changes nothing, like removing a temporary file.
 
 ## 4. SwiftUI
@@ -121,7 +123,7 @@ Once a format ships, it stays. Don't change a key derivation label, an associate
 - **Test first, and watch it fail.** Write a stub that compiles, run the test against it, then implement. A test that never failed may test nothing.
 - **For logic that guards data, break the code on purpose** (skip a save, ignore an argument, leak a value) and check a test fails. Then put it back.
 - **Tests never wait forever.** Anything that waits for a gate has a timeout. Use `try #require` before indexing into a result.
-- **VaultCore** is tested with `swift test` in `Packages/VaultCore`, on a Mac, no simulator. **App logic** is tested in `SimpaninTests`, with the stand-ins in `Support/` for the models. **Screens** are tested in `SimpaninUITests` on a throwaway vault (`-SimpaninUITest`), finding elements by accessibility identifier rather than by layout.
+- **VaultCore** and **Parsers** are tested with `swift test` in `Packages/VaultCore`, on a Mac, no simulator. Parser tests use synthetic text only. **App logic** is tested in `SimpaninTests`, with the stand-ins in `Support/` for the models. **Screens** are tested in `SimpaninUITests` on a throwaway vault (`-SimpaninUITest`), finding elements by accessibility identifier rather than by layout.
 - **The simulator isn't a phone.** Anything that touches system folders, file attributes, protection classes, the Keychain or Face ID also runs on a device before it's merged: the simulator once let the app change a folder that iOS refuses on a phone, and every launch failed (#11). The DEBUG device checks screen covers what can be checked by hand.
 - **A refactor proves it changed nothing**: compare the code before and after (only names and headers may differ), run every test, and compare the UI test screenshots with main.
 
