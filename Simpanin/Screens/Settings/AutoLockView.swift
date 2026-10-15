@@ -38,6 +38,7 @@ struct AutoLockView: View {
                     // with only the checkmark in the accent colour.
                     .foregroundStyle(.primary)
                     .accessibilityAddTraits(lock.autoLock == choice ? .isSelected : [])
+                    .accessibilityIdentifier("autoLock.\(choice.rawValue)")
                 }
             } footer: {
                 Text("autoLock.footer")
