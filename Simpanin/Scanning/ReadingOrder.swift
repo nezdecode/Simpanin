@@ -19,7 +19,8 @@ nonisolated struct TextPiece: Equatable, Sendable {
 }
 
 /// Puts recognised pieces in reading order, top to bottom and left to right, as the parsers expect.
-/// Pieces on one row stay separate lines: joining them could glue a SIM's class onto its number.
+/// Pieces on one row stay separate lines, so a SIM's class isn't glued onto its number, except a value
+/// after a colon, which joins its label.
 nonisolated enum ReadingOrder {
     static func lines(_ pieces: [TextPiece]) -> [String] {
         var rows: [[TextPiece]] = []
@@ -33,6 +34,17 @@ nonisolated enum ReadingOrder {
                 rows.append([piece])
             }
         }
-        return rows.flatMap { $0.sorted { $0.box.minX < $1.box.minX }.map(\.text) }
+        return rows.flatMap { row in
+            var lines: [String] = []
+            for piece in row.sorted(by: { $0.box.minX < $1.box.minX }) {
+                // A KTP prints its values after a colon, and Vision returns label and value as two pieces.
+                if piece.text.hasPrefix(":"), let label = lines.popLast() {
+                    lines.append(label + " " + piece.text)
+                } else {
+                    lines.append(piece.text)
+                }
+            }
+            return lines
+        }
     }
 }
