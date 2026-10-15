@@ -2,7 +2,7 @@
 //  AutoLockTests.swift
 //  SimpaninTests
 //
-//  Created by Inez Amanda on 15/10/26.
+//  Created by Inez Amanda on 14/10/26.
 //
 //  This Source Code Form is subject to the terms of the Mozilla Public
 //  License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -31,6 +31,19 @@ struct AutoLockTests {
         #expect(String(localized: AutoLock.immediately.title) == "Langsung")
         #expect(String(localized: AutoLock.oneMinute.title) == "Setelah 1 menit")
         #expect(String(localized: AutoLock.fiveMinutes.title) == "Setelah 5 menit")
+    }
+
+    /// The stored values are what's already on people's phones: renaming a case must not change them.
+    @Test func storedValuesNeverChange() {
+        let stored: [String: AutoLock] = [
+            "immediately": .immediately, "oneMinute": .oneMinute, "fiveMinutes": .fiveMinutes,
+        ]
+        for (value, choice) in stored {
+            #expect(AutoLock(rawValue: value) == choice)
+        }
+        let defaults = defaults()
+        AutoLock.fiveMinutes.store(in: defaults)
+        #expect(defaults.string(forKey: "autoLock") == "fiveMinutes")
     }
 
     @Test func choiceIsKept() {

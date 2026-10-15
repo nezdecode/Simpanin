@@ -2,7 +2,7 @@
 //  AutoLock.swift
 //  Simpanin
 //
-//  Created by Inez Amanda on 15/10/26.
+//  Created by Inez Amanda on 14/10/26.
 //
 //  This Source Code Form is subject to the terms of the Mozilla Public
 //  License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -14,7 +14,10 @@ import Foundation
 /// "Kunci otomatis": how long the vault may stay open in the background. Five minutes at most,
 /// because a longer time makes the lock weaker.
 nonisolated enum AutoLock: String, CaseIterable, Sendable {
-    case immediately, oneMinute, fiveMinutes
+    // Stored in UserDefaults, so the values are fixed: renaming a case must not change them.
+    case immediately = "immediately"
+    case oneMinute = "oneMinute"
+    case fiveMinutes = "fiveMinutes"
 
     private static let key = "autoLock"
 

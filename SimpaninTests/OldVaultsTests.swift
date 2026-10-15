@@ -2,7 +2,7 @@
 //  OldVaultsTests.swift
 //  SimpaninTests
 //
-//  Created by Inez Amanda on 15/10/26.
+//  Created by Inez Amanda on 14/10/26.
 //
 //  This Source Code Form is subject to the terms of the Mozilla Public
 //  License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -79,6 +79,8 @@ struct OldVaultsTests {
         // A second vault moved in the same second gets "-2"; the time still reads.
         #expect(OldVaultText.movedAt(folderName: "20261014-021200-2") == moved)
         #expect(OldVaultText.movedAt(folderName: "not-a-date") == nil)
+        // An impossible date is not a date, rather than rolling over into the next year.
+        #expect(OldVaultText.movedAt(folderName: "20261314-021200") == nil)
     }
 
     @Test func unreadableFolderShowsSizeAndDate() {

@@ -2,7 +2,7 @@
 //  Date+Indonesian.swift
 //  Simpanin
 //
-//  Created by Inez Amanda on 15/10/26.
+//  Created by Inez Amanda on 14/10/26.
 //
 //  This Source Code Form is subject to the terms of the Mozilla Public
 //  License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -29,13 +29,4 @@ extension FormatStyle where Self == Date.FormatStyle {
     nonisolated private static func indonesian(_ timeZone: TimeZone) -> Date.FormatStyle {
         Date.FormatStyle(locale: Locale(identifier: "id_ID"), timeZone: timeZone)
     }
-}
-
-extension Calendar {
-    /// Gregorian in UTC, for calendar days that no time zone may move.
-    nonisolated static let gregorianUTC: Calendar = {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = .gmt
-        return calendar
-    }()
 }

@@ -40,8 +40,8 @@
                 switch path {
                 case "pages": label = "pages folder"
                 case VaultStore.headerFileName: label = "vault header"
-                case "index.enc": label = "index"
-                case "index.prev.enc": label = "previous index"
+                case "index.enc": label = "index"  // swiftlint:disable:this vault_file_names
+                case "index.prev.enc": label = "previous index"  // swiftlint:disable:this vault_file_names
                 default:
                     if path.hasPrefix("pages/") {
                         pages += 1

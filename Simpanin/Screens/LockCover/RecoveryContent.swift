@@ -2,7 +2,7 @@
 //  RecoveryContent.swift
 //  Simpanin
 //
-//  Created by Inez Amanda on 15/10/26.
+//  Created by Inez Amanda on 14/10/26.
 //
 //  This Source Code Form is subject to the terms of the Mozilla Public
 //  License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -80,16 +80,6 @@ nonisolated enum RecoveryText {
         case .vaultUnreadable: "recovery.extra.vaultUnreadable"
         case .updateApp: "recovery.extra.updateApp"
         case .unlockPhoneAndRetry, .storageFullOnOpen, .storageFullOnSave, .saveFailed: nil
-        }
-    }
-}
-
-extension VaultNotice {
-    nonisolated var message: LocalizedStringResource {
-        switch self {
-        case .newestChangeMayBeLost: LocalizedStringResource("notice.newestChangeMayBeLost")
-        case .recoveredFromPages: LocalizedStringResource("notice.recoveredFromPages")
-        case .repairWaitingForSpace: LocalizedStringResource("notice.repairWaitingForSpace")
         }
     }
 }
