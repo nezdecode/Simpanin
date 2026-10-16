@@ -327,6 +327,13 @@ extension ReviewModelTests {
 
 /// What a save stores, and what it never stores.
 extension ReviewModelTests {
+    /// Encoding a few full-size pages takes long enough to freeze the screen, so it runs off the main actor.
+    @Test func pagesAreEncodedOffTheMainActor() async throws {
+        let review = model(encode: { _ in Thread.isMainThread ? nil : Data([1]) })
+        review.load(Self.ktp, pages: [try page()])
+        #expect(await review.save())
+    }
+
     /// The last page failing is as bad as the first: the document is saved with every page or not at all.
     @Test func aLastPageThatCantBeEncodedSavesNothing() async throws {
         let store = FakeDocuments()

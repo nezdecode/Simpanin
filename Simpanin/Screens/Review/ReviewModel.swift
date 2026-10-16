@@ -149,7 +149,7 @@ final class ReviewModel {
                 fields[key] = text
             }
         }
-        let encoded = pages.compactMap(encode)
+        let encoded = await Self.encoded(pages, with: encode)
         // A page that can't be prepared is never left out, so nothing is saved.
         guard encoded.count == pages.count else {
             Logger.scan.error("A page couldn't be encoded; nothing was saved")
@@ -187,6 +187,12 @@ extension ReviewModel {
             result.append(digit)
         }
         return result
+    }
+
+    /// Off the main actor: a few full-size pages take long enough to freeze the screen.
+    @concurrent
+    private static func encoded(_ pages: [CGImage], with encode: @Sendable (CGImage) -> Data?) async -> [Data] {
+        pages.compactMap(encode)
     }
 
     /// Fields holding a date: shown day first, as on the card, and stored as YYYY-MM-DD like every date
