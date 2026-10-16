@@ -9,6 +9,7 @@
 //  file, You can obtain one at https://mozilla.org/MPL/2.0/.
 //
 
+import Foundation
 import Testing
 import VaultCore
 
@@ -16,6 +17,14 @@ import VaultCore
 
 @Suite("Type picker")
 struct TypePickerViewTests {
+    /// Each class shows what it may drive, never its key: the key has to be looked up whole.
+    @Test func everySIMClassHasItsDescription() {
+        #expect(String(localized: TypePickerView.description(of: .simA)) == "Mobil sampai 3.500 kg")
+        for type in DocumentType.simClasses {
+            #expect(!String(localized: TypePickerView.description(of: type)).hasPrefix("simClass."), "\(type.rawValue)")
+        }
+    }
+
     /// Umum comes from the type, not from a position in the list, so a new class lands in the right section.
     @Test func simClassesSplitIntoPersonalAndUmum() {
         #expect(TypePickerView.publicSIMClasses == [.simAUmum, .simB1Umum, .simB2Umum])

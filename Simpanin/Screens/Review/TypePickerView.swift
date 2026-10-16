@@ -22,6 +22,13 @@ struct TypePickerView: View {
 
     /// Umum is read from the type id, so a class added later lands in the right section.
     static let publicSIMClasses = DocumentType.simClasses.filter { $0.rawValue.hasSuffix("-umum") }
+    /// The key is built as a plain string first: interpolated into a LocalizationValue, the class would
+    /// become an argument and the lookup would search for "simClass.description.%@".
+    static func description(of type: DocumentType) -> LocalizedStringResource {
+        let key = "simClass.description." + type.rawValue
+        return LocalizedStringResource(String.LocalizationValue(key))
+    }
+
     static let personalSIMClasses = DocumentType.simClasses.filter { !publicSIMClasses.contains($0) }
 
     var body: some View {
@@ -107,7 +114,7 @@ private struct SIMClassList: View {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(DocumentStyle.name(type)).foregroundStyle(Color.primary)
-                    Text(LocalizedStringResource(String.LocalizationValue("simClass.description.\(type.rawValue)")))
+                    Text(TypePickerView.description(of: type))
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
