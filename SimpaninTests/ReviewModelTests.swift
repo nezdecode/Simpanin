@@ -223,41 +223,6 @@ struct ReviewModelTests {
         #expect(await store.created.isEmpty)
     }
 
-    /// A birth date can't be in the future, so Simpan refuses one and says why under the field.
-    @Test func aFutureBirthDateIsRefusedWithAReason() async throws {
-        let store = FakeDocuments()
-        let review = model(store)
-        review.load(Self.ktp, pages: [try page()])
-        review.setValue("17-08-2999", for: FieldKey.birthDate)
-        #expect(review.problems.isEmpty)
-        #expect(await !review.save())
-        #expect(review.problems[FieldKey.birthDate] == .birthDateInFuture)
-        #expect(await store.created.isEmpty)
-        review.setValue("17-08-1990", for: FieldKey.birthDate)
-        #expect(review.problems.isEmpty)
-    }
-
-    /// Typed on a number pad: the dashes come by themselves, and only before a digit, so deleting one works.
-    @Test func typedDatesGetDashes() {
-        #expect(ReviewModel.typedDate("17") == "17")
-        #expect(ReviewModel.typedDate("170") == "17-0")
-        #expect(ReviewModel.typedDate("17081990") == "17-08-1990")
-        #expect(ReviewModel.typedDate("17-08-1990") == "17-08-1990")
-        #expect(ReviewModel.typedDate("17/08/19901") == "17-08-1990")
-    }
-
-    /// An edit that makes the birth date and the NIK disagree marks both: either could be the wrong one.
-    @Test func aNIKAndBirthDateThatDisagreeAreMarked() throws {
-        let review = model()
-        review.load(Self.ktp, pages: [try page()])
-        review.setValue("18-08-1990", for: FieldKey.birthDate)
-        #expect(review.marked.isSuperset(of: [FieldKey.nik, FieldKey.birthDate]))
-        review.setValue("17-08-1990", for: FieldKey.birthDate)
-        #expect(review.marked.isDisjoint(with: [FieldKey.nik, FieldKey.birthDate]))
-        review.setValue("0012341808900001", for: FieldKey.nik)
-        #expect(review.marked.isSuperset(of: [FieldKey.nik, FieldKey.birthDate]))
-    }
-
     /// One save at a time: a second tap while the first is being written is refused, never a duplicate.
     @Test func aSecondSaveWhileOneRunsIsRefused() async throws {
         let store = FakeDocuments()
@@ -310,5 +275,43 @@ struct ReviewModelTests {
     @Test func aRealPageEncodesAsJPEG() throws {
         let data = try #require(PageEncoding.jpeg(try page()))
         #expect(data.prefix(2) == Data([0xFF, 0xD8]))
+    }
+}
+
+/// Dates as typed, and the NIK checked against the birth date.
+extension ReviewModelTests {
+    /// A birth date can't be in the future, so Simpan refuses one and says why under the field.
+    @Test func aFutureBirthDateIsRefusedWithAReason() async throws {
+        let store = FakeDocuments()
+        let review = model(store)
+        review.load(Self.ktp, pages: [try page()])
+        review.setValue("17-08-2999", for: FieldKey.birthDate)
+        #expect(review.problems.isEmpty)
+        #expect(await !review.save())
+        #expect(review.problems[FieldKey.birthDate] == .birthDateInFuture)
+        #expect(await store.created.isEmpty)
+        review.setValue("17-08-1990", for: FieldKey.birthDate)
+        #expect(review.problems.isEmpty)
+    }
+
+    /// Typed on a number pad: the dashes come by themselves, and only before a digit, so deleting one works.
+    @Test func typedDatesGetDashes() {
+        #expect(ReviewModel.typedDate("17") == "17")
+        #expect(ReviewModel.typedDate("170") == "17-0")
+        #expect(ReviewModel.typedDate("17081990") == "17-08-1990")
+        #expect(ReviewModel.typedDate("17-08-1990") == "17-08-1990")
+        #expect(ReviewModel.typedDate("17/08/19901") == "17-08-1990")
+    }
+
+    /// An edit that makes the birth date and the NIK disagree marks both: either could be the wrong one.
+    @Test func aNIKAndBirthDateThatDisagreeAreMarked() throws {
+        let review = model()
+        review.load(Self.ktp, pages: [try page()])
+        review.setValue("18-08-1990", for: FieldKey.birthDate)
+        #expect(review.marked.isSuperset(of: [FieldKey.nik, FieldKey.birthDate]))
+        review.setValue("17-08-1990", for: FieldKey.birthDate)
+        #expect(review.marked.isDisjoint(with: [FieldKey.nik, FieldKey.birthDate]))
+        review.setValue("0012341808900001", for: FieldKey.nik)
+        #expect(review.marked.isSuperset(of: [FieldKey.nik, FieldKey.birthDate]))
     }
 }
