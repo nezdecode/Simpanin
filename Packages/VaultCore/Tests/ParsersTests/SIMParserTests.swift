@@ -243,6 +243,16 @@ struct SIMParserTests {
         }
     }
 
+    /// A corrected birth date is a guess, unless a new card's number, the NIK, confirms it.
+    @Test func aBirthDateWithALookalikeDigit() throws {
+        let newCard = try #require(parse(Self.newCard(birth: "JAKARTA, l7-08-1990")))
+        #expect(newCard.fields.values[FieldKey.birthDate] == "1990-08-17")
+        #expect(newCard.needsCheck.isEmpty)
+        let oldCard = try #require(parse(Self.oldCard(birth: "JAKARTA, l7-08-1990")))
+        #expect(oldCard.fields.values[FieldKey.birthDate] == "1990-08-17")
+        #expect(oldCard.needsCheck.contains(FieldKey.birthDate))
+    }
+
     @Test func aBirthDateThatCantBeRightIsMarked() throws {
         for birth in ["JAKARTA, 17-08-1090", "JAKARTA, 17-08-2090", "JAKARTA, 31-02-1990"] {
             let result = try #require(parse(Self.oldCard(birth: birth)))

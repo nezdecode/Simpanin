@@ -48,11 +48,15 @@ public enum SIMParser {
         }
 
         let birthText = field(2, label: "Tempat, Tgl Lahir/Place, Date of Birth", in: lines, card: card)?.text
-        let birth = birthText?.lastDate
-        if let birth {
+        let read = birthText?.lastDateReadingLookalikes
+        let birth = read?.date
+        if let birth, let read {
             fields[FieldKey.birthDate] = birth.string
             // A NIK only holds the last two digits of the year, and an old number holds none.
-            if birth.year < 1900 || birth > today { needsCheck.insert(FieldKey.birthDate) }
+            let implausible = birth.year < 1900 || birth > today
+            // A corrected date is a guess, unless a new card's number, the NIK, agrees with it.
+            let confirmed = nikDate?.matches(birth) ?? false
+            if implausible || (read.corrected && !confirmed) { needsCheck.insert(FieldKey.birthDate) }
         } else {
             needsCheck.insert(FieldKey.birthDate)
         }
