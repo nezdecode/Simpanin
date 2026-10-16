@@ -53,6 +53,23 @@ struct DocumentCameraCacheTests {
         #expect(protector.calls.map(\.protection) == [.complete])
     }
 
+    /// The folder is protected as soon as it exists, so a page that can't be removed doesn't leave it
+    /// without class Complete.
+    @Test func theFolderIsProtectedEvenWhenAPageCantBeRemoved() throws {
+        let caches = try caches()
+        let stuck = folder(in: caches).appending(path: "Scans")
+        try FileManager.default.createDirectory(at: stuck, withIntermediateDirectories: true)
+        try Data([1]).write(to: stuck.appending(path: "page.jpg"))
+        try FileManager.default.setAttributes([.posixPermissions: 0o500], ofItemAtPath: stuck.path)
+        defer {
+            try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: stuck.path)
+            try? FileManager.default.removeItem(at: caches)
+        }
+        let protector = RecordingProtector()
+        #expect(throws: (any Error).self) { try DocumentCameraCache.clear(in: caches, protector: protector) }
+        #expect(protector.calls.map(\.protection) == [.complete])
+    }
+
     @Test func otherCachesStay() throws {
         let caches = try caches()
         defer { try? FileManager.default.removeItem(at: caches) }
