@@ -18,6 +18,8 @@ struct LibraryView: View {
     let vault: AppVault
     let lock: LockController
     @State private var library: LibraryModel
+    @State private var scanShown = false
+    @State private var passcodeNeededShown = false
     @Environment(\.dynamicTypeSize) private var typeSize
 
     init(vault: AppVault, lock: LockController) {
@@ -92,6 +94,21 @@ struct LibraryView: View {
             .navigationTitle(Text("list.title"))
             .toolbar { toolbar }
             .task { await library.reload() }
+            .fullScreenCover(isPresented: $scanShown) {
+                ScanFlowView(store: Self.documentStore(for: vault), lock: lock) {
+                    scanShown = false
+                    Task { await library.reload() }
+                }
+            }
+            .alert(Text("recovery.passcodeNeeded"), isPresented: $passcodeNeededShown) {
+                if let url = URL.appSettings {
+                    Link(destination: url) { Text(ScreenText.openSettings) }
+                }
+                Button(role: .cancel) {
+                } label: {
+                    Text(ScreenText.cancel)
+                }
+            }
             .alert(
                 library.saveError.map { Text(RecoveryContent($0).message) } ?? Text(verbatim: ""),
                 isPresented: Binding(isPresent: $library.saveError)
@@ -137,8 +154,26 @@ struct LibraryView: View {
             }
             .accessibilityIdentifier("list.settings")
         }
+        ToolbarItem(placement: .topBarTrailing) {
+            Button {
+                // The vault's key needs a passcode; checked before the first scan, as the design doc says.
+                if lock.passcodeState == .set {
+                    scanShown = true
+                } else {
+                    passcodeNeededShown = true
+                }
+            } label: {
+                Label {
+                    Text("main.scan")
+                } icon: {
+                    Image(systemName: "plus")
+                }
+            }
+            .disabled(library.loadFailed)
+            .accessibilityIdentifier("list.scan")
+        }
         #if DEBUG
-            // Scanning isn't built yet, so in DEBUG "+" adds a synthetic sample document.
+            // A synthetic sample document, for the UI tests and trying the list without scanning.
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     Task { await library.addSample() }
@@ -146,7 +181,7 @@ struct LibraryView: View {
                     Label {
                         Text("debug.addSample")
                     } icon: {
-                        Image(systemName: "plus")
+                        Image(systemName: "doc.badge.plus")
                     }
                 }
                 // Saving while the list can't load would only confuse; it can't harm the vault.
