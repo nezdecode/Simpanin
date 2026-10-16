@@ -95,7 +95,8 @@
                         newPages = pages
                         reads += 1
                     },
-                    onCancel: { cameraShown = false }
+                    onCancel: { cameraShown = false },
+                    onPageFailed: { cameraShown = false }
                 )
                 .ignoresSafeArea()
             }

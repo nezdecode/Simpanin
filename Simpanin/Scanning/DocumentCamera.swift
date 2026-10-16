@@ -18,6 +18,8 @@ import VisionKit
 struct DocumentCamera: UIViewControllerRepresentable {
     let onFinish: ([CGImage]) -> Void
     let onCancel: () -> Void
+    /// A page couldn't be copied into memory. The scan is never handed on with a page missing.
+    let onPageFailed: () -> Void
 
     /// False in the simulator, which has no camera.
     static var isSupported: Bool { VNDocumentCameraViewController.isSupported }
@@ -48,8 +50,10 @@ struct DocumentCamera: UIViewControllerRepresentable {
         func documentCameraViewController(
             _ controller: VNDocumentCameraViewController, didFinishWith scan: VNDocumentCameraScan
         ) {
-            let pages = (0..<scan.pageCount).compactMap { Self.inMemory(scan.imageOfPage(at: $0)) }
+            let drawn = (0..<scan.pageCount).map { Self.inMemory(scan.imageOfPage(at: $0)) }
             DocumentCameraCache.clear()
+            let pages = drawn.compactMap { $0 }
+            guard pages.count == drawn.count else { return camera.onPageFailed() }
             camera.onFinish(pages)
         }
 

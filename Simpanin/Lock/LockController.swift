@@ -45,6 +45,8 @@ final class LockController {
     /// Where the choice is saved. UI tests pass their own store, so they never touch the app's.
     private let settings: UserDefaults
     var relockTimeout: TimeInterval { autoLock.seconds }
+    /// The same check the lock uses, so "+" can ask for a passcode before the first scan.
+    var passcodeState: PasscodeState { passcode() }
     private let vault: any VaultOpening
     private let clock: any VaultClock
     private let passcode: @MainActor () -> PasscodeState

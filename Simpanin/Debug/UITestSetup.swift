@@ -11,12 +11,14 @@
 
 #if DEBUG
     import Foundation
+    import CoreGraphics
     import VaultCore
 
     /// Launch arguments the UI tests use. `-SimpaninUITest` starts on a fresh throwaway vault
     /// with an in-memory key. `-SimpaninUITestOpenError <case>` makes opening fail, so a test
     /// lands on a recovery screen; `-SimpaninUITestPasscode notSet` acts as if there's no passcode.
     /// `-SimpaninUITestBrokenOldVault` puts a folder VaultCore can't read into Data lama.
+    /// `-SimpaninUITestScan` makes "+" skip the camera, which the simulator lacks, and read a synthetic KTP.
     nonisolated enum UITestSetup {
         static var isActive: Bool { ProcessInfo.processInfo.arguments.contains("-SimpaninUITest") }
 
@@ -65,6 +67,31 @@
         static func documentStore(for vault: AppVault) -> any DocumentStoring {
             guard let count = value(after: "-SimpaninUITestLoadError").flatMap(Int.init) else { return vault.store }
             return ScriptedDocuments(store: vault.store, failingLoads: count)
+        }
+
+        static var scansSynthetically: Bool {
+            isActive && ProcessInfo.processInfo.arguments.contains("-SimpaninUITestScan")
+        }
+
+        /// One blank page: the synthetic recognizer below never looks at it.
+        static var syntheticPages: [CGImage] {
+            guard
+                let context = CGContext(
+                    data: nil, width: 8, height: 8, bitsPerComponent: 8, bytesPerRow: 32,
+                    space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue),
+                let page = context.makeImage()
+            else { return [] }
+            return [page]
+        }
+
+        /// A synthetic KTP whose name is marked, so the review screen shows Periksa lagi.
+        struct SyntheticRecognizer: TextRecognizer {
+            func lines(in page: CGImage) async throws -> [String] {
+                [
+                    "PROVINSI DKI JAKARTA", "NIK : 0012341708900001", "Nama : BUDI C0NTOH",
+                    "Tempat/Tgl Lahir : JAKARTA, 17-08-1990", "Jenis Kelamin : LAKI-LAKI",
+                ]
+            }
         }
 
         static var passcode: PasscodeState {
