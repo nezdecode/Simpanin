@@ -102,7 +102,7 @@ struct ReviewView: View {
             } label: {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("review.type").foregroundStyle(Color.primary)
-                    if review.typeNeedsCheck { CheckAgainText() }
+                    if review.typeNeedsCheck { WarningText("review.checkAgain") }
                 }
             }
         }
@@ -136,7 +136,8 @@ struct ReviewView: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(Self.title(for: key)).font(.footnote).foregroundStyle(.secondary)
             TextField(
-                text: Binding(get: { review.values[key] ?? "" }, set: { review.setValue($0, for: key) })
+                text: Binding(get: { review.values[key] ?? "" }, set: { review.setValue($0, for: key) }),
+                prompt: ReviewModel.dateKeys.contains(key) ? Text("review.datePlaceholder") : nil
             ) {
                 Text(Self.title(for: key))
             }
@@ -144,7 +145,11 @@ struct ReviewView: View {
             .autocorrectionDisabled()
             .font(key == FieldKey.nik || key == FieldKey.simNumber ? .body.monospaced() : .body)
             .accessibilityIdentifier("review.field.\(key)")
-            if review.marked.contains(key) { CheckAgainText() }
+            if let problem = review.problems[key] {
+                WarningText(Self.reason(for: problem))
+            } else if review.marked.contains(key) {
+                WarningText("review.checkAgain")
+            }
         }
     }
 
@@ -189,7 +194,7 @@ struct ReviewView: View {
     private var expiryLabel: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text("review.validUntil").foregroundStyle(Color.primary)
-            if review.expiryNeedsCheck || review.expiryMissing { CheckAgainText() }
+            if review.expiryNeedsCheck || review.expiryMissing { WarningText("review.checkAgain") }
         }
     }
 
@@ -202,20 +207,32 @@ struct ReviewView: View {
         }
     }
 
+    private static func reason(for problem: ReviewModel.FieldProblem) -> LocalizedStringResource {
+        switch problem {
+        case .notADate: "review.notADate"
+        case .birthDateInFuture: "review.birthDateInFuture"
+        }
+    }
+
     private static func keyboard(for key: String) -> UIKeyboardType {
         switch key {
         case FieldKey.nik: .numberPad
-        case FieldKey.simNumber, FieldKey.birthDate: .numbersAndPunctuation
+        case FieldKey.birthDate: .numberPad
+        case FieldKey.simNumber: .numbersAndPunctuation
         default: .default
         }
     }
 }
 
-/// "Periksa lagi" under a field the parser isn't sure about.
-private struct CheckAgainText: View {
+/// Under a field: "Periksa lagi" when the parser isn't sure, or why Simpan refused it.
+private struct WarningText: View {
+    let text: LocalizedStringResource
+
+    init(_ text: LocalizedStringResource) { self.text = text }
+
     var body: some View {
         Label {
-            Text("review.checkAgain")
+            Text(text)
         } icon: {
             Image(systemName: "exclamationmark.triangle")
         }

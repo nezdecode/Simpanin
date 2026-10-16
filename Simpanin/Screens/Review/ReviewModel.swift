@@ -32,6 +32,8 @@ final class ReviewModel {
     private(set) var typeNeedsCheck = false
     private(set) var expiry: CalendarDate?
     private(set) var expiryNeedsCheck = false
+    /// Why Simpan refused a field, shown under it until the field is edited.
+    private(set) var problems: [String: FieldProblem] = [:]
     var saveError: RecoveryScreen?
     private(set) var saving = false
     /// What the scan read, to tell what the user changed.
@@ -81,13 +83,32 @@ final class ReviewModel {
         typeNeedsCheck = result?.typeNeedsCheck ?? true
         expiry = result?.expiry
         expiryNeedsCheck = result?.expiryNeedsCheck ?? false
+        problems = [:]
         saveError = nil
     }
 
     func setValue(_ text: String, for key: String) {
-        values[key] = text
+        values[key] = Self.dateKeys.contains(key) ? Self.typedDate(text) : text
         // The user looked at it and decided, so it's no longer the parser's guess.
         marked.remove(key)
+        problems[key] = nil
+        if key == FieldKey.nik || key == FieldKey.birthDate { checkNIKAgainstBirthDate() }
+    }
+
+    /// The KTP parser's cross-check, again after an edit: when they disagree, either could be wrong.
+    private func checkNIKAgainstBirthDate() {
+        let pair: Set = [FieldKey.nik, FieldKey.birthDate]
+        guard fieldKeys.contains(FieldKey.nik), let nik = values[FieldKey.nik],
+            let birth = Self.yearFirst(values[FieldKey.birthDate] ?? "").flatMap(CalendarDate.init),
+            let agrees = NIK.agrees(nik, withBirthDate: birth)
+        else { return }
+        if !agrees {
+            marked.formUnion(pair)
+            return
+        }
+        marked.remove(FieldKey.nik)
+        // The NIK holds only the year's last two digits, so it can't vouch for a century.
+        if birth.year >= 1900, birth <= .today { marked.remove(FieldKey.birthDate) }
     }
 
     func setExpiry(_ date: CalendarDate?) {
@@ -111,6 +132,12 @@ final class ReviewModel {
                 // A date that can't exist is never stored; the field is marked for the user to fix.
                 guard let date = Self.yearFirst(text) else {
                     marked.insert(key)
+                    problems[key] = .notADate
+                    return false
+                }
+                if key == FieldKey.birthDate, let day = CalendarDate(date), day > .today {
+                    marked.insert(key)
+                    problems[key] = .birthDateInFuture
                     return false
                 }
                 fields[key] = date
@@ -143,6 +170,21 @@ final class ReviewModel {
 }
 
 extension ReviewModel {
+    enum FieldProblem: Equatable {
+        case notADate
+        case birthDateInFuture
+    }
+
+    /// Digits as dd-mm-yyyy, for a number pad. A dash only goes before a digit, so backspace can remove it.
+    static func typedDate(_ text: String) -> String {
+        var result = ""
+        for (index, digit) in text.filter { $0.isASCII && $0.isNumber }.prefix(8).enumerated() {
+            if index == 2 || index == 4 { result.append("-") }
+            result.append(digit)
+        }
+        return result
+    }
+
     /// Fields holding a date: shown day first, as on the card, and stored as YYYY-MM-DD like every date
     /// in the vault.
     static let dateKeys: Set<String> = [FieldKey.birthDate]

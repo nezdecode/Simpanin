@@ -958,6 +958,17 @@
         }
       }
     },
+    "review.birthDateInFuture" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tanggal lahir tidak bisa di masa depan."
+          }
+        }
+      }
+    },
     "review.checkAgain" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -965,6 +976,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Periksa lagi"
+          }
+        }
+      }
+    },
+    "review.datePlaceholder" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "dd-mm-yyyy"
           }
         }
       }
@@ -1031,6 +1053,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "mis. Ibu, Kantor"
+          }
+        }
+      }
+    },
+    "review.notADate" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tanggal tidak valid. Tulis sebagai dd-mm-yyyy."
           }
         }
       }
