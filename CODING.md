@@ -18,6 +18,7 @@ Simpanin has two parts: a core that keeps documents safe, and an app around it.
 | `Vault/` | The platform side of VaultCore (`KeychainKeyStore`, `DataProtectionFileProtector`) and `AppVault`, which creates the one `VaultStore`. |
 | `Lock/` | `LockController`, `RecoveryMapping`, the lock settings every screen relies on, and how errors are summarised for the log (`ErrorSummary`). |
 | `Documents/` | How a document reads: `DocumentStyle`, `ExpiryText`, date display. |
+| `Scanning/` | From the camera to parsed fields: `DocumentCamera`, `TextRecognizer` (Vision), `ReadingOrder`, `ScanModel`, and `DocumentCameraCache`, which removes the page images VisionKit leaves in Caches. |
 | `Screens/<Area>/` | One folder per screen or flow, with its views and models side by side. |
 | `Screens/` (root) | Texts several screens share (`ScreenText`). |
 | `Components/` | Views and styles several screens use. |
