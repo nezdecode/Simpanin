@@ -496,6 +496,17 @@
         }
       }
     },
+    "notice.scanDropped" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pindaian yang belum disimpan dibuang karena Simpanin terkunci. Pindai lagi kalau perlu."
+          }
+        }
+      }
+    },
     "oldVaults.deleteConfirm" : {
       "extractionState" : "manual",
       "localizations" : {

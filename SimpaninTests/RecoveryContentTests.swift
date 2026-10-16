@@ -48,6 +48,9 @@ struct RecoveryContentTests {
         #expect(
             String(localized: VaultNotice.repairWaitingForSpace.message)
                 == "Penyimpanan HP hampir penuh. Beberapa perbaikan akan disimpan setelah ada ruang.")
+        #expect(
+            String(localized: VaultNotice.scanDropped.message)
+                == "Pindaian yang belum disimpan dibuang karena Simpanin terkunci. Pindai lagi kalau perlu.")
     }
 
     @Test func buttonTexts() {

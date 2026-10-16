@@ -16,10 +16,13 @@ struct NoticeList: View {
     let notices: Set<VaultNotice>
     let onDismiss: (VaultNotice) -> Void
 
-    private let order: [VaultNotice] = [.recoveredFromPages, .newestChangeMayBeLost, .repairWaitingForSpace]
+    /// Every notice must be listed here, or it's never shown; a test checks that.
+    static let order: [VaultNotice] = [
+        .scanDropped, .recoveredFromPages, .newestChangeMayBeLost, .repairWaitingForSpace,
+    ]
 
     var body: some View {
-        ForEach(order, id: \.self) { notice in
+        ForEach(Self.order, id: \.self) { notice in
             if notices.contains(notice) {
                 HStack(alignment: .top, spacing: 12) {
                     Image(systemName: notice == .repairWaitingForSpace ? "externaldrive" : "info.circle")
