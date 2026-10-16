@@ -56,12 +56,14 @@ struct ReviewView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
+                    // Nothing can be cancelled or rescanned while a save is being written.
                     Button(action: onCancel) { Text(ScreenText.cancel) }
+                        .disabled(review.saving)
                         .accessibilityIdentifier("review.cancel")
                 }
                 ToolbarItem(placement: .primaryAction) {
                     Button(action: onRescan) { Text("review.rescan") }
-                        .disabled(reading)
+                        .disabled(reading || review.saving)
                         .accessibilityIdentifier("review.rescan")
                 }
             }

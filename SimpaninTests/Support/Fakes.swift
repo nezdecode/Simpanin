@@ -73,10 +73,27 @@ actor FakeDocuments: DocumentStoring {
     private var failure: VaultError?
     private var loadFailure: VaultError?
     private var binFailure: VaultError?
+    private var createGated = false
+    private var createGate: CheckedContinuation<Void, Never>?
 
     func setFailure(_ failure: VaultError?) { self.failure = failure }
     func setLoadFailure(_ failure: VaultError?) { loadFailure = failure }
     func setBinFailure(_ failure: VaultError?) { binFailure = failure }
+    /// The next createDocument waits until the test releases it, like a save still being written.
+    func gateNextCreate() { createGated = true }
+
+    /// False if no gated create started within two seconds, so a test fails instead of hanging.
+    func waitUntilCreating() async -> Bool {
+        for _ in 0..<2_000 where createGate == nil {
+            try? await Task.sleep(for: .milliseconds(1))
+        }
+        return createGate != nil
+    }
+
+    func releaseCreate() {
+        createGate?.resume()
+        createGate = nil
+    }
 
     func documents() async throws -> [Document] {
         if let loadFailure { throw loadFailure }
@@ -93,6 +110,10 @@ actor FakeDocuments: DocumentStoring {
         type: DocumentType, label: String?, expiry: CalendarDate?, pinned: Bool, fields: DocumentFields,
         pages: [Data]
     ) async throws -> DocumentID {
+        if createGated {
+            createGated = false
+            await withCheckedContinuation { createGate = $0 }
+        }
         if let failure { throw failure }
         let id = DocumentID()
         created.append(fields)

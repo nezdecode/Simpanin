@@ -88,7 +88,13 @@ final class ReviewModel {
     }
 
     /// Seals the pages and the fields into the vault. False when it didn't; `saveError` says why.
-    func save() async -> Bool {
+    /// - Parameter onSaved: runs the moment the vault has the document, before anything else can, so a
+    ///   lock right after never reports the saved scan as dropped.
+    func save(onSaved: () -> Void = {}) async -> Bool {
+        // One save at a time: a second tap while the first is being written would save a duplicate.
+        guard !saving else { return false }
+        saving = true
+        defer { saving = false }
         var fields: [String: String] = [:]
         for key in fieldKeys {
             let text = values[key]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
@@ -104,8 +110,6 @@ final class ReviewModel {
                 fields[key] = text
             }
         }
-        saving = true
-        defer { saving = false }
         let encoded = pages.compactMap(encode)
         // A page that can't be prepared is never left out, so nothing is saved.
         guard encoded.count == pages.count else {
@@ -118,6 +122,7 @@ final class ReviewModel {
             _ = try await store.createDocument(
                 type: type, label: trimmedLabel.isEmpty ? nil : trimmedLabel, expiry: hasExpiry ? expiry : nil,
                 pinned: false, fields: DocumentFields(fields), pages: encoded)
+            onSaved()
             return true
         } catch {
             // Only the kind of error; never a field or a path.

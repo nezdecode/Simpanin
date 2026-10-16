@@ -178,6 +178,36 @@ struct ReviewModelTests {
         #expect(await store.created.isEmpty)
     }
 
+    /// One save at a time: a second tap while the first is being written is refused, never a duplicate.
+    @Test func aSecondSaveWhileOneRunsIsRefused() async throws {
+        let store = FakeDocuments()
+        await store.gateNextCreate()
+        let review = model(store)
+        review.load(Self.ktp, pages: [try page()])
+        let first = Task { await review.save() }
+        try #require(await store.waitUntilCreating())
+        #expect(await !review.save())
+        await store.releaseCreate()
+        #expect(await first.value)
+        #expect(await store.created.count == 1)
+    }
+
+    /// The scan counts as ended the moment the vault has it, before anything else can run, so a lock
+    /// right after never reports a saved scan as dropped.
+    @Test func savedIsReportedOnlyWhenTheVaultHasIt() async throws {
+        let review = model()
+        review.load(Self.ktp, pages: [try page()])
+        var reported = 0
+        #expect(await review.save(onSaved: { reported += 1 }))
+        #expect(reported == 1)
+        let failing = FakeDocuments()
+        await failing.setFailure(.storageFull)
+        let other = model(failing)
+        other.load(Self.ktp, pages: [try page()])
+        #expect(await !other.save(onSaved: { reported += 1 }))
+        #expect(reported == 1)
+    }
+
     @Test func aFullDiskSaysSo() async throws {
         let store = FakeDocuments()
         await store.setFailure(.storageFull)

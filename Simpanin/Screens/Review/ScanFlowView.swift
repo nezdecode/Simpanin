@@ -149,7 +149,8 @@ struct ScanFlowView: View {
 
     private func save() {
         Task {
-            if await review.save() { end() }
+            // The scan ends the moment the vault has it, so a lock right after doesn't call it dropped.
+            if await review.save(onSaved: lock.scanEnded) { end() }
         }
     }
 
