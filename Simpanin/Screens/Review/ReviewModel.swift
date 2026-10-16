@@ -23,7 +23,11 @@ import VaultCore
 @MainActor @Observable
 final class ReviewModel {
     private(set) var pages: [CGImage] = []
-    var type = DocumentType.other
+    /// Set by the type sheet; picking one is the user's decision, so the parser's doubt goes. `load` sets
+    /// the mark again after setting the type.
+    var type = DocumentType.other {
+        didSet { typeNeedsCheck = false }
+    }
     var label = ""
     /// The text of each field, by `FieldKey`, as read or as typed.
     private(set) var values: [String: String] = [:]

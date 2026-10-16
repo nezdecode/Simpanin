@@ -135,6 +135,15 @@ struct ReviewModelTests {
         #expect(review.hasUserChanges)
     }
 
+    /// A type the user picked is their decision, no longer the parser's guess.
+    @Test func pickingATypeClearsItsMark() throws {
+        let review = model()
+        review.load(nil, pages: [try page()])
+        #expect(review.typeNeedsCheck)
+        review.type = .ktp
+        #expect(!review.typeNeedsCheck)
+    }
+
     /// A type, a SIM class or a date picked by hand is the user's choice too, and a rescan would undo it.
     @Test func choicesAreChangesToo() throws {
         let review = model()
