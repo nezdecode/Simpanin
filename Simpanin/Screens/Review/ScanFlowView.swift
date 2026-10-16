@@ -15,7 +15,11 @@ import VaultCore
 /// From "+" to a saved document: the camera, Vision reading the pages, then "Periksa data". The scan
 /// lives only in memory; Batal, saving and the lock all drop it, and VisionKit's copies are removed.
 struct ScanFlowView: View {
-    let lock: LockController
+    /// For the lock, which drops a scan in progress and says so after unlocking.
+    let onScanStarted: () -> Void
+    let onScanEnded: () -> Void
+    /// The pages were read and the review shows them.
+    let onRead: () -> Void
     /// Called when the flow ends, saved or not.
     let onDone: () -> Void
     @State private var review: ReviewModel
@@ -26,9 +30,15 @@ struct ScanFlowView: View {
     @State private var newPages: [CGImage]?
     @State private var rescanConfirmShown = false
     @State private var pageFailedShown = false
+    @State private var started = false
 
-    init(store: any DocumentStoring, lock: LockController, onDone: @escaping () -> Void) {
-        self.lock = lock
+    init(
+        store: any DocumentStoring, onScanStarted: @escaping () -> Void, onScanEnded: @escaping () -> Void,
+        onRead: @escaping () -> Void = {}, onDone: @escaping () -> Void
+    ) {
+        self.onScanStarted = onScanStarted
+        self.onScanEnded = onScanEnded
+        self.onRead = onRead
         self.onDone = onDone
         _review = State(initialValue: ReviewModel(store: store))
         _scan = State(initialValue: ScanModel(recognizer: Self.recognizer))
@@ -89,9 +99,7 @@ struct ScanFlowView: View {
             // Text Vision couldn't read is still a scan: the user picks the type and can save the pages.
             review.load(scan.state == .read ? scan.result : nil, pages: pages)
             scan.discard()
-            #if DEBUG
-                if UITestSetup.capturesAfterScan { lock.screenCaptured = true }
-            #endif
+            onRead()
         }
         .onAppear(perform: start)
         .confirmationDialog(
@@ -121,7 +129,10 @@ struct ScanFlowView: View {
     }
 
     private func start() {
-        lock.scanStarted()
+        // onAppear can run again when the flow reappears; the scan starts once.
+        guard !started else { return }
+        started = true
+        onScanStarted()
         // The camera is already showing; UI tests read their synthetic page instead.
         if Self.scansSynthetically { openCamera() }
     }
@@ -150,13 +161,13 @@ struct ScanFlowView: View {
     private func save() {
         Task {
             // The scan ends the moment the vault has it, so a lock right after doesn't call it dropped.
-            if await review.save(onSaved: lock.scanEnded) { end() }
+            if await review.save(onSaved: onScanEnded) { end() }
         }
     }
 
     private func end() {
         DocumentCameraCache.clear()
-        lock.scanEnded()
+        onScanEnded()
         onDone()
     }
 }

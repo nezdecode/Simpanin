@@ -30,6 +30,13 @@ struct LibraryView: View {
 
     private var today: CalendarDate { CalendarDate.today }
 
+    private func scanRead() {
+        #if DEBUG
+            // Lets a UI test check the privacy cover sits above the scan flow.
+            if UITestSetup.capturesAfterScan { lock.screenCaptured = true }
+        #endif
+    }
+
     private static var canScan: Bool {
         #if DEBUG
             if UITestSetup.scansSynthetically { return true }
@@ -102,7 +109,10 @@ struct LibraryView: View {
             .toolbar { toolbar }
             .task { await library.reload() }
             .fullScreenCover(isPresented: $scanShown) {
-                ScanFlowView(store: Self.documentStore(for: vault), lock: lock) {
+                ScanFlowView(
+                    store: Self.documentStore(for: vault), onScanStarted: lock.scanStarted,
+                    onScanEnded: lock.scanEnded, onRead: scanRead
+                ) {
                     scanShown = false
                     Task { await library.reload() }
                 }
