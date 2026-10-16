@@ -32,6 +32,16 @@ struct ScanFlowView: View {
         self.onDone = onDone
         _review = State(initialValue: ReviewModel(store: store))
         _scan = State(initialValue: ScanModel(recognizer: Self.recognizer))
+        // Shown from the first frame, so "+" never shows an empty review first.
+        _cameraShown = State(initialValue: !Self.scansSynthetically)
+    }
+
+    private static var scansSynthetically: Bool {
+        #if DEBUG
+            UITestSetup.scansSynthetically
+        #else
+            false
+        #endif
     }
 
     private static var recognizer: @Sendable (RecognitionMethod) -> any TextRecognizer {
@@ -42,29 +52,34 @@ struct ScanFlowView: View {
     }
 
     var body: some View {
-        ReviewView(
-            review: review, reading: review.pages.isEmpty || scan.state == .reading, onCancel: end,
-            onRescan: rescan, onSave: save
-        )
-        // VisionKit may still write its copies after handing the pages back, so clear once it's gone.
-        .fullScreenCover(isPresented: $cameraShown, onDismiss: DocumentCameraCache.clear) {
-            DocumentCamera(
-                onFinish: { pages in
-                    cameraShown = false
-                    newPages = pages
-                    reads += 1
-                },
-                onCancel: {
-                    cameraShown = false
-                    // Cancelling the first scan ends the flow; cancelling a rescan keeps the scan before it.
-                    if review.pages.isEmpty { end() }
-                },
-                onPageFailed: {
-                    cameraShown = false
-                    pageFailedShown = true
-                }
-            )
-            .ignoresSafeArea()
+        // The camera is the flow's own content, not a screen presented over the review, so "+" shows it
+        // at once and no second presentation can fail while the first is still animating in.
+        Group {
+            if cameraShown {
+                DocumentCamera(
+                    onFinish: { pages in
+                        cameraShown = false
+                        newPages = pages
+                        reads += 1
+                    },
+                    onCancel: {
+                        cameraShown = false
+                        // Cancelling the first scan ends the flow; cancelling a rescan keeps the scan before it.
+                        if review.pages.isEmpty { end() }
+                    },
+                    onPageFailed: {
+                        cameraShown = false
+                        pageFailedShown = true
+                    }
+                )
+                .ignoresSafeArea()
+                // VisionKit may still write its copies after handing the pages back, so clear once it's gone.
+                .onDisappear(perform: DocumentCameraCache.clear)
+            } else {
+                ReviewView(
+                    review: review, reading: review.pages.isEmpty || scan.state == .reading, onCancel: end,
+                    onRescan: rescan, onSave: save)
+            }
         }
         .task(id: reads) {
             guard let pages = newPages else { return }
@@ -104,7 +119,8 @@ struct ScanFlowView: View {
 
     private func start() {
         lock.scanStarted()
-        openCamera()
+        // The camera is already showing; UI tests read their synthetic page instead.
+        if Self.scansSynthetically { openCamera() }
     }
 
     private func openCamera() {

@@ -173,20 +173,23 @@ struct LibraryView: View {
             .accessibilityIdentifier("list.scan")
         }
         #if DEBUG
-            // A synthetic sample document, for the UI tests and trying the list without scanning.
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    Task { await library.addSample() }
-                } label: {
-                    Label {
-                        Text("debug.addSample")
-                    } icon: {
-                        Image(systemName: "doc.badge.plus")
+            // A synthetic sample document, for the UI tests only: on a phone, next to "+", it was easy to
+            // mistake for scanning, and real scans now fill the list.
+            if UITestSetup.isActive {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        Task { await library.addSample() }
+                    } label: {
+                        Label {
+                            Text("debug.addSample")
+                        } icon: {
+                            Image(systemName: "doc.badge.plus")
+                        }
                     }
+                    // Saving while the list can't load would only confuse; it can't harm the vault.
+                    .disabled(library.loadFailed)
+                    .accessibilityIdentifier("list.addSample")
                 }
-                // Saving while the list can't load would only confuse; it can't harm the vault.
-                .disabled(library.loadFailed)
-                .accessibilityIdentifier("list.addSample")
             }
         #endif
     }
