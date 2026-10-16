@@ -187,4 +187,12 @@ struct KeychainKeyStoreTests {
             PasscodeState.from(canEvaluate: false, error: LAError(.biometryLockout))
                 == .unknown(code: LAError.Code.biometryLockout.rawValue))
     }
+
+    /// Only a passcode known to be off stops a scan. An unknown state tries, and the save says why if the
+    /// key really can't be used.
+    @Test func onlyAMissingPasscodeStopsAScan() {
+        #expect(PasscodeState.notSet.stopsScanning)
+        #expect(!PasscodeState.set.stopsScanning)
+        #expect(!PasscodeState.unknown(code: LAError.Code.biometryLockout.rawValue).stopsScanning)
+    }
 }
