@@ -32,6 +32,12 @@ struct DocumentCamera: UIViewControllerRepresentable {
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
 
+    /// Runs whenever the camera leaves the screen, for any reason. Locking the vault removes the screen
+    /// that showed the camera without calling the delegate, so this is the one place that always runs.
+    static func dismantleUIViewController(_ camera: VNDocumentCameraViewController, coordinator: Coordinator) {
+        DocumentCameraCache.clear()
+    }
+
     final class Coordinator: NSObject, VNDocumentCameraViewControllerDelegate {
         private let camera: DocumentCamera
 

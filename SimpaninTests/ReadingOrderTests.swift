@@ -54,6 +54,12 @@ struct ReadingOrderTests {
         #expect(ReadingOrder.lines(pieces) == ["NIK : 0012341708900001", "Nama : BUDI CONTOH"])
     }
 
+    /// Recognition reads a colon as a semicolon, as the parsers already allow.
+    @Test func aValueAfterASemicolonJoinsItsLabel() {
+        let pieces = [piece("; 0012341708900001", left: 0.4, middle: 0.8), piece("NIK", left: 0.1, middle: 0.8)]
+        #expect(ReadingOrder.lines(pieces) == ["NIK ; 0012341708900001"])
+    }
+
     /// A SIM has no colons: its number and its class on one row stay separate lines.
     @Test func piecesWithoutAColonStaySeparate() {
         let pieces = [piece("A", left: 0.8, middle: 0.8), piece("0012341708900001", left: 0.1, middle: 0.8)]

@@ -151,8 +151,9 @@ actor FakeQuarantine: QuarantineStoring {
     }
 }
 
-/// Answers a page with the next list of lines. A gated read waits until the test releases it, like
-/// Vision still working when the vault locks.
+/// Answers a page with the next list of lines. When gated, the first read waits until the test releases
+/// it, like Vision still working when the vault locks; later reads answer at once, so a read the test
+/// doesn't expect fails it instead of hanging it.
 actor FakeRecognizer {
     private var answers: [[String]]
     private let failing: Bool
@@ -180,7 +181,7 @@ actor FakeRecognizer {
 
     private func read(_ method: RecognitionMethod) async throws -> [String] {
         methods.append(method)
-        if gated { await withCheckedContinuation { gate = $0 } }
+        if gated, methods.count == 1 { await withCheckedContinuation { gate = $0 } }
         if failing { throw Failure() }
         return answers.isEmpty ? [] : answers.removeFirst()
     }

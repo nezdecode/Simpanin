@@ -100,6 +100,20 @@ struct ScanModelTests {
         #expect(scan.result == nil)
     }
 
+    /// Once a scan is dropped, the pages left aren't read: they'd keep the dropped pages in memory and
+    /// Vision busy.
+    @Test func aDiscardedScanReadsNoFurtherPages() async throws {
+        let fake = FakeRecognizer([Self.ktp, Self.ktp], gated: true)
+        let scan = model(fake)
+        let pages = [try page(), try page()]
+        let reading = Task { await scan.scanned(pages) }
+        try #require(await fake.waitUntilReading())
+        scan.discard()
+        await fake.release()
+        await reading.value
+        #expect(await fake.methods.count == 1)
+    }
+
     /// The vault can lock while Vision is still reading; the read that finishes later must not bring
     /// the scan back.
     @Test func aScanDiscardedWhileReadingStaysDiscarded() async throws {
@@ -107,7 +121,7 @@ struct ScanModelTests {
         let scan = model(fake)
         let pages = [try page()]
         let reading = Task { await scan.scanned(pages) }
-        #expect(await fake.waitUntilReading())
+        try #require(await fake.waitUntilReading())
         #expect(scan.state == .reading)
         scan.discard()
         await fake.release()

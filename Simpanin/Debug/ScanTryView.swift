@@ -65,7 +65,7 @@
                         Button("Copy masked text") {
                             UIPasteboard.general.setItems(
                                 [[UTType.plainText.identifier: MaskedText.mask(scan.lines)]],
-                                options: [.localOnly: true])
+                                options: [.localOnly: true, .expirationDate: Date.now.addingTimeInterval(60)])
                         }
                     }
                 }

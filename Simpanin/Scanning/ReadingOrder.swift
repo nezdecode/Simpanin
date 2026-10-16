@@ -38,7 +38,8 @@ nonisolated enum ReadingOrder {
             var lines: [String] = []
             for piece in row.sorted(by: { $0.box.minX < $1.box.minX }) {
                 // A KTP prints its values after a colon, and Vision returns label and value as two pieces.
-                if piece.text.hasPrefix(":"), let label = lines.popLast() {
+                // A colon is sometimes read as a semicolon, as the parsers already allow.
+                if piece.text.hasPrefix(":") || piece.text.hasPrefix(";"), let label = lines.popLast() {
                     lines.append(label + " " + piece.text)
                 } else {
                     lines.append(piece.text)

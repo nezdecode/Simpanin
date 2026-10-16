@@ -10,6 +10,7 @@
 //
 
 import CoreGraphics
+import OSLog
 import Observation
 import Parsers
 import VaultCore
@@ -64,6 +65,8 @@ final class ScanModel {
         do {
             var lines: [String] = []
             for page in pages {
+                // A dropped scan reads no further pages: they'd keep its pages in memory and Vision busy.
+                guard run == generation else { return }
                 lines += try await recognizer.lines(in: page)
             }
             // The vault may have locked meanwhile; a stale read must not bring the scan back.
@@ -73,6 +76,7 @@ final class ScanModel {
             state = .read
         } catch {
             guard run == generation else { return }
+            Logger.scan.error("Recognition failed: \(ErrorSummary.describe(error), privacy: .public)")
             state = .failed
         }
     }
