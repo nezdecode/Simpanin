@@ -99,7 +99,7 @@ actor FakeDocuments: DocumentStoring {
         createdPages.append(pages)
         live.append(
             Document(
-                id: id, type: type, createdAt: .now, updatedAt: .now, expiry: expiry, pinned: pinned,
+                id: id, type: type, label: label, createdAt: .now, updatedAt: .now, expiry: expiry, pinned: pinned,
                 deletedAt: nil, pageIDs: pages.map { _ in PageID() }))
         return id
     }
