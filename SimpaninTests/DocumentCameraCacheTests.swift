@@ -11,6 +11,7 @@
 
 import Foundation
 import Testing
+import VaultCore
 
 @testable import Simpanin
 
@@ -22,14 +23,34 @@ struct DocumentCameraCacheTests {
         return url
     }
 
+    func folder(in caches: URL) -> URL {
+        caches.appending(path: DocumentCameraCache.folderName, directoryHint: .isDirectory)
+    }
+
+    /// The pages go, the folder stays: VisionKit's next pages land in it and take its class.
     @Test func thePagesVisionKitLeftAreRemoved() throws {
         let caches = try caches()
         defer { try? FileManager.default.removeItem(at: caches) }
-        let scans = caches.appending(path: "\(DocumentCameraCache.folderName)/Scans")
+        let scans = folder(in: caches).appending(path: "Scans")
         try FileManager.default.createDirectory(at: scans, withIntermediateDirectories: true)
         try Data(repeating: 0, count: 8).write(to: scans.appending(path: "page.jpg"))
-        try DocumentCameraCache.clear(in: caches)
-        #expect(!FileManager.default.fileExists(atPath: caches.appending(path: DocumentCameraCache.folderName).path))
+        try DocumentCameraCache.clear(in: caches, protector: RecordingProtector())
+        let left = try FileManager.default.contentsOfDirectory(atPath: folder(in: caches).path)
+        #expect(left.isEmpty)
+    }
+
+    /// Created ahead of VisionKit with class Complete, so its files are locked from the moment they're
+    /// written, before Simpanin removes them.
+    @Test func theFolderIsCreatedWithClassComplete() throws {
+        let caches = try caches()
+        defer { try? FileManager.default.removeItem(at: caches) }
+        let protector = RecordingProtector()
+        try DocumentCameraCache.clear(in: caches, protector: protector)
+        var isFolder: ObjCBool = false
+        #expect(FileManager.default.fileExists(atPath: folder(in: caches).path, isDirectory: &isFolder))
+        #expect(isFolder.boolValue)
+        #expect(protector.calls.map(\.url.lastPathComponent) == [DocumentCameraCache.folderName])
+        #expect(protector.calls.map(\.protection) == [.complete])
     }
 
     @Test func otherCachesStay() throws {
@@ -39,16 +60,7 @@ struct DocumentCameraCacheTests {
         try FileManager.default.createDirectory(
             at: other.deletingLastPathComponent(), withIntermediateDirectories: true)
         try Data([1]).write(to: other)
-        try FileManager.default.createDirectory(
-            at: caches.appending(path: DocumentCameraCache.folderName), withIntermediateDirectories: true)
-        try DocumentCameraCache.clear(in: caches)
+        try DocumentCameraCache.clear(in: caches, protector: RecordingProtector())
         #expect(FileManager.default.fileExists(atPath: other.path))
-    }
-
-    /// Most launches find nothing to remove; that's not an error.
-    @Test func nothingToRemoveIsFine() throws {
-        let caches = try caches()
-        defer { try? FileManager.default.removeItem(at: caches) }
-        try DocumentCameraCache.clear(in: caches)
     }
 }

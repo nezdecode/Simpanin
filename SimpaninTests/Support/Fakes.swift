@@ -199,3 +199,12 @@ actor FakeRecognizer {
         gate = nil
     }
 }
+
+/// Records which class each path was given, so tests can check it without a device.
+final class RecordingProtector: FileProtector {
+    private let log = Mutex<[(url: URL, protection: FileProtectionClass)]>([])
+    var calls: [(url: URL, protection: FileProtectionClass)] { log.withLock { $0 } }
+    func protect(_ url: URL, as protection: FileProtectionClass) throws {
+        log.withLock { $0.append((url, protection)) }
+    }
+}

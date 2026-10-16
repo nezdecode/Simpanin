@@ -11,26 +11,30 @@
 
 import Foundation
 import OSLog
+import VaultCore
 
 /// VisionKit's document camera keeps every page it takes as an unencrypted JPEG in
 /// `Library/Caches/com.apple.DocumentCamera` (seen on iOS 27). A scan may only live in memory until
-/// it's saved, so the folder is removed after every scan and at launch.
+/// it's saved, so the folder is emptied after every scan and at launch, and kept with class Complete.
 nonisolated enum DocumentCameraCache {
     static let folderName = "com.apple.DocumentCamera"
 
-    /// A missing folder is fine; any other error is thrown, so the caller can log it.
-    static func clear(in caches: URL) throws {
-        do {
-            try FileManager.default.removeItem(at: caches.appending(path: folderName, directoryHint: .isDirectory))
-        } catch let error as CocoaError where error.code == .fileNoSuchFile {
-            return
+    /// Removes what's in the folder and keeps the folder, with class Complete: VisionKit writes into it,
+    /// and a new file takes its folder's class, so its pages are locked from the moment they're written.
+    /// Any error is thrown, so the caller can log it.
+    static func clear(in caches: URL, protector: any FileProtector) throws {
+        let folder = caches.appending(path: folderName, directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        for item in try FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil) {
+            try FileManager.default.removeItem(at: item)
         }
+        try protector.protect(folder, as: .complete)
     }
 
     /// Clears the app's own Caches. A failure is logged, never ignored: it would leave a page on disk.
     static func clear() {
         do {
-            try clear(in: .cachesDirectory)
+            try clear(in: .cachesDirectory, protector: DataProtectionFileProtector())
         } catch {
             Logger.scan.error(
                 "The document camera's pages weren't removed: \(ErrorSummary.describe(error), privacy: .public)")
