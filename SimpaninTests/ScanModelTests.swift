@@ -114,6 +114,23 @@ struct ScanModelTests {
         #expect(await fake.methods.count == 1)
     }
 
+    /// The screen that started a read cancels it when it goes away, also when locking the vault removes
+    /// it before it could drop the scan. A cancelled read reads no further pages and drops the scan.
+    @Test func aCancelledReadDropsTheScan() async throws {
+        let fake = FakeRecognizer([Self.ktp, Self.ktp], gated: true)
+        let scan = model(fake)
+        let pages = [try page(), try page()]
+        let reading = Task { await scan.scanned(pages) }
+        try #require(await fake.waitUntilReading())
+        reading.cancel()
+        await fake.release()
+        await reading.value
+        #expect(await fake.methods.count == 1)
+        #expect(scan.state == .empty)
+        #expect(scan.pages.isEmpty)
+        #expect(scan.lines.isEmpty)
+    }
+
     /// The vault can lock while Vision is still reading; the read that finishes later must not bring
     /// the scan back.
     @Test func aScanDiscardedWhileReadingStaysDiscarded() async throws {

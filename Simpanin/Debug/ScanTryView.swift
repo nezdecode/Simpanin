@@ -16,14 +16,17 @@
     import VaultCore
 
     /// DEBUG only. Scans a document and shows what Vision and the parsers read, so scanning can be tried
-    /// on the phone before the review screen exists. Saves nothing, and drops the scan when the vault
-    /// locks, like the real flow.
+    /// on the phone before the review screen exists. Saves nothing. Locking the vault removes this screen,
+    /// which cancels a read and drops the scan; RootView removes VisionKit's page images.
     struct ScanTryView: View {
-        let lock: LockController
         @State private var scan = ScanModel()
         @State private var cameraShown = false
         @State private var snapshot: FileChanges?
         @State private var leftovers: [FileChanges.Change]?
+        /// Reads run in `.task(id: reads)`, so SwiftUI cancels one when the screen goes away.
+        @State private var reads = 0
+        @State private var newPages: [CGImage]?
+        @State private var requestedMethod = RecognitionMethod.text
 
         /// Where VisionKit could leave page images: tmp, and Library with its Caches.
         private static var watchedFolders: [URL] { [.temporaryDirectory, .libraryDirectory] }
@@ -31,7 +34,12 @@
         private static let shownFields = [FieldKey.nik, FieldKey.simNumber, FieldKey.name, FieldKey.birthDate]
 
         private var method: Binding<RecognitionMethod> {
-            Binding(get: { scan.method }, set: { method in Task { await scan.read(using: method) } })
+            Binding(
+                get: { scan.method },
+                set: { method in
+                    requestedMethod = method
+                    reads += 1
+                })
         }
 
         var body: some View {
@@ -84,19 +92,21 @@
                 DocumentCamera(
                     onFinish: { pages in
                         cameraShown = false
-                        Task {
-                            await scan.scanned(pages)
-                            leftovers = snapshot?.changes()
-                        }
+                        newPages = pages
+                        reads += 1
                     },
                     onCancel: { cameraShown = false }
                 )
                 .ignoresSafeArea()
             }
-            .onChange(of: lock.state) { _, state in
-                if state != .unlocked {
-                    scan.discard()
-                    DocumentCameraCache.clear()
+            .task(id: reads) {
+                guard reads > 0 else { return }
+                if let pages = newPages {
+                    newPages = nil
+                    await scan.scanned(pages)
+                    leftovers = snapshot?.changes()
+                } else {
+                    await scan.read(using: requestedMethod)
                 }
             }
         }

@@ -16,7 +16,8 @@ import Parsers
 import VaultCore
 
 /// One scan, from the camera's pages to what the parsers read. Kept in memory only, until it's saved
-/// or dropped; when the vault locks it's dropped.
+/// or dropped. Start reads from the screen's `.task`, so a read is cancelled, and the scan dropped, when
+/// the screen goes away, also when locking the vault removes it.
 @MainActor @Observable
 final class ScanModel {
     enum State: Equatable {
@@ -67,15 +68,21 @@ final class ScanModel {
             for page in pages {
                 // A dropped scan reads no further pages: they'd keep its pages in memory and Vision busy.
                 guard run == generation else { return }
+                // Cancelled with the screen that started it: locking the vault removes that screen before
+                // it can drop the scan, so the read drops it.
+                guard !Task.isCancelled else { return discard() }
                 lines += try await recognizer.lines(in: page)
             }
-            // The vault may have locked meanwhile; a stale read must not bring the scan back.
+            // The vault may have locked meanwhile; a stale or cancelled read must not bring the scan back.
             guard run == generation else { return }
+            guard !Task.isCancelled else { return discard() }
             self.lines = lines
             result = KTPParser.parse(lines, today: today()) ?? SIMParser.parse(lines, today: today())
             state = .read
         } catch {
             guard run == generation else { return }
+            // Vision may throw when its task is cancelled; that's a dropped scan, not a failure.
+            guard !Task.isCancelled else { return discard() }
             Logger.scan.error("Recognition failed: \(ErrorSummary.describe(error), privacy: .public)")
             state = .failed
         }
