@@ -207,4 +207,88 @@ final class SimpaninUITests: XCTestCase {
         XCTAssertEqual(app.buttons.matching(identifier: "oldVaults.delete").count, 0)
         screenshot("09 data lama, folder tidak terbaca")
     }
+
+    // MARK: Scanning (synthetic page and text: the simulator has no camera)
+
+    @MainActor
+    private func openReview(_ app: XCUIApplication) {
+        XCTAssertTrue(app.navigationBars["Dokumen"].waitForExistence(timeout: 10))
+        app.buttons["list.scan"].tap()
+        XCTAssertTrue(app.textFields["review.field.name"].waitForExistence(timeout: 10))
+    }
+
+    @MainActor
+    private func replace(_ field: XCUIElement, with text: String) {
+        field.tap()
+        let old = field.value as? String ?? ""
+        field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: old.count) + text)
+    }
+
+    @MainActor
+    func testScanCheckAndSaveAKTP() throws {
+        let app = launch(["-SimpaninUITestScan"])
+        openReview(app)
+        XCTAssertEqual(app.textFields["review.field.nik"].value as? String, "0012341708900001")
+        XCTAssertEqual(app.textFields["review.field.birthDate"].value as? String, "17-08-1990")
+        // The synthetic name has a 0 for an O, so it's marked.
+        XCTAssertTrue(app.staticTexts["Periksa lagi"].exists)
+        screenshot("20 review a scanned KTP")
+
+        replace(app.textFields["review.field.name"], with: "BUDI CONTOH")
+        XCTAssertFalse(app.staticTexts["Periksa lagi"].exists)
+        app.textFields["review.label"].tap()
+        app.textFields["review.label"].typeText("Ibu")
+        app.buttons["review.save"].tap()
+
+        XCTAssertTrue(rows(app).firstMatch.waitForExistence(timeout: 10))
+        XCTAssertEqual(rows(app).count, 1)
+        screenshot("21 the saved KTP in the list")
+    }
+
+    @MainActor
+    func testCancellingAScanSavesNothing() throws {
+        let app = launch(["-SimpaninUITestScan"])
+        openReview(app)
+        app.buttons["review.cancel"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)["list.empty"].waitForExistence(timeout: 5))
+        XCTAssertEqual(rows(app).count, 0)
+    }
+
+    @MainActor
+    func testALabelThatLooksLikeANumberWarns() throws {
+        let app = launch(["-SimpaninUITestScan"])
+        openReview(app)
+        app.textFields["review.label"].tap()
+        app.textFields["review.label"].typeText("0012 3417 0890")
+        XCTAssertTrue(app.descendants(matching: .any)["review.labelIsNumber"].waitForExistence(timeout: 5))
+        screenshot("22 a label that looks like a number")
+    }
+
+    /// A rescan may be a different card, so typed changes are confirmed before they're replaced.
+    @MainActor
+    func testARescanAfterTypingAsksFirst() throws {
+        let app = launch(["-SimpaninUITestScan"])
+        openReview(app)
+        replace(app.textFields["review.field.name"], with: "TYPED")
+        app.buttons["review.rescan"].tap()
+        XCTAssertTrue(
+            app.staticTexts["Perubahan yang kamu ketik akan diganti hasil pindaian baru."].waitForExistence(timeout: 5))
+        screenshot("23 rescan after typing")
+    }
+
+    @MainActor
+    func testPickingASIMClassShowsItsFields() throws {
+        let app = launch(["-SimpaninUITestScan"])
+        openReview(app)
+        app.buttons["review.type"].tap()
+        app.buttons["typePicker.sim"].tap()
+        XCTAssertTrue(app.buttons["typePicker.sim-c"].waitForExistence(timeout: 5))
+        screenshot("24 SIM classes")
+        app.buttons["typePicker.sim-c"].tap()
+        XCTAssertTrue(app.textFields["review.field.simNumber"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.textFields["review.field.nik"].exists)
+        // A form builds its rows as they scroll in, and the expiry is the last one.
+        app.swipeUp()
+        XCTAssertTrue(app.descendants(matching: .any)["review.expiry"].waitForExistence(timeout: 5))
+    }
 }
