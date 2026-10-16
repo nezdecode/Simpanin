@@ -103,8 +103,6 @@ struct KTPParserTests {
         }
     }
 
-    /// Recognition can return the label column before the value column. A label is never taken as a
-    /// value, and the card is still a KTP, with everything marked.
     /// Recognition mixes up l, i, I, 1 and |; a label read as "Tgi" or "NlK" is still that label. Values
     /// aren't touched: this applies to labels only.
     @Test func labelsReadWithLookalikeLetters() throws {
@@ -130,6 +128,30 @@ struct KTPParserTests {
         #expect(result.needsCheck.contains(FieldKey.birthDate))
     }
 
+    /// The same misread letter in the NIK and the date gives two wrong values that agree, so a corrected
+    /// NIK can't confirm anything.
+    @Test func aCorrectedNIKDoesntConfirmACorrectedBirthDate() throws {
+        let result = try #require(parse(Self.card(nik: "0012341S08900001", birth: "JAKARTA, 1S-08-1990")))
+        #expect(result.needsCheck.contains(FieldKey.nik))
+        #expect(result.needsCheck.contains(FieldKey.birthDate))
+    }
+
+    /// A NIK whose pairing is a guess, with no birth date to confirm it, stays marked.
+    @Test func aNIKOnTheNextLineWithoutABirthDateIsMarked() throws {
+        let result = try #require(parse(["NIK", ": 0012341708900001", "Nama : BUDI CONTOH"]))
+        #expect(result.fields.values[FieldKey.nik] == "0012341708900001")
+        #expect(result.needsCheck.contains(FieldKey.nik))
+    }
+
+    /// Every letter the NIK reads in place of a digit is read in a date too.
+    @Test func everyNIKLookalikeIsReadInADate() throws {
+        for (letter, day) in [("O", "01"), ("D", "01"), ("Z", "21")] {
+            let lines = Self.card(nik: "001234\(day)08900001", birth: "JAKARTA, \(letter)1-08-1990")
+            let result = try #require(parse(lines), "\(letter)")
+            #expect(result.fields.values[FieldKey.birthDate] == "1990-08-\(day)", "\(letter)")
+        }
+    }
+
     /// Seen on a real KTP: the first digit of the day read as a letter.
     @Test func aBirthDateWithALookalikeDigitIsCorrected() throws {
         for day in ["l7", "I7", "|7"] {
@@ -144,6 +166,8 @@ struct KTPParserTests {
         #expect(unconfirmed.needsCheck.contains(FieldKey.birthDate))
     }
 
+    /// Recognition can return the label column before the value column. A label is never taken as a
+    /// value, and the card is still a KTP, with everything marked.
     @Test func labelsBeforeValuesNeverTakeALabelAsAValue() throws {
         let lines = [
             "PROVINSI DKI JAKARTA", "NIK", "Nama", "Tempat/Tgl Lahir", ": 0012341708900001", ": BUDI CONTOH",

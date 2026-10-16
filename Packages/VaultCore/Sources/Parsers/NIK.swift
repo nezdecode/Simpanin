@@ -15,7 +15,7 @@ import VaultCore
 /// What a NIK says about its holder. Shared by every document that prints one.
 enum NIK {
     /// Letters recognition often reads in place of digits.
-    private static let lookalikes: [Character: Character] = [
+    static let lookalikes: [Character: Character] = [
         "O": "0", "o": "0", "D": "0", "I": "1", "l": "1", "|": "1", "Z": "2", "S": "5", "B": "8",
     ]
 

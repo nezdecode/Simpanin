@@ -24,11 +24,13 @@ public enum KTPParser {
 
         var number = ""
         var nikFromNextLine = false
+        var nikCorrected = false
         if let found = card.value(of: "NIK") {
             let (digits, corrected) = NIK.digits(from: found.text)
             number = digits
             fields[FieldKey.nik] = number
             nikFromNextLine = found.fromNextLine
+            nikCorrected = corrected
             // A matching birth date confirms only digits 7 to 12, so a correction stays marked.
             if corrected { needsCheck.insert(FieldKey.nik) }
         }
@@ -42,7 +44,10 @@ public enum KTPParser {
         fields[FieldKey.name] = name?.text
         if name.map(nameNeedsCheck) ?? true { needsCheck.insert(FieldKey.name) }
 
-        let birth = readBirthDate(card.value(of: "Tempat/Tgl Lahir"), nikDate: nikDate, today: today)
+        // The same misread letter in the NIK and the date gives two wrong values that agree, so a corrected
+        // NIK confirms nothing.
+        let birth = readBirthDate(
+            card.value(of: "Tempat/Tgl Lahir"), nikDate: nikCorrected ? nil : nikDate, today: today)
         if let date = birth.date { fields[FieldKey.birthDate] = date.string }
         if birth.needsCheck { needsCheck.insert(FieldKey.birthDate) }
         if nikFromNextLine && !birth.confirmed { needsCheck.insert(FieldKey.nik) }
