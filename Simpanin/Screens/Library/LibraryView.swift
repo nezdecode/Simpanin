@@ -30,6 +30,13 @@ struct LibraryView: View {
 
     private var today: CalendarDate { CalendarDate.today }
 
+    private static var canScan: Bool {
+        #if DEBUG
+            if UITestSetup.scansSynthetically { return true }
+        #endif
+        return DocumentCamera.isSupported
+    }
+
     private static func documentStore(for vault: AppVault) -> any DocumentStoring {
         #if DEBUG
             if UITestSetup.isActive { return UITestSetup.documentStore(for: vault) }
@@ -169,7 +176,8 @@ struct LibraryView: View {
                     Image(systemName: "plus")
                 }
             }
-            .disabled(library.loadFailed)
+            // A phone without VisionKit's document camera can't scan; nothing pretends it can.
+            .disabled(library.loadFailed || !Self.canScan)
             .accessibilityIdentifier("list.scan")
         }
         #if DEBUG
