@@ -143,6 +143,33 @@ struct ReviewModelTests {
         #expect(try await store.documents().first?.label == nil)
     }
 
+    /// Dates show as on the card, day first, and are stored as YYYY-MM-DD like every date in the vault.
+    @Test func aBirthDateShowsDayFirst() throws {
+        let review = model()
+        review.load(Self.ktp, pages: [try page()])
+        #expect(review.values[FieldKey.birthDate] == "17-08-1990")
+    }
+
+    @Test func aTypedBirthDateIsStoredYearFirst() async throws {
+        let store = FakeDocuments()
+        let review = model(store)
+        review.load(Self.ktp, pages: [try page()])
+        review.setValue("01-12-1985", for: FieldKey.birthDate)
+        #expect(await review.save())
+        #expect(await store.created.first?.values[FieldKey.birthDate] == "1985-12-01")
+    }
+
+    /// A date that can't exist is never stored: nothing is saved and the field is marked.
+    @Test func anImpossibleBirthDateIsntSaved() async throws {
+        let store = FakeDocuments()
+        let review = model(store)
+        review.load(Self.ktp, pages: [try page()])
+        review.setValue("31-02-1990", for: FieldKey.birthDate)
+        #expect(await !review.save())
+        #expect(review.marked.contains(FieldKey.birthDate))
+        #expect(await store.created.isEmpty)
+    }
+
     @Test func aFullDiskSaysSo() async throws {
         let store = FakeDocuments()
         await store.setFailure(.storageFull)

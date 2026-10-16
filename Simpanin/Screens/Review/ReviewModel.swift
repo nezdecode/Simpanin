@@ -65,7 +65,9 @@ final class ReviewModel {
     func load(_ result: ParsedDocument?, pages: [CGImage]) {
         self.pages = pages
         type = result?.type ?? .other
-        values = result?.fields.values ?? [:]
+        values = (result?.fields.values ?? [:]).reduce(into: [:]) { shown, field in
+            shown[field.key] = Self.dateKeys.contains(field.key) ? Self.dayFirst(field.value) : field.value
+        }
         scanned = values
         marked = result?.needsCheck ?? []
         typeNeedsCheck = result?.typeNeedsCheck ?? true
@@ -82,6 +84,21 @@ final class ReviewModel {
 
     /// Seals the pages and the fields into the vault. False when it didn't; `saveError` says why.
     func save() async -> Bool {
+        var fields: [String: String] = [:]
+        for key in fieldKeys {
+            let text = values[key]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            guard !text.isEmpty else { continue }
+            if Self.dateKeys.contains(key) {
+                // A date that can't exist is never stored; the field is marked for the user to fix.
+                guard let date = Self.yearFirst(text) else {
+                    marked.insert(key)
+                    return false
+                }
+                fields[key] = date
+            } else {
+                fields[key] = text
+            }
+        }
         saving = true
         defer { saving = false }
         let encoded = pages.compactMap(encode)
@@ -90,11 +107,6 @@ final class ReviewModel {
             Logger.scan.error("A page couldn't be encoded; nothing was saved")
             saveError = .saveFailed
             return false
-        }
-        var fields: [String: String] = [:]
-        for key in fieldKeys {
-            let text = values[key]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            if !text.isEmpty { fields[key] = text }
         }
         let trimmedLabel = label.trimmingCharacters(in: .whitespacesAndNewlines)
         do {
@@ -109,6 +121,25 @@ final class ReviewModel {
             saveError = RecoveryMapping.screen(forSaveError: error)
             return false
         }
+    }
+}
+
+extension ReviewModel {
+    /// Fields holding a date: shown day first, as on the card, and stored as YYYY-MM-DD like every date
+    /// in the vault.
+    static let dateKeys: Set<String> = [FieldKey.birthDate]
+
+    static func dayFirst(_ stored: String) -> String {
+        guard let date = CalendarDate(stored) else { return stored }
+        return String(format: "%02d-%02d-%04d", date.day, date.month, date.year)
+    }
+
+    /// "17-08-1990", also with dots, slashes or spaces between; nil when the date can't exist.
+    static func yearFirst(_ typed: String) -> String? {
+        guard let match = typed.wholeMatch(of: /\s*([0-9]{1,2})[-.\/ ]([0-9]{1,2})[-.\/ ]([0-9]{4})\s*/),
+            let day = Int(match.1), let month = Int(match.2), let year = Int(match.3)
+        else { return nil }
+        return CalendarDate(year: year, month: month, day: day)?.string
     }
 }
 
