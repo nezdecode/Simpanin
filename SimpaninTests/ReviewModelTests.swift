@@ -87,6 +87,14 @@ struct ReviewModelTests {
         #expect(review.marked.isEmpty)
     }
 
+    @Test func settingTheExpiryClearsItsMark() throws {
+        let review = model()
+        review.load(Self.sim, pages: [try page()])
+        review.setExpiry(CalendarDate(year: 2028, month: 1, day: 4))
+        #expect(review.expiry == CalendarDate(year: 2028, month: 1, day: 4))
+        #expect(!review.expiryNeedsCheck)
+    }
+
     @Test func typedChangesAreNoticed() throws {
         let review = model()
         review.load(Self.ktp, pages: [try page()])

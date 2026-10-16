@@ -30,7 +30,7 @@ final class ReviewModel {
     /// Fields marked "Periksa lagi".
     private(set) var marked: Set<String> = []
     private(set) var typeNeedsCheck = false
-    var expiry: CalendarDate?
+    private(set) var expiry: CalendarDate?
     private(set) var expiryNeedsCheck = false
     var saveError: RecoveryScreen?
     private(set) var saving = false
@@ -80,6 +80,11 @@ final class ReviewModel {
         values[key] = text
         // The user looked at it and decided, so it's no longer the parser's guess.
         marked.remove(key)
+    }
+
+    func setExpiry(_ date: CalendarDate?) {
+        expiry = date
+        expiryNeedsCheck = false
     }
 
     /// Seals the pages and the fields into the vault. False when it didn't; `saveError` says why.
