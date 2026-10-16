@@ -259,6 +259,29 @@ extension SimpaninUITests {
         screenshot("25 cover above the scan flow")
     }
 
+    /// A scan the lock interrupts is gone after unlocking, and the list says so.
+    @MainActor
+    func testALockDuringAScanDropsItAndSaysSo() throws {
+        let app = launch(["-SimpaninUITestScan"])
+        app.buttons["list.settings"].tap()
+        let row = app.buttons["settings.autoLock"]
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        row.tap()
+        app.buttons["autoLock.immediately"].tap()
+        app.navigationBars["Kunci otomatis"].buttons.element(boundBy: 0).tap()
+        app.navigationBars["Pengaturan"].buttons.element(boundBy: 0).tap()
+        openReview(app)
+
+        XCUIDevice.shared.press(.home)
+        // Coming back locks the vault; in UI tests the unlock prompt that follows succeeds by itself.
+        app.activate()
+        let notice = app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH 'Pindaian yang belum disimpan'"))
+        XCTAssertTrue(notice.firstMatch.waitForExistence(timeout: 10))
+        XCTAssertFalse(app.textFields["review.field.name"].exists)
+        XCTAssertTrue(app.staticTexts["list.empty"].exists)
+        screenshot("26 scan dropped by the lock")
+    }
+
     @MainActor
     func testCancellingAScanSavesNothing() throws {
         let app = launch(["-SimpaninUITestScan"])
