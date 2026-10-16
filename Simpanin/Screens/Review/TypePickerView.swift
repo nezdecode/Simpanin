@@ -17,7 +17,12 @@ struct TypePickerView: View {
     @Binding var selection: DocumentType
     @Environment(\.dismiss) private var dismiss
 
-    private static let types: [DocumentType] = [.ktp, .passport, .stnk, .kk, .npwp, .bpjs, .other]
+    /// After KTP and SIM, which have rows of their own.
+    private static let types: [DocumentType] = [.passport, .stnk, .kk, .npwp, .bpjs, .other]
+
+    /// Umum is read from the type id, so a class added later lands in the right section.
+    static let publicSIMClasses = DocumentType.simClasses.filter { $0.rawValue.hasSuffix("-umum") }
+    static let personalSIMClasses = DocumentType.simClasses.filter { !publicSIMClasses.contains($0) }
 
     var body: some View {
         NavigationStack {
@@ -34,7 +39,7 @@ struct TypePickerView: View {
                         }
                     }
                     .accessibilityIdentifier("typePicker.sim")
-                    ForEach(Self.types.dropFirst(), id: \.self) { typeRow($0) }
+                    ForEach(Self.types, id: \.self) { typeRow($0) }
                 } footer: {
                     Text("typePicker.footer")
                 }
@@ -79,12 +84,12 @@ private struct SIMClassList: View {
     var body: some View {
         List {
             Section {
-                ForEach(DocumentType.simClasses.prefix(8), id: \.self, content: row)
+                ForEach(TypePickerView.personalSIMClasses, id: \.self, content: row)
             } header: {
                 Text("simClass.personal")
             }
             Section {
-                ForEach(DocumentType.simClasses.dropFirst(8), id: \.self, content: row)
+                ForEach(TypePickerView.publicSIMClasses, id: \.self, content: row)
             } header: {
                 Text("simClass.public")
             } footer: {
