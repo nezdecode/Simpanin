@@ -132,6 +132,8 @@ struct KTPParserTests {
     /// NIK can't confirm anything.
     @Test func aCorrectedNIKDoesntConfirmACorrectedBirthDate() throws {
         let result = try #require(parse(Self.card(nik: "0012341S08900001", birth: "JAKARTA, 1S-08-1990")))
+        // Read, so the mark below comes from the confirmation rule and not from a date that wasn't found.
+        #expect(result.fields.values[FieldKey.birthDate] == "1990-08-15")
         #expect(result.needsCheck.contains(FieldKey.nik))
         #expect(result.needsCheck.contains(FieldKey.birthDate))
     }
@@ -145,10 +147,11 @@ struct KTPParserTests {
 
     /// Every letter the NIK reads in place of a digit is read in a date too.
     @Test func everyNIKLookalikeIsReadInADate() throws {
-        for (letter, day) in [("O", "01"), ("D", "01"), ("Z", "21")] {
-            let lines = Self.card(nik: "001234\(day)08900001", birth: "JAKARTA, \(letter)1-08-1990")
-            let result = try #require(parse(lines), "\(letter)")
-            #expect(result.fields.values[FieldKey.birthDate] == "1990-08-\(day)", "\(letter)")
+        // l, I and | are covered above.
+        for (date, day) in [("O1", "01"), ("o1", "01"), ("D1", "01"), ("Z1", "21"), ("1S", "15"), ("1B", "18")] {
+            let lines = Self.card(nik: "001234\(day)08900001", birth: "JAKARTA, \(date)-08-1990")
+            let result = try #require(parse(lines), "\(date)")
+            #expect(result.fields.values[FieldKey.birthDate] == "1990-08-\(day)", "\(date)")
         }
     }
 
