@@ -1382,7 +1382,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tiap golongan disimpan sebagai dokumen sendiri dengan pengingatnya sendiri."
+            "value" : "Tiap golongan disimpan sebagai dokumen sendiri."
           }
         }
       }
@@ -1701,7 +1701,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Jenis menentukan kolom yang diisi dan warna kartunya. Jenis tampil di daftar dan di pengingat."
+            "value" : "Jenis menentukan kolom yang diisi dan warna kartunya."
           }
         }
       }
