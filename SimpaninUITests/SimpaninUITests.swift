@@ -207,7 +207,9 @@ final class SimpaninUITests: XCTestCase {
         XCTAssertEqual(app.buttons.matching(identifier: "oldVaults.delete").count, 0)
         screenshot("09 data lama, folder tidak terbaca")
     }
+}
 
+extension SimpaninUITests {
     // MARK: Scanning (synthetic page and text: the simulator has no camera)
 
     @MainActor
