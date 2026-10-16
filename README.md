@@ -18,7 +18,7 @@ Run the core tests on a Mac (no simulator needed):
 cd Packages/VaultCore && swift test
 ```
 
-Build the app:
+Build the app (Xcode 27; the app runs on iOS 26 or later):
 
 ```sh
 xcodebuild -project Simpanin.xcodeproj -scheme Simpanin -destination 'generic/platform=iOS Simulator' build

@@ -23,11 +23,16 @@ public enum KTPParser {
         var needsCheck: Set<String> = []
 
         var number = ""
+        var nikFromNextLine = false
+        var nikCorrected = false
         if let found = card.value(of: "NIK") {
             let (digits, corrected) = NIK.digits(from: found.text)
             number = digits
             fields[FieldKey.nik] = number
-            if found.fromNextLine || corrected { needsCheck.insert(FieldKey.nik) }
+            nikFromNextLine = found.fromNextLine
+            nikCorrected = corrected
+            // A matching birth date confirms only digits 7 to 12, so a correction stays marked.
+            if corrected { needsCheck.insert(FieldKey.nik) }
         }
         let nikDate = NIK.birthDate(in: number)
         if nikDate == nil { needsCheck.insert(FieldKey.nik) }
@@ -35,32 +40,43 @@ public enum KTPParser {
             needsCheck.insert(FieldKey.nik)
         }
 
-        if let found = card.value(of: "Nama") {
-            fields[FieldKey.name] = found.text
-            // A misread character is only marked, since what it should have been can't be known.
-            if found.fromNextLine || found.continues || !found.text.looksLikeAName {
-                needsCheck.insert(FieldKey.name)
-            }
-        } else {
-            needsCheck.insert(FieldKey.name)
-        }
+        let name = card.value(of: "Nama")
+        fields[FieldKey.name] = name?.text
+        if name.map(nameNeedsCheck) ?? true { needsCheck.insert(FieldKey.name) }
 
-        let birthText = card.value(of: "Tempat/Tgl Lahir")
-        let birth = birthText?.text.lastDate
-        if let birth {
-            fields[FieldKey.birthDate] = birth.string
-            // The NIK only holds the last two digits of the year, so a misread century passes the cross-check.
-            let plausible = birth.year >= 1900 && birth <= today
-            if birthText?.fromNextLine == true || !plausible { needsCheck.insert(FieldKey.birthDate) }
-        } else {
-            needsCheck.insert(FieldKey.birthDate)
-        }
+        // The same misread letter in the NIK and the date gives two wrong values that agree, so a corrected
+        // NIK confirms nothing.
+        let birth = readBirthDate(
+            card.value(of: "Tempat/Tgl Lahir"), nikDate: nikCorrected ? nil : nikDate, today: today)
+        if let date = birth.date { fields[FieldKey.birthDate] = date.string }
+        if birth.needsCheck { needsCheck.insert(FieldKey.birthDate) }
+        if nikFromNextLine && !birth.confirmed { needsCheck.insert(FieldKey.nik) }
 
-        if let birth, let nikDate, !nikDate.matches(birth) {
+        if let birth = birth.date, let nikDate, !nikDate.matches(birth) {
             needsCheck.formUnion([FieldKey.nik, FieldKey.birthDate])
         }
         // A KTP is valid for life, so it has no expiry.
         return ParsedDocument(type: .ktp, fields: DocumentFields(fields), expiry: nil, needsCheck: needsCheck)
+    }
+
+    /// Nothing confirms a name, so a guessed pairing, a possible second line or a misread character is
+    /// marked; what a misread character should have been can't be known, so it isn't changed.
+    private static func nameNeedsCheck(_ found: LabeledLines.Found) -> Bool {
+        found.fromNextLine || found.continues || !found.text.looksLikeAName
+    }
+
+    /// The birth date, whether it needs checking, and whether the NIK confirms it. Two separate readings
+    /// that agree confirm each other: a value from the next line, or a corrected date, is then no longer a
+    /// guess.
+    private static func readBirthDate(_ found: LabeledLines.Found?, nikDate: NIK.BirthDate?, today: CalendarDate) -> (
+        date: CalendarDate?, needsCheck: Bool, confirmed: Bool
+    ) {
+        guard let read = found?.text.lastDateReadingLookalikes else { return (nil, true, false) }
+        let confirmed = nikDate?.matches(read.date) ?? false
+        // The NIK only holds the last two digits of the year, so a misread century passes the cross-check.
+        let plausible = read.date.year >= 1900 && read.date <= today
+        let guessed = found?.fromNextLine == true || read.corrected
+        return (read.date, !plausible || (guessed && !confirmed), confirmed)
     }
 
     /// Every label on the front of a KTP, so a label line is never taken as another label's value.

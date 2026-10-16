@@ -31,6 +31,25 @@ extension String {
         return found.max { $0.at < $1.at }?.date
     }
 
+    /// Like `lastDate`, but when there's no clean date it also reads letters recognition puts in place of
+    /// digits, as in "l7-08-1990". `corrected` says whether any were swapped: a correction is a guess.
+    var lastDateReadingLookalikes: (date: CalendarDate, corrected: Bool)? {
+        if let date = lastDate { return (date, false) }
+        let pattern = try? Regex<(Substring, Substring, Substring, Substring)>(Self.lookalikeDate)
+        guard let pattern, let match = matches(of: pattern).last else { return nil }
+        let (_, day, month, year) = match.output
+        let parts = [day, month, year].map { NIK.digits(from: String($0)) }
+        guard let date = Self.date(Substring(parts[0].0), Int(parts[1].0), Substring(parts[2].0)) else { return nil }
+        return (date, parts.contains { $0.corrected })
+    }
+
+    /// dd-mm-yyyy where any digit may be a letter the NIK reads as one, built from `NIK.lookalikes` so the
+    /// two lists can't drift apart. A pattern, not a Regex: a Regex isn't Sendable, so it can't be a static.
+    private static let lookalikeDate: String = {
+        let digit = "[0-9" + NSRegularExpression.escapedPattern(for: String(NIK.lookalikes.keys.sorted())) + "]"
+        return "(\(digit){2})[-./](\(digit){2})[-./](\(digit){4})"
+    }()
+
     /// Every dd-mm-yyyy in the text, with -, . or / between. Dates that can't exist are left out.
     var numericDates: [CalendarDate] {
         matches(of: /(\d{2})[-.\/](\d{2})[-.\/](\d{4})/).compactMap { match in

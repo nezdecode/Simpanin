@@ -243,14 +243,35 @@ struct SIMParserTests {
         }
     }
 
+    /// A corrected birth date is a guess, unless a new card's number, the NIK, confirms it.
+    @Test func aBirthDateWithALookalikeDigit() throws {
+        let newCard = try #require(parse(Self.newCard(birth: "JAKARTA, l7-08-1990")))
+        #expect(newCard.fields.values[FieldKey.birthDate] == "1990-08-17")
+        #expect(newCard.needsCheck.isEmpty)
+        let oldCard = try #require(parse(Self.oldCard(birth: "JAKARTA, l7-08-1990")))
+        #expect(oldCard.fields.values[FieldKey.birthDate] == "1990-08-17")
+        #expect(oldCard.needsCheck.contains(FieldKey.birthDate))
+    }
+
+    /// The same misread letter in the number and the date gives two wrong values that agree, so a
+    /// corrected number confirms nothing.
+    @Test func aCorrectedNumberDoesntConfirmACorrectedBirthDate() throws {
+        let result = try #require(parse(Self.newCard(number: "0012341S08900001", birth: "JAKARTA, 1S-08-1990")))
+        #expect(result.fields.values[FieldKey.birthDate] == "1990-08-15")
+        #expect(result.needsCheck.contains(FieldKey.birthDate))
+    }
+
     @Test func aBirthDateThatCantBeRightIsMarked() throws {
         for birth in ["JAKARTA, 17-08-1090", "JAKARTA, 17-08-2090", "JAKARTA, 31-02-1990"] {
             let result = try #require(parse(Self.oldCard(birth: birth)))
             #expect(result.needsCheck.contains(FieldKey.birthDate), "\(birth)")
         }
     }
+}
 
-    // MARK: Expiry
+// MARK: Expiry
+
+extension SIMParserTests {
 
     /// The expiry has no label, so it's the one date that isn't the birth date.
     @Test func twoCandidateExpiryDatesAreMarked() throws {

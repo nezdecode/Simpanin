@@ -9,6 +9,7 @@
 //  file, You can obtain one at https://mozilla.org/MPL/2.0/.
 //
 
+import CoreGraphics
 import Foundation
 import Synchronization
 
@@ -147,5 +148,54 @@ actor FakeQuarantine: QuarantineStoring {
         if let failure { throw failure }
         deleted.append(vault)
         listing.vaults.removeAll { $0 == vault }
+    }
+}
+
+/// Answers a page with the next list of lines. When gated, the first read waits until the test releases
+/// it, like Vision still working when the vault locks; later reads answer at once, so a read the test
+/// doesn't expect fails it instead of hanging it.
+actor FakeRecognizer {
+    private var answers: [[String]]
+    private let failing: Bool
+    private let gated: Bool
+    private var gate: CheckedContinuation<Void, Never>?
+    private(set) var methods: [RecognitionMethod] = []
+
+    init(_ answers: [[String]], failing: Bool = false, gated: Bool = false) {
+        self.answers = answers
+        self.failing = failing
+        self.gated = gated
+    }
+
+    nonisolated func using(_ method: RecognitionMethod) -> any TextRecognizer {
+        Reader(fake: self, method: method)
+    }
+
+    private struct Reader: TextRecognizer {
+        let fake: FakeRecognizer
+        let method: RecognitionMethod
+        func lines(in page: CGImage) async throws -> [String] { try await fake.read(method) }
+    }
+
+    private struct Failure: Error {}
+
+    private func read(_ method: RecognitionMethod) async throws -> [String] {
+        methods.append(method)
+        if gated, methods.count == 1 { await withCheckedContinuation { gate = $0 } }
+        if failing { throw Failure() }
+        return answers.isEmpty ? [] : answers.removeFirst()
+    }
+
+    /// False if no read started within two seconds, so a broken model fails the test instead of hanging it.
+    func waitUntilReading() async -> Bool {
+        for _ in 0..<2_000 where gate == nil {
+            try? await Task.sleep(for: .milliseconds(1))
+        }
+        return gate != nil
+    }
+
+    func release() {
+        gate?.resume()
+        gate = nil
     }
 }

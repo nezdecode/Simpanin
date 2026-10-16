@@ -49,6 +49,11 @@
 
         var body: some View {
             Form {
+                Section {
+                    NavigationLink("Coba pindai") { ScanTryView() }
+                } footer: {
+                    Text("Scan a document and see what Vision and the parsers read. Saves nothing.")
+                }
                 Section("1–3. Data Protection") {
                     Button("Check protection classes") { run(checkFiles) }
                 }

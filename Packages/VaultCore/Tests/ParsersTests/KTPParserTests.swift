@@ -83,8 +83,9 @@ struct KTPParserTests {
         #expect(result.fields.values[FieldKey.nik] == "0012341708900001")
         #expect(result.fields.values[FieldKey.name] == "BUDI CONTOH")
         #expect(result.fields.values[FieldKey.birthDate] == "1990-08-17")
-        // Which line belongs to a label is a guess here, so every value is marked.
-        #expect(result.needsCheck == [FieldKey.nik, FieldKey.name, FieldKey.birthDate])
+        // Which line belongs to a label is a guess, but the NIK and the birth date agree, which confirms
+        // both. Nothing confirms the name, so only it is marked.
+        #expect(result.needsCheck == [FieldKey.name])
     }
 
     /// Recognition drops the colon or reads it as a semicolon.
@@ -100,6 +101,72 @@ struct KTPParserTests {
             #expect(result.fields.values[FieldKey.birthDate] == "1990-08-17", "\(separator)")
             #expect(result.needsCheck.isEmpty, "\(separator)")
         }
+    }
+
+    /// Recognition mixes up l, i, I, 1 and |; a label read as "Tgi" or "NlK" is still that label. Values
+    /// aren't touched: this applies to labels only.
+    @Test func labelsReadWithLookalikeLetters() throws {
+        let lines = ["NlK : 0012341708900001", "Nama : BUDI CONTOH", "Tempat/Tgi Lahir : JAKARTA, 17-08-1990"]
+        let result = try #require(parse(lines))
+        #expect(result.fields.values[FieldKey.nik] == "0012341708900001")
+        #expect(result.fields.values[FieldKey.birthDate] == "1990-08-17")
+        #expect(result.needsCheck.isEmpty)
+    }
+
+    /// Seen on a real KTP: the label alone, and the place and date on the next line with no colon.
+    @Test func aBirthDateOnTheNextLineIsConfirmedByTheNIK() throws {
+        let lines = ["NIK : 0012341708900001", "Nama : BUDI CONTOH", "Tempat/Tgi Lahir", "JAKARTA, 17-08-1990"]
+        let result = try #require(parse(lines))
+        #expect(result.fields.values[FieldKey.birthDate] == "1990-08-17")
+        #expect(result.needsCheck.isEmpty)
+    }
+
+    /// Without a NIK to confirm it, the pairing stays a guess.
+    @Test func aBirthDateOnTheNextLineWithoutANIKIsMarked() throws {
+        let lines = ["NIK : 00123417", "Nama : BUDI CONTOH", "Tempat/Tgl Lahir", "JAKARTA, 17-08-1990"]
+        let result = try #require(parse(lines))
+        #expect(result.needsCheck.contains(FieldKey.birthDate))
+    }
+
+    /// The same misread letter in the NIK and the date gives two wrong values that agree, so a corrected
+    /// NIK can't confirm anything.
+    @Test func aCorrectedNIKDoesntConfirmACorrectedBirthDate() throws {
+        let result = try #require(parse(Self.card(nik: "0012341S08900001", birth: "JAKARTA, 1S-08-1990")))
+        // Read, so the mark below comes from the confirmation rule and not from a date that wasn't found.
+        #expect(result.fields.values[FieldKey.birthDate] == "1990-08-15")
+        #expect(result.needsCheck.contains(FieldKey.nik))
+        #expect(result.needsCheck.contains(FieldKey.birthDate))
+    }
+
+    /// A NIK whose pairing is a guess, with no birth date to confirm it, stays marked.
+    @Test func aNIKOnTheNextLineWithoutABirthDateIsMarked() throws {
+        let result = try #require(parse(["NIK", ": 0012341708900001", "Nama : BUDI CONTOH"]))
+        #expect(result.fields.values[FieldKey.nik] == "0012341708900001")
+        #expect(result.needsCheck.contains(FieldKey.nik))
+    }
+
+    /// Every letter the NIK reads in place of a digit is read in a date too.
+    @Test func everyNIKLookalikeIsReadInADate() throws {
+        // l, I and | are covered above.
+        for (date, day) in [("O1", "01"), ("o1", "01"), ("D1", "01"), ("Z1", "21"), ("1S", "15"), ("1B", "18")] {
+            let lines = Self.card(nik: "001234\(day)08900001", birth: "JAKARTA, \(date)-08-1990")
+            let result = try #require(parse(lines), "\(date)")
+            #expect(result.fields.values[FieldKey.birthDate] == "1990-08-\(day)", "\(date)")
+        }
+    }
+
+    /// Seen on a real KTP: the first digit of the day read as a letter.
+    @Test func aBirthDateWithALookalikeDigitIsCorrected() throws {
+        for day in ["l7", "I7", "|7"] {
+            let lines = Self.card(birth: "JAKARTA, \(day)-08-1990")
+            let confirmed = try #require(parse(lines))
+            #expect(confirmed.fields.values[FieldKey.birthDate] == "1990-08-17", "\(day)")
+            #expect(confirmed.needsCheck.isEmpty, "\(day)")
+        }
+        // No NIK to confirm the correction, so it's marked.
+        let unconfirmed = try #require(parse(Self.card(nik: "00123417", birth: "JAKARTA, l7-08-1990")))
+        #expect(unconfirmed.fields.values[FieldKey.birthDate] == "1990-08-17")
+        #expect(unconfirmed.needsCheck.contains(FieldKey.birthDate))
     }
 
     /// Recognition can return the label column before the value column. A label is never taken as a

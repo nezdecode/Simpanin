@@ -48,11 +48,16 @@ public enum SIMParser {
         }
 
         let birthText = field(2, label: "Tempat, Tgl Lahir/Place, Date of Birth", in: lines, card: card)?.text
-        let birth = birthText?.lastDate
-        if let birth {
+        let read = birthText?.lastDateReadingLookalikes
+        let birth = read?.date
+        if let birth, let read {
             fields[FieldKey.birthDate] = birth.string
             // A NIK only holds the last two digits of the year, and an old number holds none.
-            if birth.year < 1900 || birth > today { needsCheck.insert(FieldKey.birthDate) }
+            let implausible = birth.year < 1900 || birth > today
+            // A corrected date is a guess, unless a new card's number, the NIK, agrees with it.
+            // A corrected number confirms nothing: the same misread letter could be in both.
+            let confirmed = number.corrected ? false : nikDate?.matches(birth) ?? false
+            if implausible || (read.corrected && !confirmed) { needsCheck.insert(FieldKey.birthDate) }
         } else {
             needsCheck.insert(FieldKey.birthDate)
         }
@@ -73,21 +78,30 @@ public enum SIMParser {
             typeNeedsCheck: typeNeedsCheck, expiryNeedsCheck: expiryNeedsCheck)
     }
 
-    /// The number, where it was read, and the date inside it when it's a NIK.
-    private static func readNumber(in lines: [String], digits expected: Int?) -> (
-        text: String?, needsCheck: Bool, nikDate: NIK.BirthDate?, lines: Set<Int>
-    ) {
-        let numbers = lines.indices.compactMap { index in number(in: lines[index]).map { (index, $0) } }
-        let indices = Set(numbers.map(\.0))
-        guard let found = numbers.first?.1 else { return (nil, true, nil, indices) }
-        var needsCheck = found.corrected || numbers.count > 1 || (expected.map { $0 != found.digits.count } ?? false)
-        // From July 2024 the number is the holder's NIK, so it's checked like one.
+    private struct ReadNumber {
+        var text: String?
+        var needsCheck = true
+        /// Lookalike letters were swapped for digits.
+        var corrected = false
+        /// The date inside the number, when it's a NIK.
         var nikDate: NIK.BirthDate?
+        /// Where it was read, so those lines aren't taken for the expiry.
+        var lines: Set<Int> = []
+    }
+
+    private static func readNumber(in lines: [String], digits expected: Int?) -> ReadNumber {
+        let numbers = lines.indices.compactMap { index in number(in: lines[index]).map { (index, $0) } }
+        var read = ReadNumber(lines: Set(numbers.map(\.0)))
+        guard let found = numbers.first?.1 else { return read }
+        read.text = found.text
+        read.corrected = found.corrected
+        read.needsCheck = found.corrected || numbers.count > 1 || (expected.map { $0 != found.digits.count } ?? false)
+        // From July 2024 the number is the holder's NIK, so it's checked like one.
         if found.digits.count == 16 {
-            nikDate = NIK.birthDate(in: found.digits)
-            if nikDate == nil { needsCheck = true }
+            read.nikDate = NIK.birthDate(in: found.digits)
+            if read.nikDate == nil { read.needsCheck = true }
         }
-        return (found.text, needsCheck, nikDate, indices)
+        return read
     }
 
     private static func hasLabels(_ lines: [String]) -> Bool {

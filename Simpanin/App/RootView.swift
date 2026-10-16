@@ -48,6 +48,11 @@ struct RootView: View {
             if lock.contentHidden { LockCoverView(vault: vault, lock: lock) }
         }
         .background(SceneCaptureReader { lock.screenCaptured = $0 })
+        // Locking removes every screen at once, a scan in progress included, before it can tidy up; the
+        // page images VisionKit keeps in Caches are removed here, which outlives them.
+        .onChange(of: lock.state) { _, state in
+            if state != .unlocked { DocumentCameraCache.clear() }
+        }
         .onChange(of: scenePhase, initial: true) { _, phase in
             switch phase {
             case .active: Task { await lock.sceneDidBecomeActive() }

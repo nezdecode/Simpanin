@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		35887420307170A000707845 /* VaultCore in Frameworks */ = {isa = PBXBuildFile; productRef = 35887421307170A000707845 /* VaultCore */; };
+		35887423307170A000707845 /* Parsers in Frameworks */ = {isa = PBXBuildFile; productRef = 35887424307170A000707845 /* Parsers */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -62,6 +63,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				35887420307170A000707845 /* VaultCore in Frameworks */,
+				35887423307170A000707845 /* Parsers in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -124,6 +126,7 @@
 			name = Simpanin;
 			packageProductDependencies = (
 				35887421307170A000707845 /* VaultCore */,
+				35887424307170A000707845 /* Parsers */,
 			);
 			productName = Simpanin;
 			productReference = 358873DD3071696D00707845 /* Simpanin.app */;
@@ -419,6 +422,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Config/Info.plist;
+				INFOPLIST_KEY_NSCameraUsageDescription = "Simpanin memakai kamera untuk memindai dokumenmu. Hasil pindaian tidak masuk ke Foto, dan hanya disimpan di vault kalau kamu menyimpannya.";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "Simpanin memakai Face ID untuk membuka vault dokumenmu.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -455,6 +459,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Config/Info.plist;
+				INFOPLIST_KEY_NSCameraUsageDescription = "Simpanin memakai kamera untuk memindai dokumenmu. Hasil pindaian tidak masuk ke Foto, dan hanya disimpan di vault kalau kamu menyimpannya.";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "Simpanin memakai Face ID untuk membuka vault dokumenmu.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -619,6 +624,10 @@
 		35887421307170A000707845 /* VaultCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = VaultCore;
+		};
+		35887424307170A000707845 /* Parsers */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Parsers;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

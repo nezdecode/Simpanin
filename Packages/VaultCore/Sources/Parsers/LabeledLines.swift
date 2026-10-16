@@ -53,10 +53,12 @@ struct LabeledLines {
     }
 
     /// The rest of the line when it starts with the label, or nil. Recognition drops and adds spaces
-    /// and dots, and reads the colon as a semicolon or drops it, so all of those are allowed.
+    /// and dots, reads the colon as a semicolon or drops it, and mixes up letters that look alike
+    /// ("Tgi" for "Tgl"), so all of those are allowed. Only in the label: the value is returned as read.
     static func rest(after label: String, in line: String) -> String? {
-        let letters = label.filter { $0 != " " && $0 != "." }.map {
-            NSRegularExpression.escapedPattern(for: String($0))
+        let letters = label.filter { $0 != " " && $0 != "." }.map { letter in
+            lookalikes.first { $0.contains(letter) }.map { "[" + NSRegularExpression.escapedPattern(for: $0) + "]" }
+                ?? NSRegularExpression.escapedPattern(for: String(letter))
         }
         let pattern = "^\\s*" + letters.joined(separator: "[\\s.]*") + "(?:[\\s.]*[:;]|\\s+|$)(.*)$"
         guard let regex = try? Regex(pattern).ignoresCase(),
@@ -65,4 +67,7 @@ struct LabeledLines {
         else { return nil }
         return rest.trimmingCharacters(in: .whitespaces)
     }
+
+    /// Characters recognition reads in place of each other in a label.
+    private static let lookalikes = ["lLiI1|", "oO0"]
 }
