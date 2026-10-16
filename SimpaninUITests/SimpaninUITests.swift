@@ -329,5 +329,11 @@ extension SimpaninUITests {
         XCTAssertTrue(app.descendants(matching: .any)["review.expiry"].waitForExistence(timeout: 5))
         // The synthetic KTP has no expiry, so the SIM's shows as missing, never as today.
         XCTAssertTrue(app.staticTexts["Belum diisi"].exists)
+        // Opening the calendar sets nothing: only Pilih does, so Batal leaves it missing.
+        app.descendants(matching: .any)["review.expiry"].tap()
+        XCTAssertTrue(app.buttons["review.expiryCancel"].waitForExistence(timeout: 5))
+        screenshot("27 expiry calendar")
+        app.buttons["review.expiryCancel"].tap()
+        XCTAssertTrue(app.staticTexts["Belum diisi"].waitForExistence(timeout: 5))
     }
 }

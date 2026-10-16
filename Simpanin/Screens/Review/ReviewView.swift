@@ -21,6 +21,9 @@ struct ReviewView: View {
     let onRescan: () -> Void
     let onSave: () -> Void
     @State private var typePickerShown = false
+    @State private var expiryPickerShown = false
+    /// What the calendar shows until Pilih; only then does it become the expiry.
+    @State private var expiryDraft = Date.now
 
     var body: some View {
         NavigationStack {
@@ -77,6 +80,7 @@ struct ReviewView: View {
             .sheet(isPresented: $typePickerShown) {
                 TypePickerView(selection: $review.type)
             }
+            .sheet(isPresented: $expiryPickerShown) { expiryPicker }
         }
     }
 
@@ -175,9 +179,11 @@ struct ReviewView: View {
                     .environment(\.timeZone, .gmt)
                     .accessibilityIdentifier("review.expiry")
                 } else {
-                    // Never shown as today: an empty expiry has to be seen, not saved quietly as none.
+                    // Never shown as today: an empty expiry has to be seen, not saved quietly as none. The
+                    // calendar sets nothing until Pilih, so opening it can't fill in a date by itself.
                     Button {
-                        review.setExpiry(.today)
+                        expiryDraft = CalendarDate.today.utcDate ?? .now
+                        expiryPickerShown = true
                     } label: {
                         LabeledContent {
                             Text("review.expiryMissing")
@@ -189,6 +195,40 @@ struct ReviewView: View {
                 }
             }
         }
+    }
+
+    private var expiryPicker: some View {
+        NavigationStack {
+            DatePicker(selection: $expiryDraft, displayedComponents: .date) {
+                Text("review.validUntil")
+            }
+            .datePickerStyle(.graphical)
+            // Expiry dates are calendar days in UTC, so no time zone moves them.
+            .environment(\.timeZone, .gmt)
+            .padding(.horizontal)
+            .navigationTitle(Text("review.validUntil"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button {
+                        expiryPickerShown = false
+                    } label: {
+                        Text(ScreenText.cancel)
+                    }
+                    .accessibilityIdentifier("review.expiryCancel")
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button {
+                        review.setExpiry(CalendarDate(utc: expiryDraft))
+                        expiryPickerShown = false
+                    } label: {
+                        Text("review.pickDate")
+                    }
+                    .accessibilityIdentifier("review.expiryPick")
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
     }
 
     private var expiryLabel: some View {
