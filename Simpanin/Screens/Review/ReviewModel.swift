@@ -34,8 +34,10 @@ final class ReviewModel {
     private(set) var expiryNeedsCheck = false
     var saveError: RecoveryScreen?
     private(set) var saving = false
-    /// What the scan read, to tell what the user typed over.
+    /// What the scan read, to tell what the user changed.
     private var scanned: [String: String] = [:]
+    private var scannedType = DocumentType.other
+    private var scannedExpiry: CalendarDate?
 
     private let store: any DocumentStoring
     private let encode: @Sendable (CGImage) -> Data?
@@ -61,8 +63,9 @@ final class ReviewModel {
     /// A label shows in the list without opening the document, so it must not hold a number.
     var labelLooksLikeANumber: Bool { label.filter(\.isNumber).count >= 8 }
 
-    /// The user typed over something the scan read; a new scan would replace it.
-    var hasTypedChanges: Bool { values != scanned }
+    /// The user changed something the scan read, a field, the type or the expiry; a new scan would
+    /// replace it.
+    var hasUserChanges: Bool { values != scanned || type != scannedType || expiry != scannedExpiry }
 
     /// After a scan or a rescan: every field comes from the new pages. The label stays.
     func load(_ result: ParsedDocument?, pages: [CGImage]) {
@@ -72,6 +75,8 @@ final class ReviewModel {
             shown[field.key] = Self.dateKeys.contains(field.key) ? Self.dayFirst(field.value) : field.value
         }
         scanned = values
+        scannedType = type
+        scannedExpiry = result?.expiry
         marked = result?.needsCheck ?? []
         typeNeedsCheck = result?.typeNeedsCheck ?? true
         expiry = result?.expiry

@@ -138,9 +138,9 @@ struct ScanFlowView: View {
         cameraShown = true
     }
 
-    /// A rescan may be a different card, so it replaces every field; typed changes are confirmed first.
+    /// A rescan may be a different card, so it replaces every field; changes are confirmed first.
     private func rescan() {
-        if review.hasTypedChanges {
+        if review.hasUserChanges {
             rescanConfirmShown = true
         } else {
             openCamera()

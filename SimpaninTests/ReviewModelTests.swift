@@ -119,9 +119,21 @@ struct ReviewModelTests {
     @Test func typedChangesAreNoticed() throws {
         let review = model()
         review.load(Self.ktp, pages: [try page()])
-        #expect(!review.hasTypedChanges)
+        #expect(!review.hasUserChanges)
         review.setValue("BUDI CONTOH", for: FieldKey.name)
-        #expect(review.hasTypedChanges)
+        #expect(review.hasUserChanges)
+    }
+
+    /// A type, a SIM class or a date picked by hand is the user's choice too, and a rescan would undo it.
+    @Test func choicesAreChangesToo() throws {
+        let review = model()
+        review.load(Self.sim, pages: [try page()])
+        review.type = .simA
+        #expect(review.hasUserChanges)
+        review.type = .simC
+        #expect(!review.hasUserChanges)
+        review.setExpiry(CalendarDate(year: 2031, month: 5, day: 2))
+        #expect(review.hasUserChanges)
     }
 
     /// A rescan may be a different card: every field comes from it, none from before.
@@ -134,7 +146,7 @@ struct ReviewModelTests {
         #expect(review.type == .simC)
         #expect(review.values[FieldKey.name] == "BUDI CONTOH")
         #expect(review.values[FieldKey.nik] == nil)
-        #expect(!review.hasTypedChanges)
+        #expect(!review.hasUserChanges)
         #expect(review.label == "Ibu")
     }
 
