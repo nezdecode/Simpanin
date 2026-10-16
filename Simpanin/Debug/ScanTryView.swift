@@ -115,7 +115,11 @@
                 } header: {
                     Text("Files since the scan")
                 } footer: {
-                    Text("An image file here would be an unencrypted page left by VisionKit.")
+                    Text(
+                        "An image file here would be an unencrypted page left by VisionKit. Files under "
+                            + "com.apple.metal are the GPU's shader cache, made the first time Vision runs: "
+                            + "no page data."
+                    )
                 }
             }
         }
