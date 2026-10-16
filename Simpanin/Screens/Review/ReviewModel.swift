@@ -55,6 +55,9 @@ final class ReviewModel {
     /// Only a SIM has an expiry to show and edit here; a KTP is valid for life.
     var hasExpiry: Bool { type.isSIM }
 
+    /// The type has an expiry and none was read or picked: shown as "Belum diisi", marked, never as today.
+    var expiryMissing: Bool { hasExpiry && expiry == nil }
+
     /// A label shows in the list without opening the document, so it must not hold a number.
     var labelLooksLikeANumber: Bool { label.filter(\.isNumber).count >= 8 }
 

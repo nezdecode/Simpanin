@@ -159,25 +159,37 @@ struct ReviewView: View {
             }
         } else if review.hasExpiry {
             Section {
-                DatePicker(
-                    selection: Binding(
-                        get: { review.expiry.flatMap { Calendar.gregorianUTC.date(from: $0.components) } ?? .now },
-                        set: { date in
-                            let parts = Calendar.gregorianUTC.dateComponents([.year, .month, .day], from: date)
-                            review.setExpiry(
-                                CalendarDate(year: parts.year ?? 0, month: parts.month ?? 0, day: parts.day ?? 0))
-                        }),
-                    displayedComponents: .date
-                ) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("review.validUntil")
-                        if review.expiryNeedsCheck { CheckAgainText() }
+                if let expiry = review.expiry, let shown = expiry.utcDate {
+                    DatePicker(
+                        selection: Binding(get: { shown }, set: { review.setExpiry(CalendarDate(utc: $0)) }),
+                        displayedComponents: .date
+                    ) {
+                        expiryLabel
                     }
+                    // Expiry dates are calendar days in UTC, so no time zone moves them.
+                    .environment(\.timeZone, .gmt)
+                    .accessibilityIdentifier("review.expiry")
+                } else {
+                    // Never shown as today: an empty expiry has to be seen, not saved quietly as none.
+                    Button {
+                        review.setExpiry(.today)
+                    } label: {
+                        LabeledContent {
+                            Text("review.expiryMissing")
+                        } label: {
+                            expiryLabel
+                        }
+                    }
+                    .accessibilityIdentifier("review.expiry")
                 }
-                // Expiry dates are calendar days in UTC, so no time zone moves them.
-                .environment(\.timeZone, .gmt)
-                .accessibilityIdentifier("review.expiry")
             }
+        }
+    }
+
+    private var expiryLabel: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("review.validUntil").foregroundStyle(Color.primary)
+            if review.expiryNeedsCheck || review.expiryMissing { CheckAgainText() }
         }
     }
 

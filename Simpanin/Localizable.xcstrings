@@ -969,6 +969,17 @@
         }
       }
     },
+    "review.expiryMissing" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Belum diisi"
+          }
+        }
+      }
+    },
     "review.forLife" : {
       "extractionState" : "manual",
       "localizations" : {

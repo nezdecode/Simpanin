@@ -87,6 +87,27 @@ struct ReviewModelTests {
         #expect(review.marked.isEmpty)
     }
 
+    /// An expiry that wasn't read shows as missing, never as today, and can still be saved empty.
+    @Test func aMissingExpiryIsShownAsMissing() async throws {
+        let store = FakeDocuments()
+        let review = model(store)
+        review.load(Self.ktp, pages: [try page()])
+        #expect(!review.expiryMissing)
+        review.type = .simC
+        #expect(review.expiryMissing)
+        review.setExpiry(CalendarDate(year: 2029, month: 1, day: 4))
+        #expect(!review.expiryMissing)
+        review.setExpiry(nil)
+        #expect(await review.save())
+        #expect(try await store.documents().first?.expiry == nil)
+    }
+
+    /// The expiry picker shows UTC, so a calendar day survives the trip there and back unchanged.
+    @Test func anExpiryRoundTripsThroughThePicker() throws {
+        let day = try #require(CalendarDate(year: 2029, month: 1, day: 4))
+        #expect(CalendarDate(utc: try #require(day.utcDate)) == day)
+    }
+
     @Test func settingTheExpiryClearsItsMark() throws {
         let review = model()
         review.load(Self.sim, pages: [try page()])

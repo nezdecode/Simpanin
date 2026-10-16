@@ -302,5 +302,7 @@ final class SimpaninUITests: XCTestCase {
         // A form builds its rows as they scroll in, and the expiry is the last one.
         app.swipeUp()
         XCTAssertTrue(app.descendants(matching: .any)["review.expiry"].waitForExistence(timeout: 5))
+        // The synthetic KTP has no expiry, so the SIM's shows as missing, never as today.
+        XCTAssertTrue(app.staticTexts["Belum diisi"].exists)
     }
 }
