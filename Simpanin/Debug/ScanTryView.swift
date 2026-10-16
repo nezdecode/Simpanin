@@ -23,6 +23,8 @@
         @State private var cameraShown = false
         @State private var snapshot: FileChanges?
         @State private var leftovers: [FileChanges.Change]?
+        /// What VisionKit's folder held while the camera was open, with each item's protection class.
+        @State private var whileOpen: [String: String] = [:]
         /// Reads run in `.task(id: reads)`, so SwiftUI cancels one when the screen goes away.
         @State private var reads = 0
         @State private var newPages: [CGImage]?
@@ -48,6 +50,7 @@
                     Button("Scan") {
                         snapshot = FileChanges(folders: Self.watchedFolders)
                         leftovers = nil
+                        whileOpen = [:]
                         cameraShown = true
                     }
                     .disabled(!DocumentCamera.isSupported || scan.state == .reading)
@@ -78,6 +81,7 @@
                     }
                 }
                 leftoversSection
+                protectionSection
                 if scan.state != .empty {
                     Button("Drop the scan", role: .destructive) {
                         scan.discard()
@@ -99,6 +103,15 @@
                     onPageFailed: { cameraShown = false }
                 )
                 .ignoresSafeArea()
+            }
+            // VisionKit removes nothing until the camera closes, and Simpanin clears the folder before the
+            // pages arrive, so the folder is looked at while the camera is still open.
+            .task(id: cameraShown) {
+                let folder = URL.cachesDirectory.appending(path: DocumentCameraCache.folderName)
+                while cameraShown, !Task.isCancelled {
+                    whileOpen.merge(FileChanges.protectionClasses(in: folder)) { _, new in new }
+                    try? await Task.sleep(for: .milliseconds(500))
+                }
             }
             .task(id: reads) {
                 guard reads > 0 else { return }
@@ -131,6 +144,20 @@
                             + "com.apple.metal are the GPU's shader cache, made the first time Vision runs: "
                             + "no page data."
                     )
+                }
+            }
+        }
+
+        @ViewBuilder private var protectionSection: some View {
+            if !whileOpen.isEmpty {
+                Section {
+                    ForEach(whileOpen.keys.sorted(), id: \.self) { path in
+                        Text(verbatim: "\(path): \(whileOpen[path] ?? "")").font(.caption.monospaced())
+                    }
+                } header: {
+                    Text("VisionKit's folder while the camera was open")
+                } footer: {
+                    Text("Every line should say Complete: the folder, Scans and each page file.")
                 }
             }
         }
