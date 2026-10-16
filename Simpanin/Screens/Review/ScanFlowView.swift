@@ -89,6 +89,9 @@ struct ScanFlowView: View {
             // Text Vision couldn't read is still a scan: the user picks the type and can save the pages.
             review.load(scan.state == .read ? scan.result : nil, pages: pages)
             scan.discard()
+            #if DEBUG
+                if UITestSetup.capturesAfterScan { lock.screenCaptured = true }
+            #endif
         }
         .onAppear(perform: start)
         .confirmationDialog(

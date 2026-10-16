@@ -245,6 +245,18 @@ final class SimpaninUITests: XCTestCase {
         screenshot("21 the saved KTP in the list")
     }
 
+    /// Sheets and full-screen covers sit above the root view, so the privacy cover must too: while the
+    /// screen is recorded (or the app is in the switcher), the scan's fields can't be reached or seen.
+    @MainActor
+    func testTheCoverSitsAboveTheScanFlow() throws {
+        let app = launch(["-SimpaninUITestScan", "-SimpaninUITestCaptureAfterScan"])
+        openReview(app)
+        let nik = app.textFields["review.field.nik"]
+        expectation(for: NSPredicate(format: "isHittable == false"), evaluatedWith: nik)
+        waitForExpectations(timeout: 10)
+        screenshot("25 cover above the scan flow")
+    }
+
     @MainActor
     func testCancellingAScanSavesNothing() throws {
         let app = launch(["-SimpaninUITestScan"])
