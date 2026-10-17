@@ -139,11 +139,18 @@ struct ReviewView: View {
     private func fieldRow(_ key: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(Self.title(for: key)).font(.footnote).foregroundStyle(.secondary)
-            TextField(
-                text: Binding(get: { review.values[key] ?? "" }, set: { review.setValue($0, for: key) }),
-                prompt: ReviewModel.dateKeys.contains(key) ? Text("review.datePlaceholder") : nil
-            ) {
-                Text(Self.title(for: key))
+            Group {
+                if ReviewModel.dateKeys.contains(key) {
+                    DateField(title: Self.title(for: key), value: review.values[key] ?? "") {
+                        review.setValue($0, for: key)
+                    }
+                } else {
+                    TextField(
+                        text: Binding(get: { review.values[key] ?? "" }, set: { review.setValue($0, for: key) })
+                    ) {
+                        Text(Self.title(for: key))
+                    }
+                }
             }
             .keyboardType(Self.keyboard(for: key))
             .autocorrectionDisabled()
@@ -260,6 +267,32 @@ struct ReviewView: View {
         case FieldKey.birthDate: .numberPad
         case FieldKey.simNumber: .numbersAndPunctuation
         default: .default
+        }
+    }
+}
+
+/// A dd-mm-yyyy field for the number pad. A binding whose setter reformats doesn't update what the field
+/// shows when the model's value stays the same, so digits typed past the eighth stayed on screen; the
+/// field keeps its own draft and writes the formatted text back into it.
+private struct DateField: View {
+    let title: LocalizedStringResource
+    let value: String
+    let onChange: (String) -> Void
+    @State private var draft = ""
+
+    var body: some View {
+        TextField(text: $draft, prompt: Text("review.datePlaceholder")) {
+            Text(title)
+        }
+        .onAppear { draft = value }
+        .onChange(of: draft) { _, typed in
+            let formatted = ReviewModel.typedDate(typed)
+            if formatted != typed { draft = formatted }
+            if formatted != value { onChange(formatted) }
+        }
+        // A rescan replaces the value from outside.
+        .onChange(of: value) { _, new in
+            if new != draft { draft = new }
         }
     }
 }

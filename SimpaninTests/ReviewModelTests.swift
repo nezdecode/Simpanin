@@ -295,11 +295,24 @@ extension ReviewModelTests {
         let review = model(store)
         review.load(Self.ktp, pages: [try page()])
         review.setValue("17-08-2999", for: FieldKey.birthDate)
-        #expect(review.problems.isEmpty)
+        // Shown as soon as the date is complete, not only when Simpan is tapped.
+        #expect(review.problems[FieldKey.birthDate] == .birthDateInFuture)
         #expect(await !review.save())
         #expect(review.problems[FieldKey.birthDate] == .birthDateInFuture)
         #expect(await store.created.isEmpty)
         review.setValue("17-08-1990", for: FieldKey.birthDate)
+        #expect(review.problems.isEmpty)
+    }
+
+    /// Half-typed dates aren't judged; a complete one that can't exist says so at once.
+    @Test func onlyACompleteDateIsChecked() throws {
+        let review = model()
+        review.load(Self.ktp, pages: [try page()])
+        review.setValue("31-02-19", for: FieldKey.birthDate)
+        #expect(review.problems.isEmpty)
+        review.setValue("31-02-1990", for: FieldKey.birthDate)
+        #expect(review.problems[FieldKey.birthDate] == .notADate)
+        review.setValue("28-02-1990", for: FieldKey.birthDate)
         #expect(review.problems.isEmpty)
     }
 

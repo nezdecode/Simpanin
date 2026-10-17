@@ -282,6 +282,21 @@ extension SimpaninUITests {
         screenshot("26 scan dropped by the lock")
     }
 
+    /// The model keeps 8 digits; the field has to show the same, not the digits typed past them.
+    @MainActor
+    func testABirthDateStopsAtEightDigits() throws {
+        let app = launch(["-SimpaninUITestScan"])
+        openReview(app)
+        let field = app.textFields["review.field.birthDate"]
+        field.tap()
+        // One key at a time, as a person types: a whole string arrives faster than the field writes its
+        // formatted text back, and keys get lost in a way no typing hand can cause.
+        for _ in 0..<12 { field.typeText(XCUIKeyboardKey.delete.rawValue) }
+        XCTAssertEqual(field.placeholderValue, "dd-mm-yyyy")
+        for digit in "120420021234" { field.typeText(String(digit)) }
+        XCTAssertEqual(field.value as? String, "12-04-2002")
+    }
+
     @MainActor
     func testCancellingAScanSavesNothing() throws {
         let app = launch(["-SimpaninUITestScan"])

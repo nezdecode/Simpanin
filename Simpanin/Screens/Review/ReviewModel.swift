@@ -96,6 +96,10 @@ final class ReviewModel {
         // The user looked at it and decided, so it's no longer the parser's guess.
         marked.remove(key)
         problems[key] = nil
+        // A complete date is judged at once; a half-typed one only when Simpan is tapped.
+        if Self.dateKeys.contains(key), let typed = values[key], typed.count == "dd-mm-yyyy".count {
+            problems[key] = Self.problem(with: typed, for: key)
+        }
         if key == FieldKey.nik || key == FieldKey.birthDate { checkNIKAgainstBirthDate() }
     }
 
@@ -134,17 +138,12 @@ final class ReviewModel {
             guard !text.isEmpty else { continue }
             if Self.dateKeys.contains(key) {
                 // A date that can't exist is never stored; the field is marked for the user to fix.
-                guard let date = Self.yearFirst(text) else {
+                if let problem = Self.problem(with: text, for: key) {
                     marked.insert(key)
-                    problems[key] = .notADate
+                    problems[key] = problem
                     return false
                 }
-                if key == FieldKey.birthDate, let day = CalendarDate(date), day > .today {
-                    marked.insert(key)
-                    problems[key] = .birthDateInFuture
-                    return false
-                }
-                fields[key] = date
+                fields[key] = Self.yearFirst(text)
             } else {
                 fields[key] = text
             }
@@ -177,6 +176,12 @@ extension ReviewModel {
     enum FieldProblem: Equatable {
         case notADate
         case birthDateInFuture
+    }
+
+    /// Why a date can't be stored, or nil when it can.
+    static func problem(with text: String, for key: String) -> FieldProblem? {
+        guard let date = yearFirst(text).flatMap(CalendarDate.init) else { return .notADate }
+        return key == FieldKey.birthDate && date > .today ? .birthDateInFuture : nil
     }
 
     /// Digits as dd-mm-yyyy, for a number pad. A dash only goes before a digit, so backspace can remove it.
