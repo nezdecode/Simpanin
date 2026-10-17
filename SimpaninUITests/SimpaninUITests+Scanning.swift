@@ -108,7 +108,7 @@ extension SimpaninUITests {
         XCTAssertEqual(field.value as? String, "12-04-2002")
     }
 
-    /// The number pad has no return key, so Selesai above it is the way to close it.
+    /// The number pad has no Return, so Selesai in the navigation bar is the way to close it.
     @MainActor
     func testTheNumberPadCanBeClosed() throws {
         let app = launch(["-SimpaninUITestScan"])

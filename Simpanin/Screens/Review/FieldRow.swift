@@ -55,7 +55,8 @@ struct FieldRow: View {
             )
             .accessibilityFocused(voiceOverFocus, equals: key)
             .accessibilityIdentifier("review.field.\(key)")
-            if let warning { WarningText(warning) }
+            // A refusal is already in the field's label, so VoiceOver doesn't read it twice; Periksa lagi stays.
+            if let warning { WarningText(warning).accessibilityHidden(refusal != nil) }
         }
     }
 }

@@ -61,7 +61,7 @@ struct ReviewView: View {
             }
             // Nothing in the form changes while a save is being written.
             .disabled(review.saving)
-            // The number pad has no return key: Selesai above it, or a swipe down the form, closes it.
+            // The number pad has no Return: Selesai in the bar, or a swipe down the form, closes it.
             .scrollDismissesKeyboard(.interactively)
             .navigationTitle(Text("review.title"))
             .navigationBarTitleDisplayMode(.inline)
@@ -287,9 +287,8 @@ extension ReviewView {
         if let key = review.firstProblem() {
             focusedField = key
             refusals += 1
-            // VoiceOver goes to the field and reads its value, which carries the reason.
+            // VoiceOver goes to the field and reads its label, which carries the reason.
             voiceOverField = key
-            AccessibilityNotification.LayoutChanged().post()
         } else if review.nikMissing {
             nikMissingShown = true
         } else {
@@ -301,18 +300,10 @@ extension ReviewView {
     /// screen, checked rather than guessed with a delay. After two seconds at most it's set anyway.
     private func focusAfterAlertCloses(_ key: String) {
         Task {
-            for _ in 0..<40 where Self.alertOnScreen {
+            for _ in 0..<40 where UIApplication.shared.showsAlert {
                 try? await Task.sleep(for: .milliseconds(50))
             }
             focusedField = key
-        }
-    }
-
-    private static var alertOnScreen: Bool {
-        UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.flatMap(\.windows).contains { window in
-            var top = window.rootViewController
-            while let presented = top?.presentedViewController { top = presented }
-            return top is UIAlertController
         }
     }
 
