@@ -195,4 +195,18 @@ extension SIMParserTests {
         #expect(result.fields.values[FieldKey.simNumber] == "00000000000001")
         #expect(result.needsCheck.contains(FieldKey.simNumber) == corrected)
     }
+
+    /// The back of an older SIM: the title and numbered rules, but no number.
+    static let back = [
+        "INDONESIA", "SURAT IZIN MENGEMUDI", "DRIVING LICENSE", "1. MEMALSUKAN SIM DILARANG",
+        "2. SIM TIDAK DIPINJAMKAN",
+        "3. CONTOH KETENTUAN",
+    ]
+
+    /// A "1." before or without the number is a rule on the back, not the name.
+    @Test func aBackPageGivesNoName() throws {
+        let result = try #require(parse(Self.back))
+        #expect(result.fields.values[FieldKey.name] == nil)
+        #expect(result.needsCheck.contains(FieldKey.name))
+    }
 }

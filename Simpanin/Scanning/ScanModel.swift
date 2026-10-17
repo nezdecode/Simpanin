@@ -88,15 +88,14 @@ final class ScanModel {
         }
     }
 
-    /// Each page on its own: the first that reads as a KTP or SIM gives the fields, so a back page's text
-    /// and dates never mix in, and the front is found as any page.
+    /// Each page on its own, so a back page's text and dates never mix in. The front is the first page
+    /// that reads as a KTP or SIM with a number or NIK: the back of a SIM carries its title too.
     static func parse(_ pages: [[String]], today: CalendarDate) -> ParsedDocument? {
-        for lines in pages {
-            if let result = KTPParser.parse(lines, today: today) ?? SIMParser.parse(lines, today: today) {
-                return result
-            }
+        let results = pages.compactMap { KTPParser.parse($0, today: today) ?? SIMParser.parse($0, today: today) }
+        let numbered = results.first { result in
+            [FieldKey.nik, FieldKey.simNumber].contains { result.fields.values[$0] != nil }
         }
-        return nil
+        return numbered ?? results.first
     }
 
     func discard() {

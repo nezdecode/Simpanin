@@ -200,7 +200,9 @@ public enum SIMParser {
     /// `continues` is set when it can't be trusted as read: more than one line, or a line number removed
     /// from a misread "1BUDI" or "I. BUDI". Without the number or the birth line, nothing is guessed.
     private static func oldName(in lines: [String], number: Int?, birth: Int?) -> LabeledLines.Found? {
-        if let index = lines.firstIndex(where: { numberedField($0)?.number == 1 }),
+        // A "1." counts only after the number: the back of a card numbers its rules too.
+        if let number,
+            let index = lines.indices.dropFirst(number + 1).first(where: { numberedField(lines[$0])?.number == 1 }),
             let text = numberedField(lines[index])?.text, !text.isEmpty
         {
             // The next real line belongs to the name when it isn't a numbered field or the birth line.

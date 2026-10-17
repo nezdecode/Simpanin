@@ -25,6 +25,9 @@ struct ScanModelTests {
         "SURAT IZIN MENGEMUDI", "C", "0000-0000-000001", "1. BUDI CONTOH", "2. JAKARTA, 17-08-1990", "04-01-2027",
     ]
 
+    /// The back of an older SIM as printed: the title and numbered rules, and no number.
+    static let titledBack = ["SURAT IZIN MENGEMUDI", "1. MEMALSUKAN SIM DILARANG", "2. SIM TIDAK DIPINJAMKAN"]
+
     /// The back of a card: no title, and a date alone on its line, which read together with the front
     /// would be a second expiry.
     static let back = ["KETENTUAN PENGGUNAAN", "04-01-2032"]
@@ -81,6 +84,14 @@ struct ScanModelTests {
         await scan.scanned([try page(), try page()])
         #expect(scan.result?.expiry == CalendarDate(year: 2027, month: 1, day: 4))
         #expect(scan.result?.expiryNeedsCheck == false)
+    }
+
+    /// A back that reads as a SIM too doesn't hide the front: the page with a number is the front.
+    @Test func aTitledBackPageDoesntHideTheFront() async throws {
+        let scan = model(FakeRecognizer([Self.titledBack, Self.sim]))
+        await scan.scanned([try page(), try page()])
+        #expect(scan.result?.type == .simC)
+        #expect(scan.result?.fields.values[FieldKey.name] == "BUDI CONTOH")
     }
 
     /// The back may be scanned first; the front is found as the second page.
