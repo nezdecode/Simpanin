@@ -64,20 +64,20 @@ final class ScanModel {
         let recognizer = recognizer(method)
         let pages = pages
         do {
-            var lines: [String] = []
+            var pageLines: [[String]] = []
             for page in pages {
                 // A dropped scan reads no further pages: they'd keep its pages in memory and Vision busy.
                 guard run == generation else { return }
                 // Cancelled with the screen that started it: locking the vault removes that screen before
                 // it can drop the scan, so the read drops it.
                 guard !Task.isCancelled else { return discard() }
-                lines += try await recognizer.lines(in: page)
+                pageLines.append(try await recognizer.lines(in: page))
             }
             // The vault may have locked meanwhile; a stale or cancelled read must not bring the scan back.
             guard run == generation else { return }
             guard !Task.isCancelled else { return discard() }
-            self.lines = lines
-            result = KTPParser.parse(lines, today: today()) ?? SIMParser.parse(lines, today: today())
+            lines = pageLines.flatMap(\.self)
+            result = Self.parse(pageLines, today: today())
             state = .read
         } catch {
             guard run == generation else { return }
@@ -86,6 +86,17 @@ final class ScanModel {
             Logger.scan.error("Recognition failed: \(ErrorSummary.describe(error), privacy: .public)")
             state = .failed
         }
+    }
+
+    /// Each page on its own, so a back page's text and dates never mix in. The front is the first page
+    /// that reads as a KTP or SIM with a number or NIK, as the back of a SIM carries its title too; with no
+    /// number on any page, the one that gave the most fields.
+    static func parse(_ pages: [[String]], today: CalendarDate) -> ParsedDocument? {
+        let results = pages.compactMap { KTPParser.parse($0, today: today) ?? SIMParser.parse($0, today: today) }
+        let numbered = results.first { result in
+            [FieldKey.nik, FieldKey.simNumber].contains { result.fields.values[$0] != nil }
+        }
+        return numbered ?? results.max { $0.fields.values.count < $1.fields.values.count }
     }
 
     func discard() {
