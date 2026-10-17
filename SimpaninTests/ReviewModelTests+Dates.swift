@@ -46,6 +46,19 @@ extension ReviewModelTests {
         #expect(review.problems.isEmpty)
     }
 
+    /// The NIK holds two digits of the year, so agreeing with it can't clear a mark on an implausible
+    /// century: 1890 matches a NIK made for 1990.
+    @Test func aNIKThatAgreesKeepsAnImplausibleYearMarked() throws {
+        let review = model()
+        let old = ParsedDocument(
+            type: .ktp,
+            fields: DocumentFields([FieldKey.nik: "0012341708900001", FieldKey.birthDate: "1890-08-17"]),
+            expiry: nil, needsCheck: [FieldKey.birthDate])
+        review.load(old, pages: [try page()])
+        review.setValue("0012341708900001", for: FieldKey.nik)
+        #expect(review.marked.contains(FieldKey.birthDate))
+    }
+
     /// Typed on a number pad: the dashes come by themselves, and only before a digit, so deleting one works.
     @Test func typedDatesGetDashes() {
         #expect(ReviewModel.typedDate("17") == "17")
