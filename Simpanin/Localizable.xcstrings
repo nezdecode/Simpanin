@@ -1200,6 +1200,17 @@
         }
       }
     },
+    "review.pageOf %lld %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Halaman %1$lld dari %2$lld"
+          }
+        }
+      }
+    },
     "review.pages %lld" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1250,7 +1261,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Perubahan yang kamu ketik akan diganti hasil pindaian baru."
+            "value" : "Perubahan yang kamu buat akan diganti hasil pindaian baru."
           }
         }
       }

@@ -40,7 +40,7 @@ struct ReviewView: View {
                     }
                     .foregroundStyle(.secondary)
                 }
-                Section { pagesRow }
+                Section { PageStrip(pages: review.pages) }
                 if reading {
                     Section {
                         HStack(spacing: 12) {
@@ -86,6 +86,13 @@ struct ReviewView: View {
                             Text(ScreenText.done)
                         }
                         .accessibilityIdentifier("review.done")
+                    }
+                } else {
+                    // In the bar, so it's in reach wherever the form is scrolled to.
+                    ToolbarItem(placement: .primaryAction) {
+                        Button(action: onRescan) { Text("review.rescan") }
+                            .disabled(reading || review.saving)
+                            .accessibilityIdentifier("review.rescan")
                     }
                 }
             }
@@ -136,25 +143,6 @@ struct ReviewView: View {
             .sheet(isPresented: $expiryPickerShown) {
                 ExpiryCalendar(title: expiryTitle) { review.setExpiry($0) }
             }
-        }
-    }
-
-    private var pagesRow: some View {
-        HStack(spacing: 14) {
-            if let first = review.pages.first {
-                Image(decorative: first, scale: 1)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 112, height: 72)
-                    .clipShape(.rect(cornerRadius: 10))
-            }
-            Text("review.pages \(review.pages.count)").font(.headline)
-            Spacer()
-            // Here, by the pages, as it's the pages that get scanned again.
-            Button(action: onRescan) { Text("review.rescan") }
-                .buttonStyle(.borderless)
-                .disabled(reading || review.saving)
-                .accessibilityIdentifier("review.rescan")
         }
     }
 

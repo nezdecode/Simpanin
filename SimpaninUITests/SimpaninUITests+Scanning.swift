@@ -128,10 +128,13 @@ extension SimpaninUITests {
         let app = launch(["-SimpaninUITestScan"])
         openReview(app)
         let label = app.textFields["review.label"]
+        // The bar's right slot: Pindai ulang, and Selesai instead while a field is being edited.
         XCTAssertFalse(app.navigationBars.buttons["review.done"].exists)
+        XCTAssertTrue(app.navigationBars.buttons["review.rescan"].exists)
         label.tap()
         XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
         XCTAssertTrue(app.navigationBars.buttons["review.done"].exists)
+        XCTAssertFalse(app.navigationBars.buttons["review.rescan"].exists)
         XCTAssertFalse(app.buttons["review.save"].exists)
         label.typeText("\n")
         let nik = app.textFields["review.field.nik"]
@@ -142,6 +145,18 @@ extension SimpaninUITests {
         XCTAssertTrue(app.buttons["review.save"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.keyboards.firstMatch.exists)
         XCTAssertFalse(app.navigationBars.buttons["review.done"].exists)
+        XCTAssertTrue(app.navigationBars.buttons["review.rescan"].exists)
+    }
+
+    /// Each page is read as its number, never as an image, so VoiceOver can't offer to describe the card.
+    @MainActor
+    func testEachPageIsReadAsItsNumber() throws {
+        let app = launch(["-SimpaninUITestScan"])
+        openReview(app)
+        let page = app.descendants(matching: .any)["review.page.1"]
+        XCTAssertTrue(page.exists)
+        XCTAssertEqual(page.label, "Halaman 1 dari 1")
+        XCTAssertFalse(app.images["review.page.1"].exists)
     }
 
     /// A NIK of the wrong length says why when its field is left, and Simpan goes back to it.
@@ -198,6 +213,23 @@ extension SimpaninUITests {
         screenshot("29 STNK tax date")
     }
 
+    /// At the largest text size the page count moves under the strip, and nothing falls off the screen.
+    @MainActor
+    func testPeriksaDataAtTheLargestTextSize() throws {
+        let app = launch([
+            "-SimpaninUITestScan", "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL",
+        ])
+        // The fields sit far below at this size, and a form builds its rows only as they scroll in, so the
+        // review is found by its first page.
+        XCTAssertTrue(app.navigationBars["Dokumen"].waitForExistence(timeout: 10))
+        app.buttons["list.scan"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)["review.page.1"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.descendants(matching: .any)["review.page.1"].isHittable)
+        XCTAssertTrue(app.navigationBars.buttons["review.rescan"].isHittable)
+        XCTAssertTrue(app.buttons["review.type"].exists)
+        screenshot("30 periksa data at the largest text size")
+    }
+
     @MainActor
     func testCancellingAScanSavesNothing() throws {
         let app = launch(["-SimpaninUITestScan"])
@@ -229,9 +261,11 @@ extension SimpaninUITests {
         let app = launch(["-SimpaninUITestScan"])
         openReview(app)
         replace(app.textFields["review.field.name"], with: "TYPED")
-        app.buttons["review.rescan"].tap()
+        // Pindai ulang shares the bar's slot with Selesai, so typing has to be done first.
+        app.navigationBars.buttons["review.done"].tap()
+        app.navigationBars.buttons["review.rescan"].tap()
         XCTAssertTrue(
-            app.staticTexts["Perubahan yang kamu ketik akan diganti hasil pindaian baru."].waitForExistence(timeout: 5))
+            app.staticTexts["Perubahan yang kamu buat akan diganti hasil pindaian baru."].waitForExistence(timeout: 5))
         screenshot("23 rescan after typing")
     }
 
