@@ -23,8 +23,6 @@ struct ReviewView: View {
     @State private var typePickerShown = false
     @State private var expiryPickerShown = false
     @FocusState private var focusedField: String?
-    /// What the calendar shows until Pilih; only then does it become the expiry.
-    @State private var expiryDraft = Date.now
 
     var body: some View {
         NavigationStack {
@@ -92,7 +90,9 @@ struct ReviewView: View {
             .sheet(isPresented: $typePickerShown) {
                 TypePickerView(selection: $review.type)
             }
-            .sheet(isPresented: $expiryPickerShown) { expiryPicker }
+            .sheet(isPresented: $expiryPickerShown) {
+                ExpiryCalendar { review.setExpiry($0) }
+            }
         }
     }
 
@@ -202,7 +202,6 @@ struct ReviewView: View {
                     // Never shown as today: an empty expiry has to be seen, not saved quietly as none. The
                     // calendar sets nothing until Pilih, so opening it can't fill in a date by itself.
                     Button {
-                        expiryDraft = CalendarDate.today.utcDate ?? .now
                         expiryPickerShown = true
                     } label: {
                         LabeledContent {
@@ -215,40 +214,6 @@ struct ReviewView: View {
                 }
             }
         }
-    }
-
-    private var expiryPicker: some View {
-        NavigationStack {
-            DatePicker(selection: $expiryDraft, displayedComponents: .date) {
-                Text("review.validUntil")
-            }
-            .datePickerStyle(.graphical)
-            // Expiry dates are calendar days in UTC, so no time zone moves them.
-            .environment(\.timeZone, .gmt)
-            .padding(.horizontal)
-            .navigationTitle(Text("review.validUntil"))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button {
-                        expiryPickerShown = false
-                    } label: {
-                        Text(ScreenText.cancel)
-                    }
-                    .accessibilityIdentifier("review.expiryCancel")
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button {
-                        review.setExpiry(CalendarDate(utc: expiryDraft))
-                        expiryPickerShown = false
-                    } label: {
-                        Text("review.pickDate")
-                    }
-                    .accessibilityIdentifier("review.expiryPick")
-                }
-            }
-        }
-        .presentationDetents([.medium, .large])
     }
 
     private var expiryLabel: some View {
@@ -281,6 +246,47 @@ struct ReviewView: View {
         case FieldKey.simNumber: .numbersAndPunctuation
         default: .default
         }
+    }
+}
+
+/// The calendar for an expiry that wasn't read. It starts on today but sets nothing until Pilih.
+private struct ExpiryCalendar: View {
+    let onPick: (CalendarDate?) -> Void
+    @State private var draft = CalendarDate.today.utcDate ?? .now
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            DatePicker(selection: $draft, displayedComponents: .date) {
+                Text("review.validUntil")
+            }
+            .datePickerStyle(.graphical)
+            // Expiry dates are calendar days in UTC, so no time zone moves them.
+            .environment(\.timeZone, .gmt)
+            .padding(.horizontal)
+            .navigationTitle(Text("review.validUntil"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Text(ScreenText.cancel)
+                    }
+                    .accessibilityIdentifier("review.expiryCancel")
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button {
+                        onPick(CalendarDate(utc: draft))
+                        dismiss()
+                    } label: {
+                        Text("review.pickDate")
+                    }
+                    .accessibilityIdentifier("review.expiryPick")
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
     }
 }
 
