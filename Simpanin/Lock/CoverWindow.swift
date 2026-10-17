@@ -16,11 +16,17 @@ import UIKit
 /// covers and VisionKit's camera sit above the root view, so a cover drawn on the root view left them
 /// showing in the app switcher and in a recording.
 @MainActor
-final class CoverWindow {
+final class CoverWindow<Cover: View> {
+    /// Given once: the cover reads its state from the lock, so it never needs replacing.
+    private let cover: Cover
     private var window: UIWindow?
     private var captureRegistration: (any UITraitChangeRegistration)?
 
-    func show(_ cover: some View, in scene: UIWindowScene) {
+    init(_ cover: Cover) {
+        self.cover = cover
+    }
+
+    func show(in scene: UIWindowScene) {
         if window == nil {
             let window = UIWindow(windowScene: scene)
             window.windowLevel = .alert + 1

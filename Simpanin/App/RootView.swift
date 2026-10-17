@@ -19,12 +19,14 @@ struct RootView: View {
     let vault: AppVault
     @State private var lock: LockController
     @Environment(\.scenePhase) private var scenePhase
-    @State private var cover = CoverWindow()
+    @State private var cover: CoverWindow<LockCoverView>
     @State private var windowScene: UIWindowScene?
 
     init(vault: AppVault) {
         self.vault = vault
-        _lock = State(initialValue: Self.makeLock(for: vault))
+        let lock = Self.makeLock(for: vault)
+        _lock = State(initialValue: lock)
+        _cover = State(initialValue: CoverWindow(LockCoverView(vault: vault, lock: lock)))
     }
 
     static func makeLock(for vault: AppVault, defaults: UserDefaults = .standard) -> LockController {
@@ -86,7 +88,7 @@ struct RootView: View {
     private func showCover(_ hidden: Bool) {
         guard let windowScene else { return }
         if hidden {
-            cover.show(LockCoverView(vault: vault, lock: lock), in: windowScene)
+            cover.show(in: windowScene)
         } else {
             cover.hide()
         }
