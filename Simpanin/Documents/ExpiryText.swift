@@ -21,7 +21,7 @@ nonisolated enum ExpiryText {
         guard let expiry else {
             if type == .ktp { return "expiry.lifetime" }
             // Read from the type and an empty date alone, as the list shows it without decrypting.
-            return expires(type) ? "expiry.missing" : "expiry.none"
+            return hasPrintedExpiry(type) ? "expiry.missing" : "expiry.none"
         }
         let left = days(from: today, to: expiry)
         let tax = type == .stnk
@@ -39,7 +39,7 @@ nonisolated enum ExpiryText {
     }
 
     /// Types with a printed expiry; one saved without a date is missing it, not without one.
-    static func expires(_ type: DocumentType) -> Bool {
+    static func hasPrintedExpiry(_ type: DocumentType) -> Bool {
         type.isSIM || type == .stnk || type == .passport
     }
 
