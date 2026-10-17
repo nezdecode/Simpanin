@@ -148,6 +148,10 @@ final class ReviewModel {
                 fields[key] = text
             }
         }
+        // Taken before the encode, which can take a moment: what's saved is what was shown at Simpan.
+        let type = type
+        let trimmedLabel = label.trimmingCharacters(in: .whitespacesAndNewlines)
+        let expiry = hasExpiry ? expiry : nil
         let encoded = await Self.encoded(pages, with: encode)
         // A page that can't be prepared is never left out, so nothing is saved.
         guard encoded.count == pages.count else {
@@ -155,10 +159,9 @@ final class ReviewModel {
             saveError = .saveFailed
             return false
         }
-        let trimmedLabel = label.trimmingCharacters(in: .whitespacesAndNewlines)
         do {
             _ = try await store.createDocument(
-                type: type, label: trimmedLabel.isEmpty ? nil : trimmedLabel, expiry: hasExpiry ? expiry : nil,
+                type: type, label: trimmedLabel.isEmpty ? nil : trimmedLabel, expiry: expiry,
                 pinned: false, fields: DocumentFields(fields), pages: encoded)
             onSaved()
             return true

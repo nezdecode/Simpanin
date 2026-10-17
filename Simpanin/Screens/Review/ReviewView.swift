@@ -54,6 +54,8 @@ struct ReviewView: View {
                     validitySection
                 }
             }
+            // Nothing in the form changes while a save is being written.
+            .disabled(review.saving)
             // The number pad has no return key: Selesai above it, or a swipe down the form, closes it.
             .scrollDismissesKeyboard(.interactively)
             .navigationTitle(Text("review.title"))
