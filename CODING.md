@@ -81,6 +81,7 @@ A style type built on a system style keeps what the system gives for free: press
 - Layouts work at accessibility text sizes (the list drops to one column).
 - Decorative images are hidden from VoiceOver; the text next to them says what they mean.
 - Elements that UI tests use get an `accessibilityIdentifier`.
+- Move focus only after an alert or sheet has fully closed, never with a fixed delay. Focus set while one is still closing can be dropped.
 
 ## 5. Reuse
 
@@ -165,6 +166,7 @@ Add a comment when the code can't say it for itself: why something is done this 
 3. Do the names read like Apple's and SwiftUI's?
 4. Can the logic be tested without UI, and is it?
 5. Did the new test fail first?
-6. What about empty, error, Dark Mode, large text, VoiceOver and no passcode?
-7. Does it behave the same on a device as in the simulator?
-8. Does it match the UI design, and does it keep the product's promise: private, and nothing shown as working before it does?
+6. What about empty, error, Dark Mode, large text and no passcode? VoiceOver reads everything on screen, including why something was refused.
+7. Have you used the screen by hand, the way a user would? Every keyboard (including the number pad), sheet, picker and alert can be closed, nothing overlaps when the keyboard is up, and everything that can be tapped looks tappable.
+8. Does it behave the same on a device as in the simulator?
+9. Does it match the UI design, and does it keep the product's promise: private, and nothing shown as working before it does?
