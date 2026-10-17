@@ -61,14 +61,17 @@ struct ReviewView: View {
             .navigationTitle(Text("review.title"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                // Only the number pad needs it: every other keyboard has Return.
                 ToolbarItemGroup(placement: .keyboard) {
-                    Spacer()
-                    Button {
-                        focusedField = nil
-                    } label: {
-                        Text(ScreenText.done)
+                    if let focusedField, Self.keyboard(for: focusedField) == .numberPad {
+                        Spacer()
+                        Button {
+                            self.focusedField = nil
+                        } label: {
+                            Text(ScreenText.done)
+                        }
+                        .accessibilityIdentifier("keyboard.done")
                     }
-                    .accessibilityIdentifier("keyboard.done")
                 }
                 ToolbarItem(placement: .cancellationAction) {
                     // Nothing can be cancelled or rescanned while a save is being written.
@@ -82,12 +85,16 @@ struct ReviewView: View {
                         .accessibilityIdentifier("review.rescan")
                 }
             }
+            // Hidden while typing: saving only makes sense once a field is done, and the bar would ride up
+            // over the keyboard.
             .safeAreaInset(edge: .bottom) {
-                Button(action: onSave) { Text("review.save") }
-                    .buttonStyle(.prominent)
-                    .disabled(reading || review.saving)
-                    .padding(16)
-                    .accessibilityIdentifier("review.save")
+                if focusedField == nil {
+                    Button(action: onSave) { Text("review.save") }
+                        .buttonStyle(.prominent)
+                        .disabled(reading || review.saving)
+                        .padding(16)
+                        .accessibilityIdentifier("review.save")
+                }
             }
             .sheet(isPresented: $typePickerShown) {
                 TypePickerView(selection: $review.type)
@@ -135,6 +142,10 @@ struct ReviewView: View {
             TextField(text: $review.label, prompt: Text("review.labelPlaceholder")) {
                 Text("review.label")
             }
+            .focused($focusedField, equals: Self.labelFocus)
+            .autocorrectionDisabled()
+            .submitLabel(.next)
+            .onSubmit { focusField(after: Self.labelFocus) }
             .accessibilityIdentifier("review.label")
         } header: {
             Text("review.label")
@@ -171,7 +182,12 @@ struct ReviewView: View {
             }
             .focused($focusedField, equals: key)
             .keyboardType(Self.keyboard(for: key))
+            // Nothing typed here is corrected or learned by the keyboard, so a name isn't "fixed" and no
+            // value comes back as a suggestion in another app.
             .autocorrectionDisabled()
+            .textInputAutocapitalization(key == FieldKey.name ? .characters : .never)
+            .submitLabel(key == review.fieldKeys.last ? .done : .next)
+            .onSubmit { focusField(after: key) }
             .font(key == FieldKey.nik || key == FieldKey.simNumber ? .body.monospaced() : .body)
             .accessibilityIdentifier("review.field.\(key)")
             if let problem = review.problems[key] {
@@ -237,6 +253,19 @@ struct ReviewView: View {
             Text("review.validUntil").foregroundStyle(Color.primary)
             if review.expiryNeedsCheck || review.expiryMissing { WarningText("review.checkAgain") }
         }
+    }
+
+    private static let labelFocus = "label"
+
+    /// Return moves to the next field, in the order the screen shows them; after the last, the keyboard
+    /// closes.
+    private func focusField(after current: String) {
+        let order = [Self.labelFocus] + review.fieldKeys
+        guard let index = order.firstIndex(of: current), index + 1 < order.count else {
+            focusedField = nil
+            return
+        }
+        focusedField = order[index + 1]
     }
 
     static func title(for key: String) -> LocalizedStringResource {

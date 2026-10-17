@@ -314,6 +314,27 @@ extension SimpaninUITests {
         waitForExpectations(timeout: 5)
     }
 
+    /// Each field gets the keyboard it needs: Return moves on where there is one, Selesai only on the
+    /// number pad, and Simpan waits below until typing is done.
+    @MainActor
+    func testTheKeyboardFitsEachField() throws {
+        let app = launch(["-SimpaninUITestScan"])
+        openReview(app)
+        let label = app.textFields["review.label"]
+        label.tap()
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["keyboard.done"].exists)
+        XCTAssertFalse(app.buttons["review.save"].exists)
+        label.typeText("\n")
+        let nik = app.textFields["review.field.nik"]
+        let focused = NSPredicate(format: "hasKeyboardFocus == true")
+        expectation(for: focused, evaluatedWith: nik)
+        waitForExpectations(timeout: 5)
+        app.buttons["keyboard.done"].tap()
+        XCTAssertTrue(app.buttons["review.save"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.keyboards.firstMatch.exists)
+    }
+
     @MainActor
     func testCancellingAScanSavesNothing() throws {
         let app = launch(["-SimpaninUITestScan"])
