@@ -140,6 +140,40 @@ extension SimpaninUITests {
         XCTAssertFalse(app.keyboards.firstMatch.exists)
     }
 
+    /// A NIK of the wrong length says why when its field is left, and Simpan goes back to it.
+    @MainActor
+    func testSimpanGoesBackToAWrongNIK() throws {
+        let app = launch(["-SimpaninUITestScan"])
+        openReview(app)
+        let nik = app.textFields["review.field.nik"]
+        replace(nik, with: "00123")
+        app.buttons["keyboard.done"].tap()
+        XCTAssertTrue(app.staticTexts["NIK harus 16 angka."].waitForExistence(timeout: 5))
+        app.buttons["review.save"].tap()
+        expectation(for: NSPredicate(format: "hasKeyboardFocus == true"), evaluatedWith: nik)
+        waitForExpectations(timeout: 5)
+    }
+
+    /// An empty NIK is asked about: Isi NIK goes back to it, Simpan saja saves without it.
+    @MainActor
+    func testAnEmptyNIKIsAskedAbout() throws {
+        let app = launch(["-SimpaninUITestScan"])
+        openReview(app)
+        let nik = app.textFields["review.field.nik"]
+        replace(nik, with: "")
+        app.buttons["keyboard.done"].tap()
+        app.buttons["review.save"].tap()
+        XCTAssertTrue(app.buttons["Isi NIK"].waitForExistence(timeout: 5))
+        screenshot("28 empty NIK")
+        app.buttons["Isi NIK"].tap()
+        expectation(for: NSPredicate(format: "hasKeyboardFocus == true"), evaluatedWith: nik)
+        waitForExpectations(timeout: 5)
+        app.buttons["keyboard.done"].tap()
+        app.buttons["review.save"].tap()
+        app.buttons["Simpan saja"].tap()
+        XCTAssertTrue(rows(app).firstMatch.waitForExistence(timeout: 10))
+    }
+
     @MainActor
     func testCancellingAScanSavesNothing() throws {
         let app = launch(["-SimpaninUITestScan"])

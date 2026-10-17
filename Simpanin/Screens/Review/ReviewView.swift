@@ -22,6 +22,9 @@ struct ReviewView: View {
     let onSave: () -> Void
     @State private var typePickerShown = false
     @State private var expiryPickerShown = false
+    @State private var nikMissingShown = false
+    /// Counts refused taps on Simpan, for the error haptic.
+    @State private var refusals = 0
     @FocusState private var focusedField: String?
 
     var body: some View {
@@ -89,7 +92,7 @@ struct ReviewView: View {
             // over the keyboard.
             .safeAreaInset(edge: .bottom) {
                 if focusedField == nil {
-                    Button(action: onSave) { Text("review.save") }
+                    Button(action: trySave) { Text("review.save") }
                         .buttonStyle(.prominent)
                         .disabled(reading || review.saving)
                         .padding(16)
@@ -98,6 +101,20 @@ struct ReviewView: View {
             }
             .sheet(isPresented: $typePickerShown) {
                 TypePickerView(selection: $review.type)
+            }
+            .sensoryFeedback(.error, trigger: refusals)
+            // A field is judged once it's left, as typing is done.
+            .onChange(of: focusedField) { left, _ in
+                if let left { review.fieldLeft(left) }
+            }
+            .alert(Text("review.nikMissing"), isPresented: $nikMissingShown) {
+                Button {
+                    focusedField = FieldKey.nik
+                } label: {
+                    Text("review.fillNIK")
+                }
+                .keyboardShortcut(.defaultAction)
+                Button(action: onSave) { Text("review.saveAnyway") }
             }
             .sheet(isPresented: $expiryPickerShown) {
                 ExpiryCalendar { review.setExpiry($0) }
@@ -231,6 +248,22 @@ struct ReviewView: View {
 
 extension ReviewView {
     private static let labelFocus = "label"
+
+    /// Simpan never quietly does nothing: a wrong value takes the user to its field, with a haptic, and
+    /// VoiceOver reads the reason; an empty NIK is asked about first.
+    private func trySave() {
+        if let key = review.firstProblem() {
+            focusedField = key
+            refusals += 1
+            if let problem = review.problems[key] {
+                AccessibilityNotification.Announcement(String(localized: Self.reason(for: problem))).post()
+            }
+        } else if review.nikMissing {
+            nikMissingShown = true
+        } else {
+            onSave()
+        }
+    }
 
     /// Return moves to the next field, in the order the screen shows them; after the last, the keyboard
     /// closes.
