@@ -82,7 +82,7 @@ struct LibraryView: View {
                     } else if library.documents.isEmpty {
                         EmptyLibraryView()
                     } else {
-                        ExpiryBanner(documents: library.documents, today: today)
+                        ExpiryBanner(documents: library.bannerDocuments, today: today, onHide: library.hideFromBanner)
                         Text("main.allDocuments").font(.title3.weight(.semibold)).padding(.top, 8)
                         LazyVGrid(columns: columns, spacing: 12) {
                             ForEach(library.documents) { document in

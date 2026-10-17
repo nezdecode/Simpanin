@@ -71,6 +71,7 @@
             cleanUp()
             defer { cleanUp() }
             let locations = VaultLocations(applicationSupport: scratch, appGroupContainer: scratchGroup)
+            try AppVault.prepareProjectionFolder(locations, protector: DataProtectionFileProtector())
             let store = VaultStore(
                 rootDirectory: locations.root, projectionURL: locations.projection, keyStore: PreviewKeyStore(),
                 fileProtector: DataProtectionFileProtector())
@@ -79,7 +80,17 @@
             let id = try await store.createDocument(
                 type: .ktp, expiry: nil, pinned: false, fields: fields, pages: [Data(repeating: 7, count: 2_000)])
             try await store.editDocument(id, type: .ktp, label: nil, expiry: nil, pinned: true, fields: fields)
-            return try vaultClasses(root: locations.root, projection: locations.projection)
+            var lines = try vaultClasses(root: locations.root, projection: locations.projection)
+            // The banner's hidden list sits beside the projection: the same class, and out of backups.
+            let hidden = HiddenBannerFile.url(in: locations)
+            try HiddenBannerFile(url: hidden, protector: DataProtectionFileProtector()).save(HiddenBanner())
+            lines.append(DeviceCheckLine(label: "hidden banner", result: protectionName(hidden)))
+            let excluded = try locations.projectionFolder.resourceValues(forKeys: [.isExcludedFromBackupKey])
+            lines.append(
+                DeviceCheckLine(
+                    label: "projection folder out of backup",
+                    result: excluded.isExcludedFromBackup == true ? "yes" : "NO"))
+            return lines
         }
 
         /// A file born at the background class, set to Complete, then renamed like VaultCore's
