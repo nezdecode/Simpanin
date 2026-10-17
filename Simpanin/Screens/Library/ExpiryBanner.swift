@@ -18,7 +18,9 @@ struct ExpiryBanner: View {
     let today: CalendarDate
 
     var body: some View {
-        let attention = ExpiryText.needsAttention(documents.map(\.expiry), today: today)
+        let attention = ExpiryText.bannerOrder(
+            documents.map { ExpiryText.BannerCandidate(type: $0.type, expiry: $0.expiry, createdAt: $0.createdAt) },
+            today: today)
         if let first = attention.first {
             let document = documents[first]
             HStack(spacing: 12) {

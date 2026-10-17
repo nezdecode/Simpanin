@@ -107,4 +107,14 @@ struct LibraryTests {
         await library.addSample()
         #expect(library.saveError == nil)
     }
+
+    /// The banner's "today" is worked out again when the app comes back, not only at launch.
+    @Test func theDayIsRecalculatedWhenTheAppReturns() throws {
+        let library = LibraryModel(store: FakeDocuments())
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(identifier: "Asia/Makassar"))
+        let morning = try #require(calendar.date(from: DateComponents(year: 2027, month: 3, day: 2, hour: 8)))
+        library.refreshDay(at: morning, in: calendar)
+        #expect(library.today == CalendarDate(year: 2027, month: 3, day: 2))
+    }
 }

@@ -45,15 +45,36 @@ nonisolated enum ExpiryText {
         type.isSIM || type == .stnk || type == .passport
     }
 
-    /// Indices of the documents that need attention, past expiry first, then the soonest.
-    static func needsAttention(_ expiries: [CalendarDate?], today: CalendarDate) -> [Int] {
-        expiries.enumerated()
-            .compactMap { index, expiry -> (Int, CalendarDate)? in
-                guard let expiry, days(from: today, to: expiry) <= soonWindow else { return nil }
-                return (index, expiry)
+    /// A document as the banner sees it.
+    struct BannerCandidate {
+        let type: DocumentType
+        let expiry: CalendarDate?
+        let createdAt: Date
+    }
+
+    /// The banner's documents in order, as indices into the input. Near ones first, expired up to 60 days
+    /// ago or expiring within 60 days, the closest to today first; then the long expired, the most recent
+    /// first. Time never takes one out; only the user hides it. Same distance: the expired first, then the
+    /// type and when it was made, so the banner never shuffles.
+    static func bannerOrder(_ candidates: [BannerCandidate], today: CalendarDate) -> [Int] {
+        typealias Dated = (index: Int, days: Int, candidate: BannerCandidate)
+        let dated = candidates.enumerated().compactMap { index, candidate -> Dated? in
+            guard let expiry = candidate.expiry else { return nil }
+            let days = days(from: today, to: expiry)
+            return days <= soonWindow ? (index, days, candidate) : nil
+        }
+        return dated.sorted { first, second in
+            let firstNear = first.days >= -soonWindow
+            let secondNear = second.days >= -soonWindow
+            if firstNear != secondNear { return firstNear }
+            if abs(first.days) != abs(second.days) { return abs(first.days) < abs(second.days) }
+            if first.days != second.days { return first.days < second.days }
+            if first.candidate.type != second.candidate.type {
+                return first.candidate.type.rawValue < second.candidate.type.rawValue
             }
-            .sorted { $0.1 < $1.1 }
-            .map(\.0)
+            return first.candidate.createdAt < second.candidate.createdAt
+        }
+        .map(\.index)
     }
 
     static func days(from start: CalendarDate, to end: CalendarDate) -> Int {

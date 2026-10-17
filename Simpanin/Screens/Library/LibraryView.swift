@@ -21,6 +21,7 @@ struct LibraryView: View {
     @State private var scanShown = false
     @State private var passcodeNeededShown = false
     @Environment(\.dynamicTypeSize) private var typeSize
+    @Environment(\.scenePhase) private var scenePhase
 
     init(vault: AppVault, lock: LockController) {
         self.vault = vault
@@ -28,7 +29,7 @@ struct LibraryView: View {
         _library = State(initialValue: LibraryModel(store: Self.documentStore(for: vault)))
     }
 
-    private var today: CalendarDate { CalendarDate.today }
+    private var today: CalendarDate { library.today }
 
     private func scanRead() {
         #if DEBUG
@@ -116,6 +117,10 @@ struct LibraryView: View {
             .navigationTitle(Text("list.title"))
             .toolbar { toolbar }
             .task { await library.reload() }
+            // A night may have passed while the app was away.
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .active { library.refreshDay() }
+            }
             .fullScreenCover(isPresented: $scanShown) {
                 ScanFlowView(
                     store: Self.documentStore(for: vault), onScanStarted: lock.scanStarted,

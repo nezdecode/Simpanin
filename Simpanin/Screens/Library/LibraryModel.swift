@@ -35,6 +35,12 @@ extension VaultStore: DocumentStoring {}
 final class LibraryModel {
     private(set) var documents: [Document] = []
     private(set) var deleted: [Document] = []
+    /// The day the list and the banner read expiry against, worked out again when the app comes back.
+    private(set) var today = CalendarDate.today
+
+    func refreshDay(at date: Date = .now, in calendar: Calendar = .current) {
+        today = CalendarDate.day(of: date, in: calendar)
+    }
     /// The message for a failed save, if any.
     var saveError: RecoveryScreen?
     /// Loading failed. The screen shows that instead of an empty list, which would say the
