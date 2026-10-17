@@ -15,6 +15,12 @@ import VaultCore
 import os
 
 /// What the screens need from VaultStore's document calls, so tests can stand in for it.
+/// Where the documents hidden from the expiry banner are kept.
+nonisolated protocol HiddenBannerStoring: Sendable {
+    func load() throws -> HiddenBanner
+    func save(_ hidden: HiddenBanner) throws
+}
+
 nonisolated protocol DocumentStoring: Sendable {
     func documents() async throws -> [Document]
     func recentlyDeleted() async throws -> [Document]
@@ -48,7 +54,41 @@ final class LibraryModel {
     private(set) var loadFailed = false
     private let store: any DocumentStoring
 
-    init(store: any DocumentStoring) {
+    private(set) var hidden = HiddenBanner()
+    private let hiddenStore: any HiddenBannerStoring
+
+    /// The documents the banner may show: the user hasn't hidden them.
+    var bannerDocuments: [Document] {
+        documents.filter { !hidden.hides($0.id, expiry: $0.expiry, today: today) }
+    }
+
+    func hideFromBanner(_ document: Document) {
+        guard let expiry = document.expiry else { return }
+        hidden.hide(document.id, expiry: expiry, today: today)
+        saveHidden()
+    }
+
+    /// Loads the hidden list and drops entries for documents in neither the list nor Baru dihapus, so a
+    /// deleted and restored one stays hidden. A list that can't be read only costs the banner its hiding.
+    private func loadHidden() {
+        do {
+            hidden = try hiddenStore.load()
+        } catch {
+            Logger.library.error("Hidden banner list unreadable: \(ErrorSummary.describe(error), privacy: .public)")
+        }
+        if hidden.prune(keeping: Set((documents + deleted).map(\.id))) { saveHidden() }
+    }
+
+    private func saveHidden() {
+        do {
+            try hiddenStore.save(hidden)
+        } catch {
+            Logger.library.error("Hidden banner list not saved: \(ErrorSummary.describe(error), privacy: .public)")
+        }
+    }
+
+    init(store: any DocumentStoring, hidden: any HiddenBannerStoring) {
+        hiddenStore = hidden
         self.store = store
     }
 
@@ -59,6 +99,8 @@ final class LibraryModel {
             documents = live
             deleted = bin
             loadFailed = false
+            // Only with both lists read, so no hidden entry is pruned by a failed load.
+            loadHidden()
         } catch {
             Logger.library.error("Load failed: \(ErrorSummary.describe(error), privacy: .public)")
             loadFailed = true

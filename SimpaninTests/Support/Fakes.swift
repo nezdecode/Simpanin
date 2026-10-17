@@ -65,6 +65,14 @@ final class FixedClock: VaultClock {
 }
 
 /// Stands in for VaultStore's document calls, with documents kept in memory.
+/// The hidden banner list kept in memory, as a test needs it.
+final class FakeHiddenBanner: HiddenBannerStoring {
+    private let stored = Mutex(HiddenBanner())
+    var saved: HiddenBanner { stored.withLock { $0 } }
+    func load() throws -> HiddenBanner { stored.withLock { $0 } }
+    func save(_ hidden: HiddenBanner) throws { stored.withLock { $0 = hidden } }
+}
+
 actor FakeDocuments: DocumentStoring {
     private var live: [Document] = []
     private var bin: [Document] = []
@@ -131,6 +139,12 @@ actor FakeDocuments: DocumentStoring {
         var document = live.remove(at: index)
         document.deletedAt = .now
         bin.append(document)
+    }
+
+    /// Gone for good, as VaultCore purges Baru dihapus after 30 days.
+    func purge(_ id: DocumentID) {
+        live.removeAll { $0.id == id }
+        bin.removeAll { $0.id == id }
     }
 
     func restore(_ id: DocumentID) async throws {

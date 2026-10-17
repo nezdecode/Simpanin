@@ -21,7 +21,7 @@ import UIKit
 struct LibraryTests {
     @Test func sampleDocumentIsSyntheticWithOnePageImage() async throws {
         let store = FakeDocuments()
-        let library = LibraryModel(store: store)
+        let library = LibraryModel(store: store, hidden: FakeHiddenBanner())
         await library.addSample()
         #expect(library.documents.count == 1)
         let fields = try #require(await store.created.first)
@@ -33,7 +33,7 @@ struct LibraryTests {
     }
 
     @Test func deleteMovesToRecentlyDeletedAndRestoreBringsItBack() async throws {
-        let library = LibraryModel(store: FakeDocuments())
+        let library = LibraryModel(store: FakeDocuments(), hidden: FakeHiddenBanner())
         await library.addSample()
         let id = try #require(library.documents.first?.id)
         await library.delete(id)
@@ -47,7 +47,7 @@ struct LibraryTests {
     /// A failed load must never look like an empty vault.
     @Test func aFailedLoadSaysSoAndKeepsTheList() async throws {
         let store = FakeDocuments()
-        let library = LibraryModel(store: store)
+        let library = LibraryModel(store: store, hidden: FakeHiddenBanner())
         await library.addSample()
         #expect(library.documents.count == 1)
         #expect(!library.loadFailed)
@@ -66,7 +66,7 @@ struct LibraryTests {
     /// shows fresh documents next to a bin that pretends to be empty.
     @Test func aHalfFailedLoadKeepsBothAndRetryRefreshes() async throws {
         let store = FakeDocuments()
-        let library = LibraryModel(store: store)
+        let library = LibraryModel(store: store, hidden: FakeHiddenBanner())
         await library.addSample()
         await library.addSample()
         let first = try #require(library.documents.first)
@@ -90,7 +90,7 @@ struct LibraryTests {
     @Test func aFullDiskOnASaveShowsItsScreen() async {
         let store = FakeDocuments()
         await store.setFailure(.storageFull)
-        let library = LibraryModel(store: store)
+        let library = LibraryModel(store: store, hidden: FakeHiddenBanner())
         await library.addSample()
         #expect(library.saveError == .storageFullOnSave)
         #expect(library.documents.isEmpty)
@@ -98,7 +98,7 @@ struct LibraryTests {
 
     @Test func otherSaveFailuresSaySoButALockDoesNot() async {
         let store = FakeDocuments()
-        let library = LibraryModel(store: store)
+        let library = LibraryModel(store: store, hidden: FakeHiddenBanner())
         await store.setFailure(.fileUnavailable)
         await library.addSample()
         #expect(library.saveError == .saveFailed)
@@ -110,11 +110,46 @@ struct LibraryTests {
 
     /// The banner's "today" is worked out again when the app comes back, not only at launch.
     @Test func theDayIsRecalculatedWhenTheAppReturns() throws {
-        let library = LibraryModel(store: FakeDocuments())
+        let library = LibraryModel(store: FakeDocuments(), hidden: FakeHiddenBanner())
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = try #require(TimeZone(identifier: "Asia/Makassar"))
         let morning = try #require(calendar.date(from: DateComponents(year: 2027, month: 3, day: 2, hour: 8)))
         library.refreshDay(at: morning, in: calendar)
         #expect(library.today == CalendarDate(year: 2027, month: 3, day: 2))
+    }
+
+    /// Hidden documents leave the banner, are kept across launches, and everything hidden means no banner.
+    @Test func everythingHiddenMeansNoBanner() async throws {
+        let store = FakeDocuments()
+        let hidden = FakeHiddenBanner()
+        let soon = CalendarDate.day(of: .now.addingTimeInterval(5 * 86_400), in: .current)
+        _ = try await store.createDocument(
+            type: .simC, label: nil, expiry: soon, pinned: false, fields: DocumentFields([:]), pages: [Data([1])])
+        let library = LibraryModel(store: store, hidden: hidden)
+        await library.reload()
+        let document = try #require(library.bannerDocuments.first)
+        library.hideFromBanner(document)
+        #expect(library.bannerDocuments.isEmpty)
+        #expect(library.documents.count == 1)
+        let relaunched = LibraryModel(store: store, hidden: hidden)
+        await relaunched.reload()
+        #expect(relaunched.bannerDocuments.isEmpty)
+    }
+
+    /// A document purged for good, in neither the list nor Baru dihapus, leaves no hidden entry behind.
+    @Test func aPermanentlyDeletedDocumentLeavesNoHiddenEntry() async throws {
+        let store = FakeDocuments()
+        let hidden = FakeHiddenBanner()
+        let soon = CalendarDate.day(of: .now.addingTimeInterval(5 * 86_400), in: .current)
+        let id = try await store.createDocument(
+            type: .simC, label: nil, expiry: soon, pinned: false, fields: DocumentFields([:]), pages: [Data([1])])
+        let library = LibraryModel(store: store, hidden: hidden)
+        await library.reload()
+        library.hideFromBanner(try #require(library.documents.first))
+        await library.delete(id)
+        #expect(hidden.saved.entries.count == 1)
+        await store.purge(id)
+        await library.reload()
+        #expect(hidden.saved.entries.isEmpty)
     }
 }

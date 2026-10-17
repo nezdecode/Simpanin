@@ -26,7 +26,9 @@ struct LibraryView: View {
     init(vault: AppVault, lock: LockController) {
         self.vault = vault
         self.lock = lock
-        _library = State(initialValue: LibraryModel(store: Self.documentStore(for: vault)))
+        let hidden = HiddenBannerFile(
+            url: HiddenBannerFile.url(in: vault.locations), protector: DataProtectionFileProtector())
+        _library = State(initialValue: LibraryModel(store: Self.documentStore(for: vault), hidden: hidden))
     }
 
     private var today: CalendarDate { library.today }
