@@ -57,6 +57,25 @@ extension ReviewModelTests {
         #expect(document.label == nil)
     }
 
+    /// A Paspor or STNK can be given its date by hand, as no parser reads one yet; only a SIM's missing
+    /// date is marked, since only there a parser should have read it.
+    @Test func aPassportOrSTNKGetsItsDateByHand() async throws {
+        let store = FakeDocuments()
+        let review = model(store)
+        review.load(nil, pages: [try page()])
+        review.type = .stnk
+        #expect(review.hasExpiry)
+        #expect(review.expiryMissing)
+        #expect(!review.marksMissingExpiry)
+        review.type = .simA
+        #expect(review.marksMissingExpiry)
+        review.type = .passport
+        let date = try #require(CalendarDate(year: 2031, month: 3, day: 9))
+        review.setExpiry(date)
+        #expect(await review.save())
+        #expect(try await store.documents().first?.expiry == date)
+    }
+
     /// The last page failing is as bad as the first: the document is saved with every page or not at all.
     @Test func aLastPageThatCantBeEncodedSavesNothing() async throws {
         let store = FakeDocuments()

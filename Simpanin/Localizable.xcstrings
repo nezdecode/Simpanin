@@ -331,6 +331,17 @@
         }
       }
     },
+    "expiry.taxMissing" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tanggal pajak belum diisi"
+          }
+        }
+      }
+    },
     "expiry.taxSoon %lld" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1218,6 +1229,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Simpan saja"
+          }
+        }
+      }
+    },
+    "review.taxHint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tanggal pajak tahunan, bukan masa berlaku STNK 5 tahun."
+          }
+        }
+      }
+    },
+    "review.taxValidUntil" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pajak berlaku sampai"
           }
         }
       }

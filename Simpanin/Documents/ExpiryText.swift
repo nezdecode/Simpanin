@@ -20,6 +20,8 @@ nonisolated enum ExpiryText {
     static func text(type: DocumentType, expiry: CalendarDate?, today: CalendarDate) -> LocalizedStringResource {
         guard let expiry else {
             if type == .ktp { return "expiry.lifetime" }
+            // An STNK's date is its yearly tax, not the card's five-year validity.
+            if type == .stnk { return "expiry.taxMissing" }
             // Read from the type and an empty date alone, as the list shows it without decrypting.
             return hasPrintedExpiry(type) ? "expiry.missing" : "expiry.none"
         }

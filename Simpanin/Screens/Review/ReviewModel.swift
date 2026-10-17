@@ -60,11 +60,15 @@ final class ReviewModel {
         return []
     }
 
-    /// Only a SIM has an expiry to show and edit here; a KTP is valid for life.
-    var hasExpiry: Bool { type.isSIM }
+    /// SIM, Paspor and STNK have a printed expiry to show and edit here; a KTP is valid for life.
+    var hasExpiry: Bool { ExpiryText.hasPrintedExpiry(type) }
 
     /// The type has an expiry and none was read or picked: shown as "Belum diisi", marked, never as today.
     var expiryMissing: Bool { hasExpiry && expiry == nil }
+
+    /// Only a SIM's parser should have read the date; Paspor and STNK have none yet, so an empty date there
+    /// isn't a misread and gets no "Periksa lagi".
+    var marksMissingExpiry: Bool { expiryMissing && type.isSIM }
 
     /// A label shows in the list without opening the document, so it must not hold a number.
     var labelLooksLikeANumber: Bool { label.filter(\.isNumber).count >= 8 }

@@ -117,7 +117,7 @@ struct ReviewView: View {
                 Button(action: onSave) { Text("review.saveAnyway") }
             }
             .sheet(isPresented: $expiryPickerShown) {
-                ExpiryCalendar { review.setExpiry($0) }
+                ExpiryCalendar(title: expiryTitle) { review.setExpiry($0) }
             }
         }
     }
@@ -226,8 +226,16 @@ struct ReviewView: View {
                     }
                     .accessibilityIdentifier("review.expiry")
                 }
+            } footer: {
+                // The date printed on an STNK is its five-year validity; the one that matters is the tax.
+                if review.type == .stnk { Text("review.taxHint") }
             }
         }
+    }
+
+    /// An STNK's date is its yearly tax; every other type's is its validity.
+    private var expiryTitle: LocalizedStringResource {
+        review.type == .stnk ? "review.taxValidUntil" : "review.validUntil"
     }
 
     /// The chevron of a row that opens a sheet, as in Settings, so the row reads as something to tap.
@@ -240,8 +248,8 @@ struct ReviewView: View {
 
     private var expiryLabel: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("review.validUntil").foregroundStyle(Color.primary)
-            if review.expiryNeedsCheck || review.expiryMissing { WarningText("review.checkAgain") }
+            Text(expiryTitle).foregroundStyle(Color.primary)
+            if review.expiryNeedsCheck || review.marksMissingExpiry { WarningText("review.checkAgain") }
         }
     }
 }

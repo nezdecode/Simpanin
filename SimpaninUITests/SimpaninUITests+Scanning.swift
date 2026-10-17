@@ -176,6 +176,22 @@ extension SimpaninUITests {
         XCTAssertTrue(rows(app).firstMatch.waitForExistence(timeout: 10))
     }
 
+    /// An STNK's date is its yearly tax: its own label and hint, and an empty one isn't marked, as no
+    /// parser reads an STNK yet.
+    @MainActor
+    func testAnSTNKAsksForItsTaxDate() throws {
+        let app = launch(["-SimpaninUITestScan"])
+        openReview(app)
+        app.buttons["review.type"].tap()
+        app.buttons["typePicker.stnk"].tap()
+        app.swipeUp()
+        XCTAssertTrue(app.staticTexts["Pajak berlaku sampai"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Tanggal pajak tahunan, bukan masa berlaku STNK 5 tahun."].exists)
+        XCTAssertTrue(app.staticTexts["Belum diisi"].exists)
+        XCTAssertFalse(app.staticTexts["Periksa lagi"].exists)
+        screenshot("29 STNK tax date")
+    }
+
     @MainActor
     func testCancellingAScanSavesNothing() throws {
         let app = launch(["-SimpaninUITestScan"])

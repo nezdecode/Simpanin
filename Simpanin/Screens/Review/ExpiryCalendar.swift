@@ -14,6 +14,7 @@ import VaultCore
 
 /// The calendar for an expiry that wasn't read. It starts on today but sets nothing until Pilih.
 struct ExpiryCalendar: View {
+    let title: LocalizedStringResource
     let onPick: (CalendarDate?) -> Void
     @State private var draft = CalendarDate.today.utcDate ?? .now
     @Environment(\.dismiss) private var dismiss
@@ -21,13 +22,13 @@ struct ExpiryCalendar: View {
     var body: some View {
         NavigationStack {
             DatePicker(selection: $draft, displayedComponents: .date) {
-                Text("review.validUntil")
+                Text(title)
             }
             .datePickerStyle(.graphical)
             // Expiry dates are calendar days in UTC, so no time zone moves them.
             .environment(\.timeZone, .gmt)
             .padding(.horizontal)
-            .navigationTitle(Text("review.validUntil"))
+            .navigationTitle(Text(title))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
