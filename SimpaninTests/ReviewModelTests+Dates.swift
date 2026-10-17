@@ -136,4 +136,14 @@ extension ReviewModelTests {
         review.load(Self.sim, pages: [try page()])
         #expect(!review.nikMissing)
     }
+
+    /// A field gets its own value written back when it takes focus; that isn't an edit, so the reason stays.
+    @Test func writingTheSameValueKeepsTheReason() throws {
+        let review = model()
+        review.load(Self.ktp, pages: [try page()])
+        review.setValue("00123", for: FieldKey.nik)
+        review.fieldLeft(FieldKey.nik)
+        review.setValue("00123", for: FieldKey.nik)
+        #expect(review.problems[FieldKey.nik] == .nikLength)
+    }
 }

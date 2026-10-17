@@ -98,7 +98,10 @@ final class ReviewModel {
     }
 
     func setValue(_ text: String, for key: String) {
-        values[key] = Self.dateKeys.contains(key) ? Self.typedDate(text) : text
+        let text = Self.dateKeys.contains(key) ? Self.typedDate(text) : text
+        // A field writes its value back when it takes focus; that isn't an edit, and its reason stays.
+        guard text != values[key] else { return }
+        values[key] = text
         // The user looked at it and decided, so it's no longer the parser's guess.
         marked.remove(key)
         problems[key] = nil
