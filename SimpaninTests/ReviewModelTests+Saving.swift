@@ -76,6 +76,20 @@ extension ReviewModelTests {
         #expect(try await store.documents().first?.expiry == date)
     }
 
+    /// A date read for one kind of document means something else on another (an STNK's is its tax), so
+    /// it's marked when the type changes kind; another SIM class keeps it as it is.
+    @Test func aDateFromAnotherKindOfDocumentIsMarked() throws {
+        let review = model()
+        let sim = ParsedDocument(
+            type: .simC, fields: DocumentFields([:]), expiry: CalendarDate(year: 2029, month: 1, day: 4),
+            needsCheck: [])
+        review.load(sim, pages: [try page()])
+        review.type = .simA
+        #expect(!review.expiryNeedsCheck)
+        review.type = .stnk
+        #expect(review.expiryNeedsCheck)
+    }
+
     /// The last page failing is as bad as the first: the document is saved with every page or not at all.
     @Test func aLastPageThatCantBeEncodedSavesNothing() async throws {
         let store = FakeDocuments()

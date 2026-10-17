@@ -146,4 +146,15 @@ extension ReviewModelTests {
         review.setValue("00123", for: FieldKey.nik)
         #expect(review.problems[FieldKey.nik] == .nikLength)
     }
+
+    /// An empty field writes "" back when it takes focus; that isn't an edit either.
+    @Test func anEmptyFieldWrittenBackStaysUntouched() throws {
+        let review = model()
+        let noNIK = ParsedDocument(
+            type: .ktp, fields: DocumentFields([FieldKey.name: "BUDI CONTOH"]), expiry: nil, needsCheck: [FieldKey.nik])
+        review.load(noNIK, pages: [try page()])
+        review.setValue("", for: FieldKey.nik)
+        #expect(review.marked.contains(FieldKey.nik))
+        #expect(!review.hasUserChanges)
+    }
 }

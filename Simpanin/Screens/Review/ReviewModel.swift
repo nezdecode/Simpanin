@@ -26,7 +26,11 @@ final class ReviewModel {
     /// Set by the type sheet; picking one is the user's decision, so the parser's doubt goes. `load` sets
     /// the mark again after setting the type.
     var type = DocumentType.other {
-        didSet { typeNeedsCheck = false }
+        didSet {
+            typeNeedsCheck = false
+            // A date read for one kind of document means something else on another (an STNK's is its tax).
+            if expiry != nil, Self.dateKind(oldValue) != Self.dateKind(type) { expiryNeedsCheck = true }
+        }
     }
     var label = ""
     /// The text of each field, by `FieldKey`, as read or as typed.
@@ -100,7 +104,7 @@ final class ReviewModel {
     func setValue(_ text: String, for key: String) {
         let text = Self.dateKeys.contains(key) ? Self.typedDate(text) : text
         // A field writes its value back when it takes focus; that isn't an edit, and its reason stays.
-        guard text != values[key] else { return }
+        guard text != values[key] ?? "" else { return }
         values[key] = text
         // The user looked at it and decided, so it's no longer the parser's guess.
         marked.remove(key)
@@ -208,6 +212,11 @@ extension ReviewModel {
 
     private static func trimmed(_ text: String?) -> String {
         text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    }
+
+    /// What a document's date means: every SIM class shares one meaning, an STNK's is its tax.
+    private static func dateKind(_ type: DocumentType) -> String {
+        type.isSIM ? "sim" : type.rawValue
     }
 
     /// Why a value can't be stored, or nil when it can. Only a NIK's length and dates are judged.
