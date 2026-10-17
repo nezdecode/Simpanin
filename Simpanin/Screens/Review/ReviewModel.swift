@@ -223,7 +223,8 @@ extension ReviewModel {
     /// Digits as dd-mm-yyyy, for a number pad. A dash only goes before a digit, so backspace can remove it.
     static func typedDate(_ text: String) -> String {
         var result = ""
-        for (index, digit) in text.filter { $0.isASCII && $0.isNumber }.prefix(8).enumerated() {
+        let digits = text.filter { $0.isASCII && $0.isNumber }
+        for (index, digit) in digits.prefix(8).enumerated() {
             if index == 2 || index == 4 { result.append("-") }
             result.append(digit)
         }
