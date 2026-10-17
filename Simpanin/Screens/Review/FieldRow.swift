@@ -34,7 +34,7 @@ struct FieldRow: View {
                 if ReviewModel.dateKeys.contains(key) {
                     DateField(title: ReviewView.title(for: key), value: value, onChange: onChange)
                 } else {
-                    TextField(text: Binding(get: { value }, set: onChange)) {
+                    TextField(text: Binding(get: { value }, set: { onChange($0) })) {
                         Text(ReviewView.title(for: key))
                     }
                 }
