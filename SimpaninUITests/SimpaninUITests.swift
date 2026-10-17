@@ -239,7 +239,10 @@ extension SimpaninUITests {
         replace(app.textFields["review.field.name"], with: "BUDI CONTOH")
         XCTAssertFalse(app.staticTexts["Periksa lagi"].exists)
         app.textFields["review.label"].tap()
-        app.textFields["review.label"].typeText("Ibu")
+        // Return moves on to the NIK, and Selesai closes its number pad; Simpan waits until then.
+        app.textFields["review.label"].typeText("Ibu\n")
+        app.buttons["keyboard.done"].tap()
+        XCTAssertTrue(app.buttons["review.save"].waitForExistence(timeout: 5))
         app.buttons["review.save"].tap()
 
         XCTAssertTrue(rows(app).firstMatch.waitForExistence(timeout: 10))
