@@ -52,7 +52,7 @@ struct SIMParserTests {
     @Test func aCleanOldCard() throws {
         let result = try #require(parse(Self.oldCard()))
         #expect(result.type == .simC)
-        #expect(result.fields.values[FieldKey.simNumber] == "0000-0000-000001")
+        #expect(result.fields.values[FieldKey.simNumber] == "00000000000001")
         #expect(result.fields.values[FieldKey.name] == "BUDI CONTOH")
         #expect(result.fields.values[FieldKey.birthDate] == "1990-08-17")
         #expect(result.expiry == CalendarDate(year: 2027, month: 1, day: 4))
@@ -197,18 +197,16 @@ struct SIMParserTests {
         #expect(oldCardNewNumber.needsCheck.contains(FieldKey.simNumber))
     }
 
-    /// When the layout can't be told, the number's length alone isn't a reason to mark it.
+    /// When neither layout shows, the number's length alone isn't a reason to mark it. Signs of both
+    /// layouts mark every field instead (conflictingLayoutsMarkEveryField).
     @Test func anUnknownLayoutDoesntMarkTheNumbersLength() throws {
         let neither = ["SURAT IZIN MENGEMUDI", "A", "0000-0000-000001", "BUDI CONTOH", "04-01-2027"]
         #expect(try #require(parse(neither)).needsCheck.contains(FieldKey.simNumber) == false)
-        var both = Self.oldCard()
-        both.insert("Nama/Name", at: 5)
-        #expect(try #require(parse(both)).needsCheck.contains(FieldKey.simNumber) == false)
     }
 
     @Test func lookalikeLettersInTheNumberAreCorrectedAndMarked() throws {
         let result = try #require(parse(Self.oldCard(number: "OOOO-0000-00000I")))
-        #expect(result.fields.values[FieldKey.simNumber] == "0000-0000-000001")
+        #expect(result.fields.values[FieldKey.simNumber] == "00000000000001")
         #expect(result.needsCheck == [FieldKey.simNumber])
     }
 

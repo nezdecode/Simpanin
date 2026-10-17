@@ -38,7 +38,8 @@ public enum SIMParser {
         if number.needsCheck { needsCheck.insert(FieldKey.simNumber) }
         let nikDate = number.nikDate
 
-        let name = field(1, label: "Nama/Name", in: lines, card: card)
+        let (name, birthText, birthLine) = nameAndBirth(
+            in: lines, labeled: labeled, card: card, numberLine: number.lines.min())
         if let name {
             fields[FieldKey.name] = name.text
             // A misread character is only marked, since what it should have been can't be known.
@@ -47,7 +48,6 @@ public enum SIMParser {
             needsCheck.insert(FieldKey.name)
         }
 
-        let birthText = field(2, label: "Tempat, Tgl Lahir/Place, Date of Birth", in: lines, card: card)?.text
         let read = birthText?.lastDateReadingLookalikes
         let birth = read?.date
         if let birth, let read {
@@ -70,12 +70,12 @@ public enum SIMParser {
         }
 
         let (expiry, expiryNeedsCheck) = readExpiry(
-            in: lines, setAside: { number.lines.contains($0) || (birthText.map(lines[$0].contains) ?? false) },
-            birth: birth, today: today)
+            in: lines, labeled: labeled, number: number, birth: (birthText, birthLine, birth), today: today)
+        let conflict = conflictMarks(labeled: labeled, digits: number.text?.count)
 
         return ParsedDocument(
-            type: type, fields: DocumentFields(fields), expiry: expiry, needsCheck: needsCheck,
-            typeNeedsCheck: typeNeedsCheck, expiryNeedsCheck: expiryNeedsCheck)
+            type: type, fields: DocumentFields(fields), expiry: expiry, needsCheck: needsCheck.union(conflict),
+            typeNeedsCheck: typeNeedsCheck, expiryNeedsCheck: expiryNeedsCheck || !conflict.isEmpty)
     }
 
     private struct ReadNumber {
@@ -127,11 +127,105 @@ public enum SIMParser {
         guard candidates.count == 1, let expiry = candidates.first else { return (nil, true) }
         // Without the birth date, its line can't be set aside, so the one date left may be the birth date.
         guard let birth else { return (expiry, true) }
+        return (expiry, implausible(expiry, birth: birth, today: today))
+    }
+
+    /// A SIM is valid for five years from issue and needs its holder to be 17, so anything outside is a misread.
+    private static func implausible(_ expiry: CalendarDate, birth: CalendarDate, today: CalendarDate) -> Bool {
         let date = (expiry.year, expiry.month, expiry.day)
-        // A SIM is valid for five years from issue and needs its holder to be 17, so anything outside is a misread.
-        return (
-            expiry, date > (today.year + 5, today.month, today.day) || date < (birth.year + 17, birth.month, birth.day)
-        )
+        return date > (today.year + 5, today.month, today.day) || date < (birth.year + 17, birth.month, birth.day)
+    }
+
+    /// Where the name and the birth date are: by label on a newer card, and by order and shape on an older
+    /// one, whose line numbers Vision drops or misreads.
+    private static func nameAndBirth(in lines: [String], labeled: Bool, card: LabeledLines, numberLine: Int?) -> (
+        name: LabeledLines.Found?, birthText: String?, birthLine: Int?
+    ) {
+        guard !labeled else {
+            let birth = field(2, label: "Tempat, Tgl Lahir/Place, Date of Birth", in: lines, card: card)?.text
+            return (field(1, label: "Nama/Name", in: lines, card: card), birth, nil)
+        }
+        let birthLine = oldBirthLine(in: lines, after: numberLine)
+        return (oldName(in: lines, number: numberLine, birth: birthLine), birthLine.map { lines[$0] }, birthLine)
+    }
+
+    /// The expiry, by the rules of the card's layout.
+    private static func readExpiry(
+        in lines: [String], labeled: Bool, number: ReadNumber,
+        birth: (text: String?, line: Int?, date: CalendarDate?), today: CalendarDate
+    ) -> (CalendarDate?, needsCheck: Bool) {
+        guard labeled else {
+            return oldExpiry(in: lines, after: birth.line, setAside: number.lines, birth: birth.date, today: today)
+        }
+        let setAside = { (index: Int) in
+            number.lines.contains(index) || (birth.text.map(lines[index].contains) ?? false)
+        }
+        return readExpiry(in: lines, setAside: setAside, birth: birth.date, today: today)
+    }
+
+    /// Signs of both layouts at once, a 14-digit number with labels or a NIK without: the rules aren't
+    /// mixed, and every field, the expiry included, is left to the user. Empty when the layout is clear.
+    private static func conflictMarks(labeled: Bool, digits: Int?) -> Set<String> {
+        guard (labeled && digits == 14) || (!labeled && digits == 16) else { return [] }
+        return [FieldKey.simNumber, FieldKey.name, FieldKey.birthDate]
+    }
+
+    /// A line with no letter and no digit, like "~": noise Vision read, never part of a field. Told by
+    /// that alone, never by length, so a short name stays a name.
+    private static func isNoise(_ line: String) -> Bool {
+        !line.contains { $0.isLetter || $0.isNumber }
+    }
+
+    /// The birth line on an older card: field 2, or else the first line after the number shaped
+    /// "PLACE, dd-mm-yyyy", the comma optional. A place and date split over two lines isn't one.
+    private static func oldBirthLine(in lines: [String], after numberLine: Int?) -> Int? {
+        if let index = lines.firstIndex(where: { numberedField($0)?.number == 2 }),
+            lines[index].lastDateReadingLookalikes != nil
+        {
+            return index
+        }
+        let start = (numberLine ?? -1) + 1
+        guard start < lines.count else { return nil }
+        return (start..<lines.count).first { index in
+            let line = lines[index]
+            return line.contains(where: \.isLetter) && line.last?.isNumber == true
+                && line.lastDateReadingLookalikes != nil
+        }
+    }
+
+    /// The name on an older card: field 1, or else the one line between the number and the birth line.
+    /// `continues` is set when it can't be trusted as read: more than one line, or a line number removed
+    /// from a misread "1BUDI" or "I. BUDI". Without the number or the birth line, nothing is guessed.
+    private static func oldName(in lines: [String], number: Int?, birth: Int?) -> LabeledLines.Found? {
+        if let index = lines.firstIndex(where: { numberedField($0)?.number == 1 }),
+            let text = numberedField(lines[index])?.text, !text.isEmpty
+        {
+            // The next real line belongs to the name when it isn't a numbered field or the birth line.
+            let next = lines.indices.dropFirst(index + 1).first { !isNoise(lines[$0]) }
+            let continues = next.map { $0 != birth && numberedField(lines[$0]) == nil } ?? false
+            return LabeledLines.Found(text: text, continues: continues)
+        }
+        guard let number, let birth, birth > number + 1 else { return nil }
+        var corrected = false
+        let candidates = lines[(number + 1)..<birth].filter { !isNoise($0) }.map { line in
+            guard let match = line.wholeMatch(of: /(?:1(?=[A-Z])|[Il|1]\s*[.,])\s*(.*)/) else { return line }
+            corrected = true
+            return String(match.1)
+        }
+        guard !candidates.isEmpty else { return nil }
+        return LabeledLines.Found(text: candidates.joined(separator: " "), continues: candidates.count > 1 || corrected)
+    }
+
+    /// The expiry on an older card: the one line after the birth line that's only a date.
+    private static func oldExpiry(
+        in lines: [String], after birthLine: Int?, setAside: Set<Int>, birth: CalendarDate?, today: CalendarDate
+    ) -> (CalendarDate?, needsCheck: Bool) {
+        guard let birthLine, let birth, birthLine + 1 < lines.count else { return (nil, true) }
+        let candidates = ((birthLine + 1)..<lines.count)
+            .filter { !setAside.contains($0) && !lines[$0].contains(where: \.isLetter) }
+            .flatMap { lines[$0].numericDates }
+        guard candidates.count == 1, let expiry = candidates.first else { return (nil, true) }
+        return (expiry, implausible(expiry, birth: birth, today: today))
     }
 
     /// The labels on a card from July 2024. Older cards number their fields instead.
@@ -177,9 +271,8 @@ public enum SIMParser {
         guard digits.allSatisfy(\.isASCIIDigit) else { return nil }
         switch digits.count {
         case 16: return Number(text: digits, digits: digits, corrected: corrected)
-        case 14:
-            let parts = [digits.prefix(4), digits.dropFirst(4).prefix(4), digits.dropFirst(8)]
-            return Number(text: parts.joined(separator: "-"), digits: digits, corrected: corrected)
+        // Stored as digits alone, however it was printed; dashes are for display only.
+        case 14: return Number(text: digits, digits: digits, corrected: corrected)
         default: return nil
         }
     }
