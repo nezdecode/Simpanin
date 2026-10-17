@@ -70,7 +70,8 @@ public enum SIMParser {
 
         return ParsedDocument(
             type: type, fields: DocumentFields(fields), expiry: expiry, needsCheck: needsCheck.union(conflict),
-            typeNeedsCheck: typeNeedsCheck, expiryNeedsCheck: expiryNeedsCheck || !conflict.isEmpty)
+            typeNeedsCheck: typeNeedsCheck || !conflict.isEmpty, expiryNeedsCheck: expiryNeedsCheck || !conflict.isEmpty
+        )
     }
 
     private struct ReadNumber {
@@ -208,9 +209,11 @@ public enum SIMParser {
     /// `continues` is set when it can't be trusted as read: more than one line, or a line number removed
     /// from a misread "1BUDI" or "I. BUDI". Without the number or the birth line, nothing is guessed.
     private static func oldName(in lines: [String], number: Int?, birth: Int?) -> LabeledLines.Found? {
-        // A "1." counts only after the number: the back of a card numbers its rules too.
-        if let number,
-            let index = lines.indices.dropFirst(number + 1).first(where: { numberedField(lines[$0])?.number == 1 }),
+        // A "1." counts only between the number and the birth line, or above a birth line when the number
+        // wasn't read: the back of a card numbers its rules too, and they have no birth line.
+        let start = number.map { $0 + 1 } ?? 0
+        let end = birth ?? (number == nil ? start : lines.endIndex)
+        if start < end, let index = (start..<end).first(where: { numberedField(lines[$0])?.number == 1 }),
             let text = numberedField(lines[index])?.text, !text.isEmpty
         {
             // The next real line belongs to the name when it isn't a numbered field or the birth line.

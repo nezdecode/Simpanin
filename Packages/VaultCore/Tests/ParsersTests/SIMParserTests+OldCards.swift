@@ -54,7 +54,7 @@ extension SIMParserTests {
     }
 
     /// On an older card the class is printed above the number, so a lone blood type further down is never
-    /// taken for a second class, whether or not the "1." was read.
+    /// taken for a second class, even when Vision dropped the "1.".
     @Test func anOldCardsClassIsReadAboveItsNumber() throws {
         var lines = Self.withoutNameNumber()
         lines.insert("B", at: lines.count - 2)
@@ -189,6 +189,7 @@ extension SIMParserTests {
         let result = try #require(parse(lines))
         #expect(result.needsCheck.isSuperset(of: [FieldKey.simNumber, FieldKey.name, FieldKey.birthDate]))
         #expect(result.expiryNeedsCheck)
+        #expect(result.typeNeedsCheck)
     }
 
     /// Nothing in the known shapes: nothing is guessed.
@@ -238,5 +239,41 @@ extension SIMParserTests {
         #expect(result.type == .sim)
         #expect(result.typeNeedsCheck)
         expectFields(result)
+    }
+
+    /// A "1." below the birth line is a misread later field, never the name.
+    @Test func aOneAfterTheBirthLineIsntTheName() throws {
+        let lines = Self.withoutNameNumber(name: []).map { $0 == "JL. CONTOH NO. 1" ? "1. JL MAWAR" : $0 }
+        let result = try #require(parse(lines))
+        #expect(result.fields.values[FieldKey.name] == nil)
+        #expect(result.needsCheck.contains(FieldKey.name))
+    }
+
+    /// A clear "1." above a birth line is the front's name even when the number wasn't read; the back's
+    /// numbered rules have no birth line.
+    @Test func aClearNameIsReadWithoutTheNumber() throws {
+        let lines = [
+            "INDONESIA", "SURAT IZIN MENGEMUDI", "C", "1. BUDI CONTOH", "2. JAKARTA, 17-08-1990", "04-01-2027",
+        ]
+        let result = try #require(parse(lines))
+        #expect(result.fields.values[FieldKey.name] == "BUDI CONTOH")
+    }
+
+    /// A dotless field number right under the name ends it; it doesn't continue it.
+    @Test func aDotlessFieldNumberUnderTheNameDoesntMarkIt() throws {
+        let result = try #require(parse(Self.withoutBirthNumber(beforeBirth: ["2"])))
+        #expect(result.fields.values[FieldKey.name] == "BUDI CONTOH")
+        #expect(!result.needsCheck.contains(FieldKey.name))
+    }
+
+    /// A newer card whose labels Vision missed prints its number above the class, so the class is left to
+    /// the user, marked, rather than taken from the wrong place.
+    @Test func aNewerCardWithoutItsLabelsLeavesTheClassToTheUser() throws {
+        let labels: Set = [
+            "Nama/Name", "Tempat, Tgl Lahir/Place, Date of Birth", "Gol Darah/Blood Type",
+            "Jenis Kelamin/Sex", "Alamat/Address", "Pekerjaan/Occupation", "Diterbitkan Oleh/Issued by",
+        ]
+        let result = try #require(parse(Self.newCard().filter { !labels.contains($0) }))
+        #expect(result.typeNeedsCheck)
     }
 }

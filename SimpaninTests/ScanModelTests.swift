@@ -94,6 +94,14 @@ struct ScanModelTests {
         #expect(scan.result?.fields.values[FieldKey.name] == "BUDI CONTOH")
     }
 
+    /// With no number read on any page, the page that gave the most fields is the front, not an empty back.
+    @Test func aFrontWithoutItsNumberStillBeatsAnEmptyBack() async throws {
+        let front = Self.sim.filter { $0 != "0000-0000-000001" }
+        let scan = model(FakeRecognizer([Self.titledBack, front]))
+        await scan.scanned([try page(), try page()])
+        #expect(scan.result?.fields.values[FieldKey.name] == "BUDI CONTOH")
+    }
+
     /// The back may be scanned first; the front is found as the second page.
     @Test func theFrontIsFoundWhenItIsTheSecondPage() async throws {
         // A back on either side: read together, its date after the front's birth line would be a second expiry.
