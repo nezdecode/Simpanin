@@ -1024,6 +1024,17 @@
         }
       }
     },
+    "review.fillNIK" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Isi NIK"
+          }
+        }
+      }
+    },
     "review.forLife" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1075,6 +1086,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "mis. Ibu, Kantor"
+          }
+        }
+      }
+    },
+    "review.nikLength" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "NIK harus 16 angka."
+          }
+        }
+      }
+    },
+    "review.nikMissing" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "NIK belum diisi. Simpan tanpa NIK?"
           }
         }
       }
@@ -1174,6 +1207,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Simpan ke vault"
+          }
+        }
+      }
+    },
+    "review.saveAnyway" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Simpan saja"
           }
         }
       }

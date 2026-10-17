@@ -88,6 +88,8 @@ final class ReviewModel {
         expiry = result?.expiry
         expiryNeedsCheck = result?.expiryNeedsCheck ?? false
         problems = [:]
+        // A wrong value the scan read shows its reason at once, not only when Simpan is tapped.
+        _ = firstProblem()
         saveError = nil
     }
 
@@ -133,20 +135,12 @@ final class ReviewModel {
         saving = true
         defer { saving = false }
         var fields: [String: String] = [:]
+        // A value that can't be stored is never saved; its field shows why.
+        guard firstProblem() == nil else { return false }
         for key in fieldKeys {
-            let text = values[key]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            let text = Self.trimmed(values[key])
             guard !text.isEmpty else { continue }
-            if Self.dateKeys.contains(key) {
-                // A date that can't exist is never stored; the field is marked for the user to fix.
-                if let problem = Self.problem(with: text, for: key) {
-                    marked.insert(key)
-                    problems[key] = problem
-                    return false
-                }
-                fields[key] = Self.yearFirst(text)
-            } else {
-                fields[key] = text
-            }
+            fields[key] = Self.dateKeys.contains(key) ? Self.yearFirst(text) : text
         }
         // Taken before the encode, which can take a moment: what's saved is what was shown at Simpan.
         let type = type
@@ -179,10 +173,42 @@ extension ReviewModel {
     enum FieldProblem: Equatable {
         case notADate
         case birthDateInFuture
+        case nikLength
     }
 
-    /// Why a date can't be stored, or nil when it can.
+    /// The field lost focus, so typing is done: a filled one is judged now.
+    func fieldLeft(_ key: String) {
+        let text = Self.trimmed(values[key])
+        guard !text.isEmpty else { return }
+        problems[key] = Self.problem(with: text, for: key)
+    }
+
+    /// Judges every filled field, shows each one's reason, and returns the first wrong one in screen order.
+    func firstProblem() -> String? {
+        var first: String?
+        for key in fieldKeys {
+            let text = Self.trimmed(values[key])
+            guard !text.isEmpty, let problem = Self.problem(with: text, for: key) else { continue }
+            problems[key] = problem
+            marked.insert(key)
+            first = first ?? key
+        }
+        return first
+    }
+
+    /// A KTP saved without its NIK is asked about first, never refused: an old photo can be blurred there.
+    var nikMissing: Bool { fieldKeys.contains(FieldKey.nik) && Self.trimmed(values[FieldKey.nik]).isEmpty }
+
+    private static func trimmed(_ text: String?) -> String {
+        text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    }
+
+    /// Why a value can't be stored, or nil when it can. Only a NIK's length and dates are judged.
     static func problem(with text: String, for key: String) -> FieldProblem? {
+        if key == FieldKey.nik {
+            return text.count == 16 && text.allSatisfy { $0.isASCII && $0.isNumber } ? nil : .nikLength
+        }
+        guard dateKeys.contains(key) else { return nil }
         guard let date = yearFirst(text).flatMap(CalendarDate.init) else { return .notADate }
         return key == FieldKey.birthDate && date > .today ? .birthDateInFuture : nil
     }

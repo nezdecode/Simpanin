@@ -254,6 +254,7 @@ struct ReviewView: View {
         switch problem {
         case .notADate: "review.notADate"
         case .birthDateInFuture: "review.birthDateInFuture"
+        case .nikLength: "review.nikLength"
         }
     }
 

@@ -79,4 +79,61 @@ extension ReviewModelTests {
         review.setValue("0012341808900001", for: FieldKey.nik)
         #expect(review.marked.isSuperset(of: [FieldKey.nik, FieldKey.birthDate]))
     }
+
+    /// A NIK that isn't 16 digits is judged when the field is left, not while it's being typed.
+    @Test func aNIKOfTheWrongLengthIsJudgedWhenTheFieldIsLeft() throws {
+        let review = model()
+        review.load(Self.ktp, pages: [try page()])
+        review.setValue("00123417089000", for: FieldKey.nik)
+        #expect(review.problems.isEmpty)
+        review.fieldLeft(FieldKey.nik)
+        #expect(review.problems[FieldKey.nik] == .nikLength)
+        review.setValue("0012341708900001", for: FieldKey.nik)
+        review.fieldLeft(FieldKey.nik)
+        #expect(review.problems.isEmpty)
+    }
+
+    /// A wrong value the scan read shows its reason as soon as the screen opens.
+    @Test func aWrongNIKFromTheScanShowsAtOnce() throws {
+        let review = model()
+        let short = ParsedDocument(
+            type: .ktp, fields: DocumentFields([FieldKey.nik: "001234170890000"]), expiry: nil, needsCheck: [])
+        review.load(short, pages: [try page()])
+        #expect(review.problems[FieldKey.nik] == .nikLength)
+    }
+
+    @Test func simpanRefusesAWrongNIK() async throws {
+        let store = FakeDocuments()
+        let review = model(store)
+        review.load(Self.ktp, pages: [try page()])
+        review.setValue("001234170890000", for: FieldKey.nik)
+        #expect(await !review.save())
+        #expect(review.problems[FieldKey.nik] == .nikLength)
+        #expect(await store.created.isEmpty)
+    }
+
+    /// Simpan goes to the first wrong field in screen order; the others show their reasons where they are.
+    @Test func theFirstProblemIsTheFirstFieldOnScreen() throws {
+        let review = model()
+        review.load(Self.ktp, pages: [try page()])
+        #expect(review.firstProblem() == nil)
+        review.setValue("17-08-2999", for: FieldKey.birthDate)
+        review.setValue("00123", for: FieldKey.nik)
+        #expect(review.firstProblem() == FieldKey.nik)
+        #expect(review.problems[FieldKey.birthDate] == .birthDateInFuture)
+    }
+
+    /// An empty NIK is asked about, never refused: an old photo can be blurred just there.
+    @Test func anEmptyNIKIsAskedAboutNotRefused() async throws {
+        let store = FakeDocuments()
+        let review = model(store)
+        review.load(Self.ktp, pages: [try page()])
+        #expect(!review.nikMissing)
+        review.setValue("", for: FieldKey.nik)
+        #expect(review.nikMissing)
+        #expect(review.firstProblem() == nil)
+        #expect(await review.save())
+        review.load(Self.sim, pages: [try page()])
+        #expect(!review.nikMissing)
+    }
 }
