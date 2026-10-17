@@ -34,6 +34,8 @@ extension SIMParserTests {
     }
 
     func expectFull(_ result: ParsedDocument) {
+        #expect(result.type == .simC)
+        #expect(!result.typeNeedsCheck)
         #expect(result.fields.values[FieldKey.name] == "BUDI CONTOH")
         #expect(result.fields.values[FieldKey.birthDate] == "1990-08-17")
         #expect(result.expiry == CalendarDate(year: 2027, month: 1, day: 4))
@@ -45,6 +47,16 @@ extension SIMParserTests {
     @Test func anOldCardWithoutTheNameNumber() throws {
         let result = try #require(parse(Self.withoutNameNumber()))
         expectFull(result)
+    }
+
+    /// On an older card the class is printed above the number, so a lone blood type further down is never
+    /// taken for a second class, whether or not the "1." was read.
+    @Test func anOldCardsClassIsReadAboveItsNumber() throws {
+        var lines = Self.withoutNameNumber()
+        lines.insert("B", at: lines.count - 2)
+        let result = try #require(parse(lines))
+        #expect(result.type == .simC)
+        #expect(!result.typeNeedsCheck)
     }
 
     /// Its place confirms which line is the name, and nothing in it was corrected, so it isn't marked.

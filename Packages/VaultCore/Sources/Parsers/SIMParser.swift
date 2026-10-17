@@ -23,17 +23,12 @@ public enum SIMParser {
         var fields: [String: String] = [:]
         var needsCheck: Set<String> = []
 
-        // The class is printed above the fields, so a blood type further down is never taken for one.
         let labeled = hasLabels(lines)
-        let firstField = lines.firstIndex { line in
-            LabeledLines.rest(after: "Nama/Name", in: line) != nil
-                // On a card with labels an address line like "1, RT 001" must not stand in for the name label.
-                || (!labeled && numberedField(line)?.number == 1)
-        }
-        let (type, classNeedsCheck) = simClass(in: lines[..<(firstField ?? lines.endIndex)])
-        let typeNeedsCheck = classNeedsCheck || firstField == nil
-
         let number = readNumber(in: lines, digits: expectedDigits(lines))
+        let classEnd = classEnd(in: lines, labeled: labeled, numberLine: number.lines.min())
+        let (type, classNeedsCheck) = simClass(in: lines[..<(classEnd ?? lines.endIndex)])
+        let typeNeedsCheck = classNeedsCheck || classEnd == nil
+
         if let text = number.text { fields[FieldKey.simNumber] = text }
         if number.needsCheck { needsCheck.insert(FieldKey.simNumber) }
         let nikDate = number.nikDate
@@ -164,6 +159,14 @@ public enum SIMParser {
             number.lines.contains(index) || (birth.text.map(lines[index].contains) ?? false)
         }
         return readExpiry(in: lines, setAside: setAside, birth: birth.date, today: today)
+    }
+
+    /// Where the class can no longer be, so a blood type further down is never taken for one: a newer card
+    /// prints it above the name label, an older one above its number, or else above field 1, which Vision
+    /// may drop.
+    private static func classEnd(in lines: [String], labeled: Bool, numberLine: Int?) -> Int? {
+        guard !labeled else { return lines.firstIndex { LabeledLines.rest(after: "Nama/Name", in: $0) != nil } }
+        return numberLine ?? lines.firstIndex { numberedField($0)?.number == 1 }
     }
 
     /// Signs of both layouts at once, a 14-digit number with labels or a NIK without: the rules aren't
