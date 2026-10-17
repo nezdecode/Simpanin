@@ -165,37 +165,10 @@ struct ReviewView: View {
     }
 
     private func fieldRow(_ key: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(Self.title(for: key)).font(.footnote).foregroundStyle(.secondary)
-            Group {
-                if ReviewModel.dateKeys.contains(key) {
-                    DateField(title: Self.title(for: key), value: review.values[key] ?? "") {
-                        review.setValue($0, for: key)
-                    }
-                } else {
-                    TextField(
-                        text: Binding(get: { review.values[key] ?? "" }, set: { review.setValue($0, for: key) })
-                    ) {
-                        Text(Self.title(for: key))
-                    }
-                }
-            }
-            .focused($focusedField, equals: key)
-            .keyboardType(Self.keyboard(for: key))
-            // Nothing typed here is corrected or learned by the keyboard, so a name isn't "fixed" and no
-            // value comes back as a suggestion in another app.
-            .autocorrectionDisabled()
-            .textInputAutocapitalization(key == FieldKey.name ? .characters : .never)
-            .submitLabel(key == review.fieldKeys.last ? .done : .next)
-            .onSubmit { focusField(after: key) }
-            .font(key == FieldKey.nik || key == FieldKey.simNumber ? .body.monospaced() : .body)
-            .accessibilityIdentifier("review.field.\(key)")
-            if let problem = review.problems[key] {
-                WarningText(Self.reason(for: problem))
-            } else if review.marked.contains(key) {
-                WarningText("review.checkAgain")
-            }
-        }
+        FieldRow(
+            key: key, value: review.values[key] ?? "", isLast: key == review.fieldKeys.last,
+            warning: review.problems[key].map(Self.reason) ?? (review.marked.contains(key) ? "review.checkAgain" : nil),
+            focus: $focusedField, onChange: { review.setValue($0, for: key) }, onSubmit: { focusField(after: key) })
     }
 
     @ViewBuilder private var validitySection: some View {
@@ -284,7 +257,7 @@ struct ReviewView: View {
         }
     }
 
-    private static func keyboard(for key: String) -> UIKeyboardType {
+    static func keyboard(for key: String) -> UIKeyboardType {
         switch key {
         case FieldKey.nik: .numberPad
         case FieldKey.birthDate: .numberPad
@@ -332,6 +305,43 @@ private struct ExpiryCalendar: View {
             }
         }
         .presentationDetents([.medium, .large])
+    }
+}
+
+/// One field of the document: its title, the value, and under it why Simpan refused it or "Periksa lagi".
+private struct FieldRow: View {
+    let key: String
+    let value: String
+    let isLast: Bool
+    let warning: LocalizedStringResource?
+    var focus: FocusState<String?>.Binding
+    let onChange: (String) -> Void
+    let onSubmit: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(ReviewView.title(for: key)).font(.footnote).foregroundStyle(.secondary)
+            Group {
+                if ReviewModel.dateKeys.contains(key) {
+                    DateField(title: ReviewView.title(for: key), value: value, onChange: onChange)
+                } else {
+                    TextField(text: Binding(get: { value }, set: onChange)) {
+                        Text(ReviewView.title(for: key))
+                    }
+                }
+            }
+            .focused(focus, equals: key)
+            .keyboardType(ReviewView.keyboard(for: key))
+            // Nothing typed here is corrected or learned by the keyboard, so a name isn't "fixed" and no
+            // value comes back as a suggestion in another app.
+            .autocorrectionDisabled()
+            .textInputAutocapitalization(key == FieldKey.name ? .characters : .never)
+            .submitLabel(isLast ? .done : .next)
+            .onSubmit(onSubmit)
+            .font(key == FieldKey.nik || key == FieldKey.simNumber ? .body.monospaced() : .body)
+            .accessibilityIdentifier("review.field.\(key)")
+            if let warning { WarningText(warning) }
+        }
     }
 }
 
