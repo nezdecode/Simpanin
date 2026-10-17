@@ -297,6 +297,19 @@ extension SimpaninUITests {
         XCTAssertEqual(field.value as? String, "12-04-2002")
     }
 
+    /// The number pad has no return key, so Selesai above it is the way to close it.
+    @MainActor
+    func testTheNumberPadCanBeClosed() throws {
+        let app = launch(["-SimpaninUITestScan"])
+        openReview(app)
+        app.textFields["review.field.nik"].tap()
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
+        app.buttons["keyboard.done"].tap()
+        let closed = NSPredicate(format: "exists == false")
+        expectation(for: closed, evaluatedWith: app.keyboards.firstMatch)
+        waitForExpectations(timeout: 5)
+    }
+
     @MainActor
     func testCancellingAScanSavesNothing() throws {
         let app = launch(["-SimpaninUITestScan"])

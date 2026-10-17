@@ -22,6 +22,7 @@ struct ReviewView: View {
     let onSave: () -> Void
     @State private var typePickerShown = false
     @State private var expiryPickerShown = false
+    @FocusState private var focusedField: String?
     /// What the calendar shows until Pilih; only then does it become the expiry.
     @State private var expiryDraft = Date.now
 
@@ -55,9 +56,20 @@ struct ReviewView: View {
                     validitySection
                 }
             }
+            // The number pad has no return key: Selesai above it, or a swipe down the form, closes it.
+            .scrollDismissesKeyboard(.interactively)
             .navigationTitle(Text("review.title"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button {
+                        focusedField = nil
+                    } label: {
+                        Text(ScreenText.done)
+                    }
+                    .accessibilityIdentifier("keyboard.done")
+                }
                 ToolbarItem(placement: .cancellationAction) {
                     // Nothing can be cancelled or rescanned while a save is being written.
                     Button(action: onCancel) { Text(ScreenText.cancel) }
@@ -152,6 +164,7 @@ struct ReviewView: View {
                     }
                 }
             }
+            .focused($focusedField, equals: key)
             .keyboardType(Self.keyboard(for: key))
             .autocorrectionDisabled()
             .font(key == FieldKey.nik || key == FieldKey.simNumber ? .body.monospaced() : .body)

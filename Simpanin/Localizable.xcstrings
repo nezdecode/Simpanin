@@ -89,6 +89,17 @@
         }
       }
     },
+    "button.done" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Selesai"
+          }
+        }
+      }
+    },
     "button.lock" : {
       "extractionState" : "manual",
       "localizations" : {
