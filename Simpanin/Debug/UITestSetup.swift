@@ -69,8 +69,8 @@
             return ScriptedDocuments(store: vault.store, failingLoads: count)
         }
 
-        /// `-SimpaninUITestCaptureAfterScan`: once the synthetic scan is read, act as if the screen were
-        /// being recorded, so a test can check the cover sits above the scan flow.
+        /// `-SimpaninUITestCaptureAfterScan`: once the synthetic scan is read, act for a few seconds as if
+        /// the screen were being recorded, so a test can check the cover sits above the scan flow.
         static var capturesAfterScan: Bool {
             isActive && ProcessInfo.processInfo.arguments.contains("-SimpaninUITestCaptureAfterScan")
         }

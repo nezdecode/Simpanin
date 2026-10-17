@@ -32,8 +32,16 @@ struct LibraryView: View {
 
     private func scanRead() {
         #if DEBUG
-            // Lets a UI test check the privacy cover sits above the scan flow.
-            if UITestSetup.capturesAfterScan { lock.screenCaptured = true }
+            // Lets a UI test check the privacy cover sits above the scan flow: a recording starts once the
+            // review shows and stops again, so the test sees the review before, under and after the cover.
+            if UITestSetup.capturesAfterScan {
+                Task {
+                    try? await Task.sleep(for: .seconds(2))
+                    lock.screenCaptured = true
+                    try? await Task.sleep(for: .seconds(4))
+                    lock.screenCaptured = false
+                }
+            }
         #endif
     }
 

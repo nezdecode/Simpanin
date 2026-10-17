@@ -58,14 +58,16 @@ extension SimpaninUITests {
     @MainActor
     func testTheCoverSitsAboveTheScanFlow() throws {
         let app = launch(["-SimpaninUITestScan", "-SimpaninUITestCaptureAfterScan"])
-        XCTAssertTrue(app.navigationBars["Dokumen"].waitForExistence(timeout: 10))
-        app.buttons["list.scan"].tap()
-        // The cover goes up once the scan is read, so the review is underneath it. Its fields are gone
-        // from the accessibility tree too, so VoiceOver can't read what the cover hides.
+        openReview(app)
+        // The recording starts with the review on screen: its fields go from the accessibility tree too, so
+        // VoiceOver can't read what the cover hides.
         XCTAssertTrue(app.staticTexts["lock.title"].waitForExistence(timeout: 10))
         XCTAssertFalse(app.textFields["review.field.nik"].exists)
         XCTAssertFalse(app.textFields["review.field.name"].exists)
         screenshot("25 cover above the scan flow")
+        // When it stops, the review and its fields come back.
+        XCTAssertTrue(app.textFields["review.field.nik"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.staticTexts["lock.title"].exists)
     }
 
     /// A scan the lock interrupts is gone after unlocking, and the list says so.
