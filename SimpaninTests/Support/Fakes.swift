@@ -222,6 +222,13 @@ actor FakeRecognizer {
 }
 
 /// Records which class each path was given, so tests can check it without a device.
+/// A protector that always fails, like a protection change the phone refuses while it's locked.
+struct FailingProtector: FileProtector {
+    func protect(_ url: URL, as protection: FileProtectionClass) throws {
+        throw CocoaError(.fileWriteNoPermission)
+    }
+}
+
 final class RecordingProtector: FileProtector {
     private let log = Mutex<[(url: URL, protection: FileProtectionClass)]>([])
     var calls: [(url: URL, protection: FileProtectionClass)] { log.withLock { $0 } }

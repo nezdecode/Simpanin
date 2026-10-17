@@ -70,6 +70,19 @@ struct DocumentCameraCacheTests {
         #expect(protector.calls.map(\.protection) == [.complete])
     }
 
+    /// A folder that can't be protected still has VisionKit's pages removed: removing them is the main job.
+    @Test func pagesGoEvenWhenTheFolderCantBeProtected() throws {
+        let caches = try caches()
+        defer { try? FileManager.default.removeItem(at: caches) }
+        let scans = folder(in: caches).appending(path: "Scans")
+        try FileManager.default.createDirectory(at: scans, withIntermediateDirectories: true)
+        try Data([1]).write(to: scans.appending(path: "page.jpg"))
+        #expect(throws: (any Error).self) {
+            try DocumentCameraCache.clear(in: caches, protector: FailingProtector())
+        }
+        #expect(try FileManager.default.contentsOfDirectory(atPath: folder(in: caches).path).isEmpty)
+    }
+
     @Test func otherCachesStay() throws {
         let caches = try caches()
         defer { try? FileManager.default.removeItem(at: caches) }

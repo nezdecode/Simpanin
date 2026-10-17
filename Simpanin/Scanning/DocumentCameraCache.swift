@@ -24,12 +24,20 @@ nonisolated enum DocumentCameraCache {
     /// Any error is thrown, so the caller can log it.
     static func clear(in caches: URL, protector: any FileProtector) throws {
         let folder = caches.appending(path: folderName, directoryHint: .isDirectory)
-        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-        // Protected first, so a page that can't be removed never leaves the folder without its class.
-        try protector.protect(folder, as: .complete)
-        for item in try FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil) {
-            try FileManager.default.removeItem(at: item)
+        // Every step is tried even when one fails, as removing the pages is the main job; the first error
+        // is thrown at the end. Protected first, so a page that can't be removed keeps the folder's class.
+        var firstError: (any Error)?
+        func attempt(_ step: () throws -> Void) {
+            do { try step() } catch { firstError = firstError ?? error }
         }
+        attempt { try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true) }
+        attempt { try protector.protect(folder, as: .complete) }
+        attempt {
+            for item in try FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil) {
+                attempt { try FileManager.default.removeItem(at: item) }
+            }
+        }
+        if let firstError { throw firstError }
     }
 
     /// Clears the app's own Caches. A failure is logged, never ignored: it would leave a page on disk.
