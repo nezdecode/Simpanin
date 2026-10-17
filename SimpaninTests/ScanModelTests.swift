@@ -64,7 +64,6 @@ struct ScanModelTests {
         #expect(scan.result == nil)
     }
 
-    /// Every page is read, and their lines are parsed together in page order.
     /// Every page is read, and the debug screen sees all their lines; the fields come from the first page
     /// that is a KTP or SIM, never from the pages mixed together.
     @Test func everyPageIsRead() async throws {
@@ -86,8 +85,9 @@ struct ScanModelTests {
 
     /// The back may be scanned first; the front is found as the second page.
     @Test func theFrontIsFoundWhenItIsTheSecondPage() async throws {
-        let scan = model(FakeRecognizer([Self.back, Self.sim]))
-        await scan.scanned([try page(), try page()])
+        // A back on either side: read together, its date after the front's birth line would be a second expiry.
+        let scan = model(FakeRecognizer([Self.back, Self.sim, Self.back]))
+        await scan.scanned([try page(), try page(), try page()])
         #expect(scan.result?.type == .simC)
         #expect(scan.result?.expiry == CalendarDate(year: 2027, month: 1, day: 4))
     }

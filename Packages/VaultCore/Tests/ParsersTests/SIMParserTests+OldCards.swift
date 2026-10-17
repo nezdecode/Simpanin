@@ -83,6 +83,22 @@ extension SIMParserTests {
     @Test func aShortNameIsntNoise() throws {
         let result = try #require(parse(Self.withoutNameNumber(name: ["AN"])))
         #expect(result.fields.values[FieldKey.name] == "AN")
+        #expect(!result.needsCheck.contains(FieldKey.name))
+    }
+
+    /// A field number read alone on its line is no part of the name, though its place still marks it.
+    @Test(arguments: [["1.", "BUDI CONTOH"], ["BUDI CONTOH", "2."]])
+    func aFieldNumberAloneIsntPartOfTheName(_ name: [String]) throws {
+        let result = try #require(parse(Self.withoutNameNumber(name: name, birth: "JAKARTA, 17-08-1990")))
+        #expect(result.fields.values[FieldKey.name] == "BUDI CONTOH")
+        #expect(result.needsCheck.contains(FieldKey.name))
+    }
+
+    /// A name that isn't there is left out, never stored empty.
+    @Test func aMissingNameIsntStoredEmpty() throws {
+        let result = try #require(parse(Self.withoutNameNumber(name: ["1."], birth: "JAKARTA, 17-08-1990")))
+        #expect(result.fields.values[FieldKey.name] == nil)
+        #expect(result.needsCheck.contains(FieldKey.name))
     }
 
     /// Without a number, nothing says which line is the name, so none is guessed.

@@ -71,7 +71,7 @@ public enum SIMParser {
 
         let (expiry, expiryNeedsCheck) = readExpiry(
             in: lines, labeled: labeled, number: number, birth: (birthText, birthLine, birth), today: today)
-        let conflict = conflictMarks(labeled: labeled, digits: number.text?.count)
+        let conflict = conflictMarks(labeled: labeled, digits: number.digits)
 
         return ParsedDocument(
             type: type, fields: DocumentFields(fields), expiry: expiry, needsCheck: needsCheck.union(conflict),
@@ -87,6 +87,8 @@ public enum SIMParser {
         var nikDate: NIK.BirthDate?
         /// Where it was read, so those lines aren't taken for the expiry.
         var lines: Set<Int> = []
+        /// Its count of digits, which tells the layout whatever the stored format.
+        var digits: Int?
     }
 
     private static func readNumber(in lines: [String], digits expected: Int?) -> ReadNumber {
@@ -94,6 +96,7 @@ public enum SIMParser {
         var read = ReadNumber(lines: Set(numbers.map(\.0)))
         guard let found = numbers.first?.1 else { return read }
         read.text = found.text
+        read.digits = found.digits.count
         read.corrected = found.corrected
         read.needsCheck = found.corrected || numbers.count > 1 || (expected.map { $0 != found.digits.count } ?? false)
         // From July 2024 the number is the holder's NIK, so it's checked like one.
@@ -206,12 +209,16 @@ public enum SIMParser {
             return LabeledLines.Found(text: text, continues: continues)
         }
         guard let number, let birth, birth > number + 1 else { return nil }
-        var corrected = false
-        let candidates = lines[(number + 1)..<birth].filter { !isNoise($0) }.map { line in
+        let between = lines[(number + 1)..<birth].filter { !isNoise($0) }
+        // A field number read alone on its line ("1.", "2.") is no part of the name, but it's a misread.
+        let bareNumbers = between.filter { numberedField($0)?.text.isEmpty == true }
+        var corrected = !bareNumbers.isEmpty
+        let candidates = between.filter { numberedField($0)?.text.isEmpty != true }.map { line in
             guard let match = line.wholeMatch(of: /(?:1(?=[A-Z])|[Il|1]\s*[.,])\s*(.*)/) else { return line }
             corrected = true
             return String(match.1)
         }
+        .filter { !$0.isEmpty }
         guard !candidates.isEmpty else { return nil }
         return LabeledLines.Found(text: candidates.joined(separator: " "), continues: candidates.count > 1 || corrected)
     }
