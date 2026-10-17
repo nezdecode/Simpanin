@@ -13,7 +13,13 @@ import Foundation
 import VaultCore
 
 /// What a NIK says about its holder. Shared by every document that prints one.
-enum NIK {
+public enum NIK {
+    /// Whether a NIK agrees with a birth date; nil when the NIK holds no readable date. Only the day, the
+    /// month and the year's last two digits can be compared.
+    public static func agrees(_ number: String, withBirthDate birth: CalendarDate) -> Bool? {
+        birthDate(in: number)?.matches(birth)
+    }
+
     /// Letters recognition often reads in place of digits.
     static let lookalikes: [Character: Character] = [
         "O": "0", "o": "0", "D": "0", "I": "1", "l": "1", "|": "1", "Z": "2", "S": "5", "B": "8",

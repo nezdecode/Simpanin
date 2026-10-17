@@ -89,6 +89,17 @@
         }
       }
     },
+    "button.done" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Selesai"
+          }
+        }
+      }
+    },
     "button.lock" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -265,6 +276,17 @@
         }
       }
     },
+    "expiry.missing" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Masa berlaku belum diisi"
+          }
+        }
+      }
+    },
     "expiry.none" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -309,6 +331,17 @@
         }
       }
     },
+    "expiry.taxMissing" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tanggal pajak belum diisi"
+          }
+        }
+      }
+    },
     "expiry.taxSoon %lld" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -349,6 +382,50 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Berlaku sampai %@"
+          }
+        }
+      }
+    },
+    "field.birthDate" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tanggal lahir"
+          }
+        }
+      }
+    },
+    "field.name" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nama"
+          }
+        }
+      }
+    },
+    "field.nik" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "NIK"
+          }
+        }
+      }
+    },
+    "field.simNumber" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nomor SIM"
           }
         }
       }
@@ -452,6 +529,17 @@
         }
       }
     },
+    "main.scan" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pindai dokumen"
+          }
+        }
+      }
+    },
     "main.subtitle %lld" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -492,6 +580,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Penyimpanan HP hampir penuh. Beberapa perbaikan akan disimpan setelah ada ruang."
+          }
+        }
+      }
+    },
+    "notice.scanDropped" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pindaian yang belum disimpan dibuang karena Simpanin terkunci. Pindai lagi kalau perlu."
           }
         }
       }
@@ -892,6 +991,369 @@
         }
       }
     },
+    "review.birthDateInFuture" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tanggal lahir tidak bisa di masa depan."
+          }
+        }
+      }
+    },
+    "review.checkAgain" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Periksa lagi"
+          }
+        }
+      }
+    },
+    "review.datePlaceholder" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "dd-mm-yyyy"
+          }
+        }
+      }
+    },
+    "review.discard" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buang"
+          }
+        }
+      }
+    },
+    "review.discardConfirm" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buang pindaian ini?"
+          }
+        }
+      }
+    },
+    "review.expiryMissing" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Belum diisi"
+          }
+        }
+      }
+    },
+    "review.fillNIK" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Isi NIK"
+          }
+        }
+      }
+    },
+    "review.forLife" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seumur hidup"
+          }
+        }
+      }
+    },
+    "review.keepChecking" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lanjut periksa"
+          }
+        }
+      }
+    },
+    "review.label" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Label (opsional)"
+          }
+        }
+      }
+    },
+    "review.labelHint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tampil di daftar dokumen tanpa membuka dokumennya. Jangan isi nomor."
+          }
+        }
+      }
+    },
+    "review.labelIsNumber" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Label ini berisi nomor. Label tampil di daftar dokumen, jadi cukup nama pendek, misalnya Ibu."
+          }
+        }
+      }
+    },
+    "review.labelPlaceholder" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "mis. Ibu, Kantor"
+          }
+        }
+      }
+    },
+    "review.labelWithReason %@ %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@, perlu diperbaiki: %2$@"
+          }
+        }
+      }
+    },
+    "review.nikLength" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "NIK harus 16 angka."
+          }
+        }
+      }
+    },
+    "review.nikMissing" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "NIK belum diisi. Simpan tanpa NIK?"
+          }
+        }
+      }
+    },
+    "review.notADate" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tanggal tidak valid. Tulis sebagai dd-mm-yyyy."
+          }
+        }
+      }
+    },
+    "review.onDevice" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dibaca di HP ini. Tidak ada yang dikirim ke internet."
+          }
+        }
+      }
+    },
+    "review.pageFailed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Halaman pindaian tidak bisa dipakai. Pindai lagi."
+          }
+        }
+      }
+    },
+    "review.pageOf %lld %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Halaman %1$lld dari %2$lld"
+          }
+        }
+      }
+    },
+    "review.pages %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld halaman"
+          }
+        }
+      }
+    },
+    "review.pickDate" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pilih"
+          }
+        }
+      }
+    },
+    "review.reading" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Membaca dokumen…"
+          }
+        }
+      }
+    },
+    "review.rescan" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pindai ulang"
+          }
+        }
+      }
+    },
+    "review.rescanConfirm" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Perubahan yang kamu buat akan diganti hasil pindaian baru."
+          }
+        }
+      }
+    },
+    "review.save" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Simpan ke vault"
+          }
+        }
+      }
+    },
+    "review.saveAnyway" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Simpan saja"
+          }
+        }
+      }
+    },
+    "review.taxHint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tanggal pajak tahunan, bukan masa berlaku STNK 5 tahun."
+          }
+        }
+      }
+    },
+    "review.taxValidUntil" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pajak berlaku sampai"
+          }
+        }
+      }
+    },
+    "review.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Periksa data"
+          }
+        }
+      }
+    },
+    "review.type" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jenis dokumen"
+          }
+        }
+      }
+    },
+    "review.validFor" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Berlaku"
+          }
+        }
+      }
+    },
+    "review.validUntil" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Berlaku sampai"
+          }
+        }
+      }
+    },
     "saveFull.hint" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -987,6 +1449,171 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Simpanin tidak bisa disiapkan"
+          }
+        }
+      }
+    },
+    "simClass.description.sim-a" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mobil sampai 3.500 kg"
+          }
+        }
+      }
+    },
+    "simClass.description.sim-a-umum" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Angkutan umum sampai 3.500 kg"
+          }
+        }
+      }
+    },
+    "simClass.description.sim-b1" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mobil dan bus di atas 3.500 kg"
+          }
+        }
+      }
+    },
+    "simClass.description.sim-b1-umum" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Angkutan umum di atas 3.500 kg"
+          }
+        }
+      }
+    },
+    "simClass.description.sim-b2" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alat berat, penarik, gandengan"
+          }
+        }
+      }
+    },
+    "simClass.description.sim-b2-umum" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alat berat, penarik, gandengan, angkutan umum"
+          }
+        }
+      }
+    },
+    "simClass.description.sim-c" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sepeda motor sampai 250 cc"
+          }
+        }
+      }
+    },
+    "simClass.description.sim-c1" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sepeda motor 250 sampai 500 cc"
+          }
+        }
+      }
+    },
+    "simClass.description.sim-c2" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sepeda motor di atas 500 cc"
+          }
+        }
+      }
+    },
+    "simClass.description.sim-d" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kendaraan khusus disabilitas, setara SIM C"
+          }
+        }
+      }
+    },
+    "simClass.description.sim-d1" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kendaraan khusus disabilitas, setara SIM A"
+          }
+        }
+      }
+    },
+    "simClass.footer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tiap golongan disimpan sebagai dokumen sendiri."
+          }
+        }
+      }
+    },
+    "simClass.personal" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pribadi"
+          }
+        }
+      }
+    },
+    "simClass.public" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Umum"
+          }
+        }
+      }
+    },
+    "simClass.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Golongan SIM"
           }
         }
       }
@@ -1262,6 +1889,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%1$@ · %2$@"
+          }
+        }
+      }
+    },
+    "typePicker.footer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jenis menentukan kolom yang diisi dan warna kartunya."
+          }
+        }
+      }
+    },
+    "typePicker.sim" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SIM: pilih golongan"
           }
         }
       }

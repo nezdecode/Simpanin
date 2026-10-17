@@ -18,7 +18,13 @@ nonisolated enum ExpiryText {
     static let soonWindow = 60
 
     static func text(type: DocumentType, expiry: CalendarDate?, today: CalendarDate) -> LocalizedStringResource {
-        guard let expiry else { return type == .ktp ? "expiry.lifetime" : "expiry.none" }
+        guard let expiry else {
+            if type == .ktp { return "expiry.lifetime" }
+            // An STNK's date is its yearly tax, not the card's five-year validity.
+            if type == .stnk { return "expiry.taxMissing" }
+            // Read from the type and an empty date alone, as the list shows it without decrypting.
+            return hasPrintedExpiry(type) ? "expiry.missing" : "expiry.none"
+        }
         let left = days(from: today, to: expiry)
         let tax = type == .stnk
         switch left {
@@ -32,6 +38,11 @@ nonisolated enum ExpiryText {
         default:
             return tax ? "expiry.tax \(expiry.displayText)" : "expiry.valid \(expiry.displayText)"
         }
+    }
+
+    /// Types with a printed expiry; one saved without a date is missing it, not without one.
+    static func hasPrintedExpiry(_ type: DocumentType) -> Bool {
+        type.isSIM || type == .stnk || type == .passport
     }
 
     /// Indices of the documents that need attention, past expiry first, then the soonest.

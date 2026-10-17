@@ -15,6 +15,16 @@ import VaultCore
 extension CalendarDate {
     nonisolated var components: DateComponents { DateComponents(year: year, month: month, day: day) }
 
+    /// Midnight UTC on this day, for a date picker that shows UTC.
+    nonisolated var utcDate: Date? { Calendar.gregorianUTC.date(from: components) }
+
+    /// The day a UTC date falls on.
+    nonisolated init?(utc date: Date) {
+        let parts = Calendar.gregorianUTC.dateComponents([.year, .month, .day], from: date)
+        guard let year = parts.year, let month = parts.month, let day = parts.day else { return nil }
+        self.init(year: year, month: month, day: day)
+    }
+
     /// Today on the phone's calendar.
     nonisolated static var today: CalendarDate {
         let parts = Calendar.current.dateComponents([.year, .month, .day], from: .now)

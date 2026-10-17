@@ -20,4 +20,5 @@ nonisolated enum ScreenText {
     static let openAppStore = LocalizedStringResource("button.openAppStore")
     static let okay = LocalizedStringResource("button.ok")
     static let cancel = LocalizedStringResource("button.cancel")
+    static let done = LocalizedStringResource("button.done")
 }

@@ -45,6 +45,8 @@ final class LockController {
     /// Where the choice is saved. UI tests pass their own store, so they never touch the app's.
     private let settings: UserDefaults
     var relockTimeout: TimeInterval { autoLock.seconds }
+    /// The same check the lock uses, so "+" can ask for a passcode before the first scan.
+    var passcodeState: PasscodeState { passcode() }
     private let vault: any VaultOpening
     private let clock: any VaultClock
     private let passcode: @MainActor () -> PasscodeState
@@ -58,6 +60,9 @@ final class LockController {
     private var failuresInARow = 0
     /// Bumped by every lock, so an attempt that was waiting for the vault can tell it lost.
     private var lockCount = 0
+    private var scanInProgress = false
+    /// A lock dropped a scan; told once, after the next unlock.
+    private var scanDroppedByLock = false
 
     #if DEBUG
         /// For the device checks: each open attempt and lock event, as statuses only.
@@ -179,11 +184,19 @@ final class LockController {
         notices.remove(notice)
     }
 
+    /// The scan flow says when a scan starts and ends, so a lock in between can be told after unlocking.
+    func scanStarted() { scanInProgress = true }
+
+    func scanEnded() { scanInProgress = false }
+
     func lock() async {
         lockCount += 1
         await vault.lock()
         state = .locked
         notices = []
+        // Locking removes every screen, a scan in progress with it; say so after unlocking.
+        if scanInProgress { scanDroppedByLock = true }
+        scanInProgress = false
         failuresInARow = 0
     }
 
@@ -201,7 +214,8 @@ final class LockController {
         switch outcome {
         case .unlocked(let notices):
             failuresInARow = 0
-            self.notices = notices
+            self.notices = scanDroppedByLock ? notices.union([.scanDropped]) : notices
+            scanDroppedByLock = false
             state = .unlocked
         case .lockCover:
             state = .locked

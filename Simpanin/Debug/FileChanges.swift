@@ -38,6 +38,28 @@
                 .sorted { $0.path < $1.path }
         }
 
+        /// The protection class of a folder and of everything in it, by path relative to its parent. On a
+        /// device only; the simulator reports none.
+        static func protectionClasses(in folder: URL) -> [String: String] {
+            let key = URLResourceKey.fileProtectionKey
+            var classes: [String: String] = [:]
+            let parent = folder.deletingLastPathComponent().resolvingSymlinksInPath().path
+            func record(_ url: URL) {
+                let path = url.resolvingSymlinksInPath().path
+                let relative = path.hasPrefix(parent) ? String(path.dropFirst(parent.count + 1)) : path
+                let protection = (try? url.resourceValues(forKeys: [key]))?.fileProtection
+                classes[relative] =
+                    protection.map { $0.rawValue.replacingOccurrences(of: "NSFileProtection", with: "") }
+                    ?? "none reported"
+            }
+            guard FileManager.default.fileExists(atPath: folder.path) else { return [:] }
+            record(folder)
+            for case let url as URL in FileManager.default.enumerator(at: folder, includingPropertiesForKeys: [key])
+                ?? FileManager.DirectoryEnumerator()
+            { record(url) }
+            return classes
+        }
+
         private static func files(in folders: [URL]) -> [String: (modified: Date, size: Int)] {
             let keys: [URLResourceKey] = [.isRegularFileKey, .contentModificationDateKey, .fileSizeKey]
             var files: [String: (modified: Date, size: Int)] = [:]

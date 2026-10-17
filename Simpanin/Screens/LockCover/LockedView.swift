@@ -24,6 +24,7 @@ struct LockedView: View {
                     systemImage: "lock.shield", size: 88, symbolFont: .system(size: 44), tint: Color(.lockIcon),
                     background: Color(.lockIconBackground), outline: .roundedRectangle(cornerRadius: 22))
                 Text("lock.title").font(.title.bold())
+                    .accessibilityIdentifier("lock.title")
                 Text("lock.subtitle")
                     .foregroundStyle(Color(.lockSecondaryText))
                     .multilineTextAlignment(.center)

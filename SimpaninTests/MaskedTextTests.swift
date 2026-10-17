@@ -29,6 +29,11 @@ struct MaskedTextTests {
         #expect(MaskedText.mask(["NlK"]) == "NlK")
     }
 
+    /// Only whole label words stay readable: a name that starts like one is still masked.
+    @Test func aNameStartingLikeALabelIsMasked() {
+        #expect(MaskedText.mask(["Nama : NIKEN AYU", "NAMAKU"]) == "Nama : AAAAA AAA\nAAAAAA")
+    }
+
     @Test func lowercaseLettersStayLowercase() {
         #expect(MaskedText.mask(["Budi c0ntoh"]) == "Aaaa a9aaaa")
     }

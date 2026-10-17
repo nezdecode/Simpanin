@@ -19,7 +19,7 @@ final class SimpaninUITests: XCTestCase {
     }
 
     @MainActor
-    private func launch(_ arguments: [String] = []) -> XCUIApplication {
+    func launch(_ arguments: [String] = []) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = ["-SimpaninUITest"] + arguments
         app.launch()
@@ -27,7 +27,7 @@ final class SimpaninUITests: XCTestCase {
     }
 
     @MainActor
-    private func screenshot(_ name: String) {
+    func screenshot(_ name: String) {
         let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         attachment.name = name
         attachment.lifetime = .keepAlways
@@ -35,7 +35,7 @@ final class SimpaninUITests: XCTestCase {
     }
 
     @MainActor
-    private func rows(_ app: XCUIApplication) -> XCUIElementQuery {
+    func rows(_ app: XCUIApplication) -> XCUIElementQuery {
         app.descendants(matching: .any).matching(identifier: "document.row")
     }
 

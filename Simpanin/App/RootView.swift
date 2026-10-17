@@ -19,10 +19,14 @@ struct RootView: View {
     let vault: AppVault
     @State private var lock: LockController
     @Environment(\.scenePhase) private var scenePhase
+    @State private var cover: CoverWindow<LockCoverView>
+    @State private var windowScene: UIWindowScene?
 
     init(vault: AppVault) {
         self.vault = vault
-        _lock = State(initialValue: Self.makeLock(for: vault))
+        let lock = Self.makeLock(for: vault)
+        _lock = State(initialValue: lock)
+        _cover = State(initialValue: CoverWindow(LockCoverView(vault: vault, lock: lock)))
     }
 
     static func makeLock(for vault: AppVault, defaults: UserDefaults = .standard) -> LockController {
@@ -44,10 +48,16 @@ struct RootView: View {
                 Color.clear
             }
         }
+        // Until the window scene is known, the first frame, the cover is drawn here as before.
         .overlay {
-            if lock.contentHidden { LockCoverView(vault: vault, lock: lock) }
+            if lock.contentHidden, windowScene == nil { LockCoverView(vault: vault, lock: lock) }
         }
-        .background(SceneCaptureReader { lock.screenCaptured = $0 })
+        .background(WindowSceneReader { windowScene = $0 })
+        .onChange(of: lock.contentHidden, initial: true) { _, hidden in showCover(hidden) }
+        .onChange(of: windowScene) { _, scene in
+            if let scene { cover.watchCapture(in: scene) { lock.screenCaptured = $0 } }
+            showCover(lock.contentHidden)
+        }
         // Locking removes every screen at once, a scan in progress included, before it can tidy up; the
         // page images VisionKit keeps in Caches are removed here, which outlives them.
         .onChange(of: lock.state) { _, state in
@@ -72,6 +82,15 @@ struct RootView: View {
             for await _ in NotificationCenter.default.notifications(named: name) {
                 await lock.protectedDataDidBecomeAvailable()
             }
+        }
+    }
+
+    private func showCover(_ hidden: Bool) {
+        guard let windowScene else { return }
+        if hidden {
+            cover.show(in: windowScene)
+        } else {
+            cover.hide()
         }
     }
 }

@@ -28,6 +28,17 @@ struct ExpiryTextTests {
         #expect(text(.ktp, nil) == "Seumur hidup")
         #expect(text(.kk, nil) == "Tanpa masa berlaku")
         #expect(text(.bpjs, nil) == "Tanpa masa berlaku")
+        #expect(text(.npwp, nil) == "Tanpa masa berlaku")
+        #expect(text(.other, nil) == "Tanpa masa berlaku")
+    }
+
+    /// A type that does expire, saved without a date, says so; it never claims to have no expiry.
+    @Test func aMissingExpiryIsNotNoExpiry() {
+        for type in DocumentType.simClasses + [.sim, .passport] {
+            #expect(text(type, nil) == "Masa berlaku belum diisi", "\(type.rawValue)")
+        }
+        // An STNK's date is its yearly tax, not the card's five-year validity.
+        #expect(text(.stnk, nil) == "Tanggal pajak belum diisi")
     }
 
     @Test func validLongerThanSixtyDays() {

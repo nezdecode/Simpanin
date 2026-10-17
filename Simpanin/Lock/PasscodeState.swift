@@ -26,6 +26,10 @@ nonisolated enum PasscodeState: Equatable, Sendable {
         return from(canEvaluate: canEvaluate, error: error)
     }
 
+    /// Only a passcode known to be off stops a scan. An unknown state tries, and a save that can't use
+    /// the key says so.
+    var stopsScanning: Bool { self == .notSet }
+
     static func from(canEvaluate: Bool, error: (any Error)?) -> PasscodeState {
         if canEvaluate { return .set }
         guard let error = error as? LAError else { return .unknown(code: (error as NSError?)?.code ?? 0) }

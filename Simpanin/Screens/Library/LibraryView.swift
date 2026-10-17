@@ -18,6 +18,8 @@ struct LibraryView: View {
     let vault: AppVault
     let lock: LockController
     @State private var library: LibraryModel
+    @State private var scanShown = false
+    @State private var passcodeNeededShown = false
     @Environment(\.dynamicTypeSize) private var typeSize
 
     init(vault: AppVault, lock: LockController) {
@@ -27,6 +29,28 @@ struct LibraryView: View {
     }
 
     private var today: CalendarDate { CalendarDate.today }
+
+    private func scanRead() {
+        #if DEBUG
+            // Lets a UI test check the privacy cover sits above the scan flow: a recording starts once the
+            // review shows and stops again, so the test sees the review before, under and after the cover.
+            if UITestSetup.capturesAfterScan {
+                Task {
+                    try? await Task.sleep(for: .seconds(2))
+                    lock.screenCaptured = true
+                    try? await Task.sleep(for: .seconds(4))
+                    lock.screenCaptured = false
+                }
+            }
+        #endif
+    }
+
+    private static var canScan: Bool {
+        #if DEBUG
+            if UITestSetup.scansSynthetically { return true }
+        #endif
+        return DocumentCamera.isSupported
+    }
 
     private static func documentStore(for vault: AppVault) -> any DocumentStoring {
         #if DEBUG
@@ -92,6 +116,24 @@ struct LibraryView: View {
             .navigationTitle(Text("list.title"))
             .toolbar { toolbar }
             .task { await library.reload() }
+            .fullScreenCover(isPresented: $scanShown) {
+                ScanFlowView(
+                    store: Self.documentStore(for: vault), onScanStarted: lock.scanStarted,
+                    onScanEnded: lock.scanEnded, onRead: scanRead
+                ) {
+                    scanShown = false
+                    Task { await library.reload() }
+                }
+            }
+            .alert(Text("recovery.passcodeNeeded"), isPresented: $passcodeNeededShown) {
+                if let url = URL.appSettings {
+                    Link(destination: url) { Text(ScreenText.openSettings) }
+                }
+                Button(role: .cancel) {
+                } label: {
+                    Text(ScreenText.cancel)
+                }
+            }
             .alert(
                 library.saveError.map { Text(RecoveryContent($0).message) } ?? Text(verbatim: ""),
                 isPresented: Binding(isPresent: $library.saveError)
@@ -137,21 +179,43 @@ struct LibraryView: View {
             }
             .accessibilityIdentifier("list.settings")
         }
-        #if DEBUG
-            // Scanning isn't built yet, so in DEBUG "+" adds a synthetic sample document.
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    Task { await library.addSample() }
-                } label: {
-                    Label {
-                        Text("debug.addSample")
-                    } icon: {
-                        Image(systemName: "plus")
-                    }
+        ToolbarItem(placement: .topBarTrailing) {
+            Button {
+                // The vault's key needs a passcode; checked before the first scan, as the design doc says.
+                if lock.passcodeState.stopsScanning {
+                    passcodeNeededShown = true
+                } else {
+                    scanShown = true
                 }
-                // Saving while the list can't load would only confuse; it can't harm the vault.
-                .disabled(library.loadFailed)
-                .accessibilityIdentifier("list.addSample")
+            } label: {
+                Label {
+                    Text("main.scan")
+                } icon: {
+                    Image(systemName: "plus")
+                }
+            }
+            // A phone without VisionKit's document camera can't scan; nothing pretends it can.
+            .disabled(library.loadFailed || !Self.canScan)
+            .accessibilityIdentifier("list.scan")
+        }
+        #if DEBUG
+            // A synthetic sample document, for the UI tests only: on a phone, next to "+", it was easy to
+            // mistake for scanning, and real scans now fill the list.
+            if UITestSetup.isActive {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        Task { await library.addSample() }
+                    } label: {
+                        Label {
+                            Text("debug.addSample")
+                        } icon: {
+                            Image(systemName: "doc.badge.plus")
+                        }
+                    }
+                    // Saving while the list can't load would only confuse; it can't harm the vault.
+                    .disabled(library.loadFailed)
+                    .accessibilityIdentifier("list.addSample")
+                }
             }
         #endif
     }

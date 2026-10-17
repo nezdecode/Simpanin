@@ -259,6 +259,48 @@ struct LockControllerTests {
 @MainActor
 @Suite("Notices")
 struct NoticeTests {
+    func unlocked() async -> LockController {
+        let controller = LockController(
+            vault: FakeVault([]), clock: FixedClock(), autoLock: .oneMinute, passcode: { .set },
+            vaultExists: { true }, protectedDataAvailable: { true })
+        await controller.sceneDidBecomeActive()
+        return controller
+    }
+
+    /// Locking removes every screen and drops a scan in progress; after unlocking the user is told.
+    @Test func aScanDroppedByTheLockIsToldAfterUnlocking() async {
+        let controller = await unlocked()
+        controller.scanStarted()
+        await controller.lock()
+        await controller.unlock()
+        #expect(controller.notices.contains(.scanDropped))
+    }
+
+    @Test func aScanThatEndedBeforeTheLockIsntMentioned() async {
+        let controller = await unlocked()
+        controller.scanStarted()
+        controller.scanEnded()
+        await controller.lock()
+        await controller.unlock()
+        #expect(!controller.notices.contains(.scanDropped))
+    }
+
+    @Test func theDroppedScanIsToldOnce() async {
+        let controller = await unlocked()
+        controller.scanStarted()
+        await controller.lock()
+        await controller.unlock()
+        controller.dismiss(.scanDropped)
+        await controller.lock()
+        await controller.unlock()
+        #expect(!controller.notices.contains(.scanDropped))
+    }
+
+    /// NoticeList only shows what's in its order, so a notice missing there would never appear.
+    @Test func everyNoticeIsListed() {
+        #expect(Set(NoticeList.order) == Set(VaultNotice.allCases))
+    }
+
     @Test func aNoticeIsShownUntilDismissed() async {
         var report = OpenReport()
         report.newestChangeMayBeLost = true
