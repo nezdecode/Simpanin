@@ -64,20 +64,20 @@ final class ScanModel {
         let recognizer = recognizer(method)
         let pages = pages
         do {
-            var lines: [String] = []
+            var pageLines: [[String]] = []
             for page in pages {
                 // A dropped scan reads no further pages: they'd keep its pages in memory and Vision busy.
                 guard run == generation else { return }
                 // Cancelled with the screen that started it: locking the vault removes that screen before
                 // it can drop the scan, so the read drops it.
                 guard !Task.isCancelled else { return discard() }
-                lines += try await recognizer.lines(in: page)
+                pageLines.append(try await recognizer.lines(in: page))
             }
             // The vault may have locked meanwhile; a stale or cancelled read must not bring the scan back.
             guard run == generation else { return }
             guard !Task.isCancelled else { return discard() }
-            self.lines = lines
-            result = KTPParser.parse(lines, today: today()) ?? SIMParser.parse(lines, today: today())
+            lines = pageLines.flatMap(\.self)
+            result = Self.parse(pageLines, today: today())
             state = .read
         } catch {
             guard run == generation else { return }
@@ -86,6 +86,17 @@ final class ScanModel {
             Logger.scan.error("Recognition failed: \(ErrorSummary.describe(error), privacy: .public)")
             state = .failed
         }
+    }
+
+    /// Each page on its own: the first that reads as a KTP or SIM gives the fields, so a back page's text
+    /// and dates never mix in, and the front is found as any page.
+    static func parse(_ pages: [[String]], today: CalendarDate) -> ParsedDocument? {
+        for lines in pages {
+            if let result = KTPParser.parse(lines, today: today) ?? SIMParser.parse(lines, today: today) {
+                return result
+            }
+        }
+        return nil
     }
 
     func discard() {

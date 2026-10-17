@@ -25,6 +25,10 @@ struct ScanModelTests {
         "SURAT IZIN MENGEMUDI", "C", "0000-0000-000001", "1. BUDI CONTOH", "2. JAKARTA, 17-08-1990", "04-01-2027",
     ]
 
+    /// The back of a card: no title, and a date alone on its line, which read together with the front
+    /// would be a second expiry.
+    static let back = ["KETENTUAN PENGGUNAAN", "04-01-2032"]
+
     /// A blank page: the stand-in recognizer never looks at it.
     func page() throws -> CGImage {
         let context = try #require(
@@ -61,13 +65,31 @@ struct ScanModelTests {
     }
 
     /// Every page is read, and their lines are parsed together in page order.
+    /// Every page is read, and the debug screen sees all their lines; the fields come from the first page
+    /// that is a KTP or SIM, never from the pages mixed together.
     @Test func everyPageIsRead() async throws {
-        let fake = FakeRecognizer([Array(Self.ktp.prefix(2)), Array(Self.ktp.suffix(1))])
+        let fake = FakeRecognizer([Self.ktp, Self.back])
         let scan = model(fake)
         await scan.scanned([try page(), try page()])
         #expect(await fake.methods.count == 2)
-        #expect(scan.lines == Self.ktp)
+        #expect(scan.lines == Self.ktp + Self.back)
         #expect(scan.result?.fields.values[FieldKey.name] == "BUDI CONTOH")
+    }
+
+    /// A date on the back of a SIM never mixes in with the front's.
+    @Test func onlyTheFrontPageIsParsed() async throws {
+        let scan = model(FakeRecognizer([Self.sim, Self.back]))
+        await scan.scanned([try page(), try page()])
+        #expect(scan.result?.expiry == CalendarDate(year: 2027, month: 1, day: 4))
+        #expect(scan.result?.expiryNeedsCheck == false)
+    }
+
+    /// The back may be scanned first; the front is found as the second page.
+    @Test func theFrontIsFoundWhenItIsTheSecondPage() async throws {
+        let scan = model(FakeRecognizer([Self.back, Self.sim]))
+        await scan.scanned([try page(), try page()])
+        #expect(scan.result?.type == .simC)
+        #expect(scan.result?.expiry == CalendarDate(year: 2027, month: 1, day: 4))
     }
 
     /// The DEBUG screen compares the two Vision requests on the same pages.
