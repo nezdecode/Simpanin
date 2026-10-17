@@ -114,7 +114,10 @@ struct ReviewView: View {
             typePickerShown = true
         } label: {
             LabeledContent {
-                Text(DocumentStyle.name(review.type))
+                HStack(spacing: 6) {
+                    Text(DocumentStyle.name(review.type))
+                    opensSheet
+                }
             } label: {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("review.type").foregroundStyle(Color.primary)
@@ -205,7 +208,10 @@ struct ReviewView: View {
                         expiryPickerShown = true
                     } label: {
                         LabeledContent {
-                            Text("review.expiryMissing")
+                            HStack(spacing: 6) {
+                                Text("review.expiryMissing")
+                                opensSheet
+                            }
                         } label: {
                             expiryLabel
                         }
@@ -214,6 +220,14 @@ struct ReviewView: View {
                 }
             }
         }
+    }
+
+    /// The chevron of a row that opens a sheet, as in Settings, so the row reads as something to tap.
+    private var opensSheet: some View {
+        Image(systemName: "chevron.forward")
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(.tertiary)
+            .accessibilityHidden(true)
     }
 
     private var expiryLabel: some View {
