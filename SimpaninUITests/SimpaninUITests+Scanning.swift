@@ -157,6 +157,7 @@ extension SimpaninUITests {
         XCTAssertTrue(page.exists)
         XCTAssertEqual(page.label, "Halaman 1 dari 1")
         XCTAssertFalse(app.images["review.page.1"].exists)
+        XCTAssertTrue(app.staticTexts["1 halaman"].exists)
     }
 
     /// A NIK of the wrong length says why when its field is left, and Simpan goes back to it.
@@ -213,7 +214,7 @@ extension SimpaninUITests {
         screenshot("29 STNK tax date")
     }
 
-    /// At the largest text size the page count moves under the strip, and nothing falls off the screen.
+    /// At the largest text size the pages and the bar still fit, and nothing falls off the screen.
     @MainActor
     func testPeriksaDataAtTheLargestTextSize() throws {
         let app = launch([

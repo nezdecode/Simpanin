@@ -40,7 +40,11 @@ struct ReviewView: View {
                     }
                     .foregroundStyle(.secondary)
                 }
-                Section { PageStrip(pages: review.pages) }
+                Section {
+                    PageStrip(pages: review.pages)
+                } footer: {
+                    Text("review.pages \(review.pages.count)")
+                }
                 if reading {
                     Section {
                         HStack(spacing: 12) {

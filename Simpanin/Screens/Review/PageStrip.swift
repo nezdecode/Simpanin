@@ -11,32 +11,23 @@
 
 import SwiftUI
 
-/// Every page of a scan as a small thumbnail, numbered, with the page count beside it, or under it at the
-/// accessibility text sizes.
+/// Every page of a scan as a small thumbnail, numbered; the page count is in the section's footer.
 struct PageStrip: View {
     let pages: [CGImage]
-    @Environment(\.dynamicTypeSize) private var typeSize
-
     var body: some View {
-        let layout =
-            typeSize.isAccessibilitySize
-            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 10)) : AnyLayout(HStackLayout(spacing: 14))
-        layout {
-            ScrollView(.horizontal) {
-                HStack(spacing: 8) {
-                    ForEach(pages.indices, id: \.self) { index in
-                        thumbnail(pages[index], number: index + 1)
-                    }
+        ScrollView(.horizontal) {
+            HStack(spacing: 8) {
+                ForEach(pages.indices, id: \.self) { index in
+                    thumbnail(pages[index], number: index + 1)
                 }
             }
-            .scrollIndicators(.hidden)
-            .scrollBounceBehavior(.basedOnSize)
-            Text("review.pages \(pages.count)").font(.headline)
         }
+        .scrollIndicators(.hidden)
+        .scrollBounceBehavior(.basedOnSize)
     }
 
     private func thumbnail(_ page: CGImage, number: Int) -> some View {
-        // A fixed size, whatever the text size: it's a preview, and the count beside it carries the text.
+        // A fixed size, whatever the text size: it's a preview, and the footer carries the text.
         Image(decorative: page, scale: 1)
             .resizable()
             .scaledToFill()
