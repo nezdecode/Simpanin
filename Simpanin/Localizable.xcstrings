@@ -1101,6 +1101,17 @@
         }
       }
     },
+    "review.labelWithReason %@ %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@, perlu diperbaiki: %2$@"
+          }
+        }
+      }
+    },
     "review.nikLength" : {
       "extractionState" : "manual",
       "localizations" : {

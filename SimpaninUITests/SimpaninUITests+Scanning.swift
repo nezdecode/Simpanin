@@ -154,6 +154,10 @@ extension SimpaninUITests {
         app.buttons["review.save"].tap()
         expectation(for: NSPredicate(format: "hasKeyboardFocus == true"), evaluatedWith: nik)
         waitForExpectations(timeout: 5)
+        // The reason stays when the cursor goes back to the field.
+        XCTAssertTrue(app.staticTexts["NIK harus 16 angka."].exists)
+        // VoiceOver reads the reason with the field's name, wherever it lands on it.
+        XCTAssertEqual(nik.label, "NIK, perlu diperbaiki: NIK harus 16 angka.")
     }
 
     /// An empty NIK is asked about: Isi NIK goes back to it, Simpan saja saves without it.

@@ -26,6 +26,7 @@ struct ReviewView: View {
     /// Counts refused taps on Simpan, for the error haptic.
     @State private var refusals = 0
     @FocusState private var focusedField: String?
+    @AccessibilityFocusState private var voiceOverField: String?
 
     var body: some View {
         NavigationStack {
@@ -185,7 +186,8 @@ struct ReviewView: View {
         FieldRow(
             key: key, value: review.values[key] ?? "", isLast: key == review.fieldKeys.last,
             warning: review.problems[key].map(Self.reason) ?? (review.marked.contains(key) ? "review.checkAgain" : nil),
-            focus: $focusedField, onChange: { review.setValue($0, for: key) }, onSubmit: { focusField(after: key) })
+            refusal: review.problems[key].map(Self.reason), focus: $focusedField, voiceOverFocus: $voiceOverField,
+            onChange: { review.setValue($0, for: key) }, onSubmit: { focusField(after: key) })
     }
 
     @ViewBuilder private var validitySection: some View {
@@ -263,9 +265,9 @@ extension ReviewView {
         if let key = review.firstProblem() {
             focusedField = key
             refusals += 1
-            if let problem = review.problems[key] {
-                AccessibilityNotification.Announcement(String(localized: Self.reason(for: problem))).post()
-            }
+            // VoiceOver goes to the field and reads its value, which carries the reason.
+            voiceOverField = key
+            AccessibilityNotification.LayoutChanged().post()
         } else if review.nikMissing {
             nikMissingShown = true
         } else {

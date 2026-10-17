@@ -18,9 +18,14 @@ struct FieldRow: View {
     let value: String
     let isLast: Bool
     let warning: LocalizedStringResource?
+    /// Why Simpan refused the value, read by VoiceOver with the field's name.
+    let refusal: LocalizedStringResource?
     var focus: FocusState<String?>.Binding
+    var voiceOverFocus: AccessibilityFocusState<String?>.Binding
     let onChange: (String) -> Void
     let onSubmit: () -> Void
+
+    private var title: String { String(localized: ReviewView.title(for: key)) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -43,6 +48,12 @@ struct FieldRow: View {
             .submitLabel(isLast ? .done : .next)
             .onSubmit(onSubmit)
             .font(key == FieldKey.nik || key == FieldKey.simNumber ? .body.monospaced() : .body)
+            // In the label, not a hint: hints can be turned off and are often cut short. A TextField ignores
+            // accessibilityValue (its value is always the text), so the reason goes with the field's name.
+            .accessibilityLabel(
+                refusal.map { Text("review.labelWithReason \(title) \(String(localized: $0))") } ?? Text(title)
+            )
+            .accessibilityFocused(voiceOverFocus, equals: key)
             .accessibilityIdentifier("review.field.\(key)")
             if let warning { WarningText(warning) }
         }
