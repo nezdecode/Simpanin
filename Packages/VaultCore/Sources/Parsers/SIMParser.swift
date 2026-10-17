@@ -176,6 +176,11 @@ public enum SIMParser {
         return [FieldKey.simNumber, FieldKey.name, FieldKey.birthDate]
     }
 
+    /// A field number read alone on its line, with or without its dot: "1.", "2", "3 ,".
+    private static func isFieldNumber(_ line: String) -> Bool {
+        line.wholeMatch(of: /[1-6]\s*[.,]?/) != nil
+    }
+
     /// A line with no letter and no digit, like "~": noise Vision read, never part of a field. Told by
     /// that alone, never by length, so a short name stays a name.
     private static func isNoise(_ line: String) -> Bool {
@@ -210,15 +215,16 @@ public enum SIMParser {
         {
             // The next real line belongs to the name when it isn't a numbered field or the birth line.
             let next = lines.indices.dropFirst(index + 1).first { !isNoise(lines[$0]) }
-            let continues = next.map { $0 != birth && numberedField(lines[$0]) == nil } ?? false
+            let continues =
+                next.map { $0 != birth && numberedField(lines[$0]) == nil && !isFieldNumber(lines[$0]) } ?? false
             return LabeledLines.Found(text: text, continues: continues)
         }
         guard let number, let birth, birth > number + 1 else { return nil }
         let between = lines[(number + 1)..<birth].filter { !isNoise($0) }
         // A field number read alone on its line ("1.", "2.") is no part of the name, but it's a misread.
-        let bareNumbers = between.filter { numberedField($0)?.text.isEmpty == true }
+        let bareNumbers = between.filter(isFieldNumber)
         var corrected = !bareNumbers.isEmpty
-        let candidates = between.filter { numberedField($0)?.text.isEmpty != true }.map { line in
+        let candidates = between.filter { !isFieldNumber($0) }.map { line in
             guard let match = line.wholeMatch(of: /(?:1(?=[A-Z])|[Il|1]\s*[.,])\s*(.*)/) else { return line }
             corrected = true
             return String(match.1)

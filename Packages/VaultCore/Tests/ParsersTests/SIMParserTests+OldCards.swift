@@ -36,6 +36,10 @@ extension SIMParserTests {
     func expectFull(_ result: ParsedDocument) {
         #expect(result.type == .simC)
         #expect(!result.typeNeedsCheck)
+        expectFields(result)
+    }
+
+    func expectFields(_ result: ParsedDocument) {
         #expect(result.fields.values[FieldKey.name] == "BUDI CONTOH")
         #expect(result.fields.values[FieldKey.birthDate] == "1990-08-17")
         #expect(result.expiry == CalendarDate(year: 2027, month: 1, day: 4))
@@ -99,7 +103,7 @@ extension SIMParserTests {
     }
 
     /// A field number read alone on its line is no part of the name, though its place still marks it.
-    @Test(arguments: [["1.", "BUDI CONTOH"], ["BUDI CONTOH", "2."]])
+    @Test(arguments: [["1.", "BUDI CONTOH"], ["BUDI CONTOH", "2."], ["1.", "BUDI CONTOH", "2"]])
     func aFieldNumberAloneIsntPartOfTheName(_ name: [String]) throws {
         let result = try #require(parse(Self.withoutNameNumber(name: name, birth: "JAKARTA, 17-08-1990")))
         #expect(result.fields.values[FieldKey.name] == "BUDI CONTOH")
@@ -220,5 +224,19 @@ extension SIMParserTests {
         let result = try #require(parse(Self.back))
         #expect(result.fields.values[FieldKey.name] == nil)
         #expect(result.needsCheck.contains(FieldKey.name))
+    }
+
+    /// Vision may not read the class letter at all; the class is then left to the user, never guessed,
+    /// and the fields are still read.
+    @Test func aClassVisionDidntReadIsLeftToTheUser() throws {
+        let lines = [
+            "INDONESIA", "DRIVING LICENSE", "SURAT IZIN MENGEMUDI", "0000-0000-000001", "BUDI CONTOH",
+            "JAKARTA, 17-08-1990", "A - WANITA", "JL. CONTOH NO. 1", "RT 01/02", "KOTA CONTOH", "KARYAWAN", "METRO",
+            "04-01-2027",
+        ]
+        let result = try #require(parse(lines))
+        #expect(result.type == .sim)
+        #expect(result.typeNeedsCheck)
+        expectFields(result)
     }
 }
