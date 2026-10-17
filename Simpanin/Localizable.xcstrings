@@ -1024,6 +1024,28 @@
         }
       }
     },
+    "review.discard" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buang"
+          }
+        }
+      }
+    },
+    "review.discardConfirm" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buang pindaian ini?"
+          }
+        }
+      }
+    },
     "review.expiryMissing" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1053,6 +1075,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Seumur hidup"
+          }
+        }
+      }
+    },
+    "review.keepChecking" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lanjut periksa"
           }
         }
       }

@@ -23,6 +23,7 @@ struct ReviewView: View {
     @State private var typePickerShown = false
     @State private var expiryPickerShown = false
     @State private var nikMissingShown = false
+    @State private var discardConfirmShown = false
     /// Counts refused taps on Simpan, for the error haptic.
     @State private var refusals = 0
     @FocusState private var focusedField: String?
@@ -65,28 +66,43 @@ struct ReviewView: View {
             .navigationTitle(Text("review.title"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                // Only the number pad needs it: every other keyboard has Return.
-                ToolbarItemGroup(placement: .keyboard) {
-                    if let focusedField, Self.keyboard(for: focusedField) == .numberPad {
-                        Spacer()
+                ToolbarItem(placement: .cancellationAction) {
+                    // Nothing can be cancelled while a save is being written.
+                    Button {
+                        discardConfirmShown = true
+                    } label: {
+                        Text(ScreenText.cancel)
+                    }
+                    .disabled(review.saving)
+                    .accessibilityIdentifier("review.cancel")
+                }
+                // In the bar, not above the keyboard: a condition inside the keyboard's own toolbar never
+                // showed on an iPhone with iOS 27. The number pad has no Return, so this is its way out.
+                if focusedField != nil {
+                    ToolbarItem(placement: .confirmationAction) {
                         Button {
-                            self.focusedField = nil
+                            focusedField = nil
                         } label: {
                             Text(ScreenText.done)
                         }
-                        .accessibilityIdentifier("keyboard.done")
+                        .accessibilityIdentifier("review.done")
                     }
                 }
-                ToolbarItem(placement: .cancellationAction) {
-                    // Nothing can be cancelled or rescanned while a save is being written.
-                    Button(action: onCancel) { Text(ScreenText.cancel) }
-                        .disabled(review.saving)
-                        .accessibilityIdentifier("review.cancel")
+            }
+            // Batal throws the scan away, so it always asks first.
+            .alert(Text("review.discardConfirm"), isPresented: $discardConfirmShown) {
+                Button(role: .destructive, action: onCancel) { Text("review.discard") }
+                Button(role: .cancel) {
+                } label: {
+                    Text("review.keepChecking")
                 }
-                ToolbarItem(placement: .primaryAction) {
-                    Button(action: onRescan) { Text("review.rescan") }
-                        .disabled(reading || review.saving)
-                        .accessibilityIdentifier("review.rescan")
+            }
+            // VoiceOver's escape closes the keyboard while editing, and otherwise works like Batal.
+            .accessibilityAction(.escape) {
+                if focusedField != nil {
+                    focusedField = nil
+                } else if !review.saving {
+                    discardConfirmShown = true
                 }
             }
             // Hidden while typing: saving only makes sense once a field is done, and the bar would ride up
@@ -133,6 +149,12 @@ struct ReviewView: View {
                     .clipShape(.rect(cornerRadius: 10))
             }
             Text("review.pages \(review.pages.count)").font(.headline)
+            Spacer()
+            // Here, by the pages, as it's the pages that get scanned again.
+            Button(action: onRescan) { Text("review.rescan") }
+                .buttonStyle(.borderless)
+                .disabled(reading || review.saving)
+                .accessibilityIdentifier("review.rescan")
         }
     }
 

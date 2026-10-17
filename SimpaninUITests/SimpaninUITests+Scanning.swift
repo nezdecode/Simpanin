@@ -43,7 +43,7 @@ extension SimpaninUITests {
         app.textFields["review.label"].tap()
         // Return moves on to the NIK, and Selesai closes its number pad; Simpan waits until then.
         app.textFields["review.label"].typeText("Ibu\n")
-        app.buttons["keyboard.done"].tap()
+        app.navigationBars.buttons["review.done"].tap()
         XCTAssertTrue(app.buttons["review.save"].waitForExistence(timeout: 5))
         app.buttons["review.save"].tap()
 
@@ -115,31 +115,33 @@ extension SimpaninUITests {
         openReview(app)
         app.textFields["review.field.nik"].tap()
         XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
-        app.buttons["keyboard.done"].tap()
+        app.navigationBars.buttons["review.done"].tap()
         let closed = NSPredicate(format: "exists == false")
         expectation(for: closed, evaluatedWith: app.keyboards.firstMatch)
         waitForExpectations(timeout: 5)
     }
 
-    /// Each field gets the keyboard it needs: Return moves on where there is one, Selesai only on the
-    /// number pad, and Simpan waits below until typing is done.
+    /// Selesai sits in the navigation bar while any field is being edited, as the number pad has no Return;
+    /// Return moves on where there is one, and Simpan waits below until typing is done.
     @MainActor
     func testTheKeyboardFitsEachField() throws {
         let app = launch(["-SimpaninUITestScan"])
         openReview(app)
         let label = app.textFields["review.label"]
+        XCTAssertFalse(app.navigationBars.buttons["review.done"].exists)
         label.tap()
         XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
-        XCTAssertFalse(app.buttons["keyboard.done"].exists)
+        XCTAssertTrue(app.navigationBars.buttons["review.done"].exists)
         XCTAssertFalse(app.buttons["review.save"].exists)
         label.typeText("\n")
         let nik = app.textFields["review.field.nik"]
         let focused = NSPredicate(format: "hasKeyboardFocus == true")
         expectation(for: focused, evaluatedWith: nik)
         waitForExpectations(timeout: 5)
-        app.buttons["keyboard.done"].tap()
+        app.navigationBars.buttons["review.done"].tap()
         XCTAssertTrue(app.buttons["review.save"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.keyboards.firstMatch.exists)
+        XCTAssertFalse(app.navigationBars.buttons["review.done"].exists)
     }
 
     /// A NIK of the wrong length says why when its field is left, and Simpan goes back to it.
@@ -149,7 +151,7 @@ extension SimpaninUITests {
         openReview(app)
         let nik = app.textFields["review.field.nik"]
         replace(nik, with: "00123")
-        app.buttons["keyboard.done"].tap()
+        app.navigationBars.buttons["review.done"].tap()
         XCTAssertTrue(app.staticTexts["NIK harus 16 angka."].waitForExistence(timeout: 5))
         app.buttons["review.save"].tap()
         expectation(for: NSPredicate(format: "hasKeyboardFocus == true"), evaluatedWith: nik)
@@ -167,14 +169,14 @@ extension SimpaninUITests {
         openReview(app)
         let nik = app.textFields["review.field.nik"]
         replace(nik, with: "")
-        app.buttons["keyboard.done"].tap()
+        app.navigationBars.buttons["review.done"].tap()
         app.buttons["review.save"].tap()
         XCTAssertTrue(app.buttons["Isi NIK"].waitForExistence(timeout: 5))
         screenshot("28 empty NIK")
         app.buttons["Isi NIK"].tap()
         expectation(for: NSPredicate(format: "hasKeyboardFocus == true"), evaluatedWith: nik)
         waitForExpectations(timeout: 5)
-        app.buttons["keyboard.done"].tap()
+        app.navigationBars.buttons["review.done"].tap()
         app.buttons["review.save"].tap()
         app.buttons["Simpan saja"].tap()
         XCTAssertTrue(rows(app).firstMatch.waitForExistence(timeout: 10))
@@ -200,7 +202,13 @@ extension SimpaninUITests {
     func testCancellingAScanSavesNothing() throws {
         let app = launch(["-SimpaninUITestScan"])
         openReview(app)
+        // Batal throws the scan away, so it asks first; Lanjut periksa keeps it.
         app.buttons["review.cancel"].tap()
+        XCTAssertTrue(app.buttons["Lanjut periksa"].waitForExistence(timeout: 5))
+        app.buttons["Lanjut periksa"].tap()
+        XCTAssertTrue(app.textFields["review.field.name"].waitForExistence(timeout: 5))
+        app.buttons["review.cancel"].tap()
+        app.buttons["Buang"].tap()
         XCTAssertTrue(app.descendants(matching: .any)["list.empty"].waitForExistence(timeout: 5))
         XCTAssertEqual(rows(app).count, 0)
     }
