@@ -248,14 +248,18 @@ extension SimpaninUITests {
     }
 
     /// Sheets and full-screen covers sit above the root view, so the privacy cover must too: while the
-    /// screen is recorded (or the app is in the switcher), the scan's fields can't be reached or seen.
+    /// screen is recorded (or the app is in the switcher), the scan's fields can't be reached, seen or read
+    /// by VoiceOver.
     @MainActor
     func testTheCoverSitsAboveTheScanFlow() throws {
         let app = launch(["-SimpaninUITestScan", "-SimpaninUITestCaptureAfterScan"])
-        openReview(app)
-        let nik = app.textFields["review.field.nik"]
-        expectation(for: NSPredicate(format: "isHittable == false"), evaluatedWith: nik)
-        waitForExpectations(timeout: 10)
+        XCTAssertTrue(app.navigationBars["Dokumen"].waitForExistence(timeout: 10))
+        app.buttons["list.scan"].tap()
+        // The cover goes up once the scan is read, so the review is underneath it. Its fields are gone
+        // from the accessibility tree too, so VoiceOver can't read what the cover hides.
+        XCTAssertTrue(app.staticTexts["lock.title"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.textFields["review.field.nik"].exists)
+        XCTAssertFalse(app.textFields["review.field.name"].exists)
         screenshot("25 cover above the scan flow")
     }
 

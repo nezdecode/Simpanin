@@ -34,10 +34,19 @@ final class CoverWindow<Cover: View> {
             self.window = window
         }
         window?.isHidden = false
+        hideOtherWindowsFromAccessibility(true, in: scene)
     }
 
     func hide() {
         window?.isHidden = true
+        if let scene = window?.windowScene { hideOtherWindowsFromAccessibility(false, in: scene) }
+    }
+
+    /// Covering the screen isn't enough for VoiceOver, which would still read the windows underneath.
+    private func hideOtherWindowsFromAccessibility(_ hidden: Bool, in scene: UIWindowScene) {
+        for other in scene.windows where other !== window {
+            other.accessibilityElementsHidden = hidden
+        }
     }
 
     /// Whether the screen is recorded or mirrored, read from the scene: a view would miss it while a
