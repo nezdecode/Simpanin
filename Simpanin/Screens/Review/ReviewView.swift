@@ -227,7 +227,9 @@ struct ReviewView: View {
             if review.expiryNeedsCheck || review.expiryMissing { WarningText("review.checkAgain") }
         }
     }
+}
 
+extension ReviewView {
     private static let labelFocus = "label"
 
     /// Return moves to the next field, in the order the screen shows them; after the last, the keyboard
@@ -265,126 +267,5 @@ struct ReviewView: View {
         case FieldKey.simNumber: .numbersAndPunctuation
         default: .default
         }
-    }
-}
-
-/// The calendar for an expiry that wasn't read. It starts on today but sets nothing until Pilih.
-private struct ExpiryCalendar: View {
-    let onPick: (CalendarDate?) -> Void
-    @State private var draft = CalendarDate.today.utcDate ?? .now
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        NavigationStack {
-            DatePicker(selection: $draft, displayedComponents: .date) {
-                Text("review.validUntil")
-            }
-            .datePickerStyle(.graphical)
-            // Expiry dates are calendar days in UTC, so no time zone moves them.
-            .environment(\.timeZone, .gmt)
-            .padding(.horizontal)
-            .navigationTitle(Text("review.validUntil"))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Text(ScreenText.cancel)
-                    }
-                    .accessibilityIdentifier("review.expiryCancel")
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button {
-                        onPick(CalendarDate(utc: draft))
-                        dismiss()
-                    } label: {
-                        Text("review.pickDate")
-                    }
-                    .accessibilityIdentifier("review.expiryPick")
-                }
-            }
-        }
-        .presentationDetents([.medium, .large])
-    }
-}
-
-/// One field of the document: its title, the value, and under it why Simpan refused it or "Periksa lagi".
-private struct FieldRow: View {
-    let key: String
-    let value: String
-    let isLast: Bool
-    let warning: LocalizedStringResource?
-    var focus: FocusState<String?>.Binding
-    let onChange: (String) -> Void
-    let onSubmit: () -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(ReviewView.title(for: key)).font(.footnote).foregroundStyle(.secondary)
-            Group {
-                if ReviewModel.dateKeys.contains(key) {
-                    DateField(title: ReviewView.title(for: key), value: value, onChange: onChange)
-                } else {
-                    TextField(text: Binding(get: { value }, set: onChange)) {
-                        Text(ReviewView.title(for: key))
-                    }
-                }
-            }
-            .focused(focus, equals: key)
-            .keyboardType(ReviewView.keyboard(for: key))
-            // Nothing typed here is corrected or learned by the keyboard, so a name isn't "fixed" and no
-            // value comes back as a suggestion in another app.
-            .autocorrectionDisabled()
-            .textInputAutocapitalization(key == FieldKey.name ? .characters : .never)
-            .submitLabel(isLast ? .done : .next)
-            .onSubmit(onSubmit)
-            .font(key == FieldKey.nik || key == FieldKey.simNumber ? .body.monospaced() : .body)
-            .accessibilityIdentifier("review.field.\(key)")
-            if let warning { WarningText(warning) }
-        }
-    }
-}
-
-/// A dd-mm-yyyy field for the number pad. A binding whose setter reformats doesn't update what the field
-/// shows when the model's value stays the same, so digits typed past the eighth stayed on screen; the
-/// field keeps its own draft and writes the formatted text back into it.
-private struct DateField: View {
-    let title: LocalizedStringResource
-    let value: String
-    let onChange: (String) -> Void
-    @State private var draft = ""
-
-    var body: some View {
-        TextField(text: $draft, prompt: Text("review.datePlaceholder")) {
-            Text(title)
-        }
-        .onAppear { draft = value }
-        .onChange(of: draft) { _, typed in
-            let formatted = ReviewModel.typedDate(typed)
-            if formatted != typed { draft = formatted }
-            if formatted != value { onChange(formatted) }
-        }
-        // A rescan replaces the value from outside.
-        .onChange(of: value) { _, new in
-            if new != draft { draft = new }
-        }
-    }
-}
-
-/// Under a field: "Periksa lagi" when the parser isn't sure, or why Simpan refused it.
-private struct WarningText: View {
-    let text: LocalizedStringResource
-
-    init(_ text: LocalizedStringResource) { self.text = text }
-
-    var body: some View {
-        Label {
-            Text(text)
-        } icon: {
-            Image(systemName: "exclamationmark.triangle")
-        }
-        .font(.footnote)
-        .foregroundStyle(Color(.warning))
     }
 }
