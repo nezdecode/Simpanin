@@ -93,6 +93,12 @@ custom_rules:
     regex: "\"(vault\\.json|index\\.enc|index\\.prev\\.enc)\""
     excluded_match_kinds: [comment, doccomment]
     severity: error
+  design_system_without_domain:
+    name: DesignSystem knows no domain
+    message: "DesignSystem/ holds views and styles with no domain knowledge: no VaultCore, Documents/ or feature types (CODING section 1)."
+    included: "/Simpanin/DesignSystem/.*\\.swift"
+    regex: "^\\s*import\\s+VaultCore\\b"
+    severity: error
   hand_built_dates:
     name: Hand-built date formats
     message: "Use the FormatStyles in Documents/Date+Indonesian.swift; the device's own locale and formats are not what Simpanin shows."
