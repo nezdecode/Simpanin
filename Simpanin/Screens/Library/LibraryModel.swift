@@ -14,6 +14,12 @@ import Observation
 import VaultCore
 import os
 
+/// Where the documents hidden from the expiry banner are kept.
+nonisolated protocol HiddenBannerStoring: Sendable {
+    func load() throws -> HiddenBanner
+    func save(_ hidden: HiddenBanner) throws
+}
+
 /// What the screens need from VaultStore's document calls, so tests can stand in for it.
 nonisolated protocol DocumentStoring: Sendable {
     func documents() async throws -> [Document]
@@ -35,6 +41,8 @@ extension VaultStore: DocumentStoring {}
 final class LibraryModel {
     private(set) var documents: [Document] = []
     private(set) var deleted: [Document] = []
+    /// The day the list and the banner read expiry against, worked out again when the app comes back.
+    private(set) var today = CalendarDate.today
     /// The message for a failed save, if any.
     var saveError: RecoveryScreen?
     /// Loading failed. The screen shows that instead of an empty list, which would say the
@@ -42,7 +50,69 @@ final class LibraryModel {
     private(set) var loadFailed = false
     private let store: any DocumentStoring
 
-    init(store: any DocumentStoring) {
+    private(set) var hidden = HiddenBanner()
+    private let hiddenStore: any HiddenBannerStoring
+    /// The file has been read, or holds nothing to keep, so writing it loses nothing.
+    private var hiddenLoaded = false
+    /// The list in memory has hides the file doesn't, from a failed save or an unread file.
+    private var hiddenUnsaved = false
+    /// Ids with a hidden entry that the last reload found in neither list.
+    private var missingLastReload: Set<DocumentID> = []
+
+    /// The documents the banner may show: the user hasn't hidden them.
+    var bannerDocuments: [Document] {
+        documents.filter { !hidden.hides($0.id, expiry: $0.expiry, today: today) }
+    }
+
+    func refreshDay(at date: Date = .now, in calendar: Calendar = .current) {
+        today = CalendarDate.day(of: date, in: calendar)
+    }
+
+    func hideFromBanner(_ document: Document) {
+        guard let expiry = document.expiry else { return }
+        hidden.hide(document.id, expiry: expiry, today: today)
+        hiddenUnsaved = true
+        saveHidden()
+    }
+
+    /// Reads the hidden list, unless memory holds hides a failed save left, and drops entries for documents
+    /// two reloads in a row found in neither the list nor Baru dihapus: a restore or delete can land between
+    /// those two reads. A deleted and restored document stays hidden.
+    private func loadHidden() {
+        if !hiddenLoaded || !hiddenUnsaved {
+            do {
+                let stored = try hiddenStore.load()
+                hidden = hiddenUnsaved ? stored.merging(hidden) : stored
+                hiddenLoaded = true
+            } catch is DecodingError {
+                // Not a hidden list at all: there's nothing in it to keep.
+                Logger.library.error("Hidden banner list corrupt, replaced")
+                hiddenLoaded = true
+                hiddenUnsaved = true
+            } catch {
+                // Maybe readable later, so it isn't overwritten meanwhile.
+                Logger.library.error("Hidden banner list unreadable: \(ErrorSummary.describe(error), privacy: .public)")
+            }
+        }
+        let present = Set((documents + deleted).map(\.id))
+        let missing = Set(hidden.entries.map(\.id)).subtracting(present)
+        if hidden.prune(keeping: present.union(missing.subtracting(missingLastReload))) { hiddenUnsaved = true }
+        missingLastReload = missing
+        if hiddenUnsaved { saveHidden() }
+    }
+
+    private func saveHidden() {
+        guard hiddenLoaded else { return }
+        do {
+            try hiddenStore.save(hidden)
+            hiddenUnsaved = false
+        } catch {
+            Logger.library.error("Hidden banner list not saved: \(ErrorSummary.describe(error), privacy: .public)")
+        }
+    }
+
+    init(store: any DocumentStoring, hidden: any HiddenBannerStoring) {
+        hiddenStore = hidden
         self.store = store
     }
 
@@ -53,6 +123,8 @@ final class LibraryModel {
             documents = live
             deleted = bin
             loadFailed = false
+            // Only with both lists read, so no hidden entry is pruned by a failed load.
+            loadHidden()
         } catch {
             Logger.library.error("Load failed: \(ErrorSummary.describe(error), privacy: .public)")
             loadFailed = true
@@ -73,7 +145,7 @@ final class LibraryModel {
         /// "Tambah dokumen contoh": a synthetic document with one generated page.
         func addSample() async {
             samples += 1
-            let sample = SampleDocument(number: samples)
+            let sample = SampleDocument(number: samples, expiringSoon: UITestSetup.expiringSamples)
             await save {
                 _ = try await self.store.createDocument(
                     type: sample.type, label: sample.label, expiry: sample.expiry, pinned: false, fields: sample.fields,

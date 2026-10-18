@@ -45,6 +45,17 @@
         }
       }
     },
+    "banner.hide" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jangan tampilkan di sini"
+          }
+        }
+      }
+    },
     "banner.more %lld" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -52,6 +63,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "dan %lld dokumen lain perlu dicek"
+          }
+        }
+      }
+    },
+    "banner.options" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pilihan pengingat"
           }
         }
       }

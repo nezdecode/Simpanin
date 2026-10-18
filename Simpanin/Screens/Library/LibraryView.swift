@@ -21,14 +21,18 @@ struct LibraryView: View {
     @State private var scanShown = false
     @State private var passcodeNeededShown = false
     @Environment(\.dynamicTypeSize) private var typeSize
+    @Environment(\.scenePhase) private var scenePhase
+    private let dayChanges = NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)
 
     init(vault: AppVault, lock: LockController) {
         self.vault = vault
         self.lock = lock
-        _library = State(initialValue: LibraryModel(store: Self.documentStore(for: vault)))
+        let hidden = HiddenBannerFile(
+            url: HiddenBannerFile.url(in: vault.locations), protector: DataProtectionFileProtector())
+        _library = State(initialValue: LibraryModel(store: Self.documentStore(for: vault), hidden: hidden))
     }
 
-    private var today: CalendarDate { CalendarDate.today }
+    private var today: CalendarDate { library.today }
 
     private func scanRead() {
         #if DEBUG
@@ -79,7 +83,7 @@ struct LibraryView: View {
                     } else if library.documents.isEmpty {
                         EmptyLibraryView()
                     } else {
-                        ExpiryBanner(documents: library.documents, today: today)
+                        ExpiryBanner(documents: library.bannerDocuments, today: today, onHide: library.hideFromBanner)
                         Text("main.allDocuments").font(.title3.weight(.semibold)).padding(.top, 8)
                         LazyVGrid(columns: columns, spacing: 12) {
                             ForEach(library.documents) { document in
@@ -116,6 +120,12 @@ struct LibraryView: View {
             .navigationTitle(Text("list.title"))
             .toolbar { toolbar }
             .task { await library.reload() }
+            // A night may have passed while the app was away.
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .active { library.refreshDay() }
+            }
+            // Midnight with the app open, and a changed time zone.
+            .onReceive(dayChanges) { _ in library.refreshDay() }
             .fullScreenCover(isPresented: $scanShown) {
                 ScanFlowView(
                     store: Self.documentStore(for: vault), onScanStarted: lock.scanStarted,

@@ -207,4 +207,54 @@ final class SimpaninUITests: XCTestCase {
         XCTAssertEqual(app.buttons.matching(identifier: "oldVaults.delete").count, 0)
         screenshot("09 data lama, folder tidak terbaca")
     }
+
+    // MARK: The expiry banner
+
+    /// The banner's … menu takes a document out of the banner: the next one shows, and with none left, no
+    /// banner at all. The tiles stay.
+    @MainActor
+    func testTheBannerMenuButtonHides() throws {
+        let app = launch(["-SimpaninUITestExpiringSamples"])
+        app.buttons["list.addSample"].tap()
+        app.buttons["list.addSample"].tap()
+        XCTAssertTrue(app.staticTexts["dan 1 dokumen lain perlu dicek"].waitForExistence(timeout: 5))
+        screenshot("31 banner with two")
+        app.buttons["banner.menu"].tap()
+        app.buttons["Jangan tampilkan di sini"].tap()
+        XCTAssertTrue(app.buttons["banner.menu"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.staticTexts["dan 1 dokumen lain perlu dicek"].exists)
+        app.buttons["banner.menu"].tap()
+        app.buttons["Jangan tampilkan di sini"].tap()
+        let gone = NSPredicate(format: "exists == false")
+        expectation(for: gone, evaluatedWith: app.buttons["banner.menu"])
+        waitForExpectations(timeout: 5)
+        XCTAssertEqual(rows(app).count, 2)
+    }
+
+    /// A long press on the banner offers the same.
+    @MainActor
+    func testTheBannerCanBeHidden() throws {
+        let app = launch(["-SimpaninUITestExpiringSamples"])
+        app.buttons["list.addSample"].tap()
+        let banner = app.descendants(matching: .any)["banner"]
+        XCTAssertTrue(banner.waitForExistence(timeout: 5))
+        banner.press(forDuration: 1)
+        app.buttons["Jangan tampilkan di sini"].tap()
+        let gone = NSPredicate(format: "exists == false")
+        expectation(for: gone, evaluatedWith: banner)
+        waitForExpectations(timeout: 5)
+    }
+
+    @MainActor
+    func testTheBannerAtTheLargestTextSize() throws {
+        let app = launch([
+            "-SimpaninUITestExpiringSamples", "-UIPreferredContentSizeCategoryName",
+            "UICTContentSizeCategoryAccessibilityXXXL",
+        ])
+        XCTAssertTrue(app.buttons["list.addSample"].waitForExistence(timeout: 10))
+        app.buttons["list.addSample"].tap()
+        XCTAssertTrue(app.buttons["banner.menu"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["banner.menu"].isHittable)
+        screenshot("32 banner at the largest text size")
+    }
 }

@@ -64,6 +64,26 @@ final class FixedClock: VaultClock {
     func advance(by seconds: TimeInterval) { date.withLock { $0 += seconds } }
 }
 
+/// The hidden banner list kept in memory, as a test needs it, with a read or a write that can fail.
+final class FakeHiddenBanner: HiddenBannerStoring {
+    private let stored = Mutex(HiddenBanner())
+    private let loadFailure = Mutex<(any Error)?>(nil)
+    private let saveFailure = Mutex<(any Error)?>(nil)
+    var saved: HiddenBanner { stored.withLock { $0 } }
+    func setLoadFailure(_ error: (any Error)?) { loadFailure.withLock { $0 = error } }
+    func setSaveFailure(_ error: (any Error)?) { saveFailure.withLock { $0 = error } }
+
+    func load() throws -> HiddenBanner {
+        if let error = loadFailure.withLock({ $0 }) { throw error }
+        return stored.withLock { $0 }
+    }
+
+    func save(_ hidden: HiddenBanner) throws {
+        if let error = saveFailure.withLock({ $0 }) { throw error }
+        stored.withLock { $0 = hidden }
+    }
+}
+
 /// Stands in for VaultStore's document calls, with documents kept in memory.
 actor FakeDocuments: DocumentStoring {
     private var live: [Document] = []
@@ -75,6 +95,7 @@ actor FakeDocuments: DocumentStoring {
     private var binFailure: VaultError?
     private var createGated = false
     private var createGate: CheckedContinuation<Void, Never>?
+    private var missingOnce: Set<DocumentID> = []
 
     func setFailure(_ failure: VaultError?) { self.failure = failure }
     func setLoadFailure(_ failure: VaultError?) { loadFailure = failure }
@@ -95,14 +116,18 @@ actor FakeDocuments: DocumentStoring {
         createGate = nil
     }
 
+    /// The next reload sees the document in neither list, like a restore landing between its two reads.
+    func missFromNextReload(_ id: DocumentID) { missingOnce.insert(id) }
+
     func documents() async throws -> [Document] {
         if let loadFailure { throw loadFailure }
-        return live
+        return live.filter { !missingOnce.contains($0.id) }
     }
 
     func recentlyDeleted() async throws -> [Document] {
         if let failure = loadFailure ?? binFailure { throw failure }
-        return bin
+        defer { missingOnce = [] }
+        return bin.filter { !missingOnce.contains($0.id) }
     }
 
     // swiftlint:disable:next function_parameter_count - mirrors VaultStore.createDocument
@@ -131,6 +156,12 @@ actor FakeDocuments: DocumentStoring {
         var document = live.remove(at: index)
         document.deletedAt = .now
         bin.append(document)
+    }
+
+    /// Gone for good, as VaultCore purges Baru dihapus after 30 days.
+    func purge(_ id: DocumentID) {
+        live.removeAll { $0.id == id }
+        bin.removeAll { $0.id == id }
     }
 
     func restore(_ id: DocumentID) async throws {

@@ -25,12 +25,15 @@ extension CalendarDate {
         self.init(year: year, month: month, day: day)
     }
 
-    /// Today on the phone's calendar.
-    nonisolated static var today: CalendarDate {
-        let parts = Calendar.current.dateComponents([.year, .month, .day], from: .now)
+    /// The day a moment falls on in a calendar, the phone's own for "today".
+    nonisolated static func day(of date: Date, in calendar: Calendar) -> CalendarDate {
+        let parts = calendar.dateComponents([.year, .month, .day], from: date)
         return CalendarDate(year: parts.year ?? 2000, month: parts.month ?? 1, day: parts.day ?? 1)
             ?? CalendarDate(year: 2000, month: 1, day: 1)!
     }
+
+    /// Today on the phone's calendar.
+    nonisolated static var today: CalendarDate { day(of: .now, in: .current) }
 
     /// The day in Indonesian, for example "17 Agu 2030". Read as UTC, so no time zone moves it.
     nonisolated var displayText: String {

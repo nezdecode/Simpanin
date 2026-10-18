@@ -75,6 +75,11 @@
             isActive && ProcessInfo.processInfo.arguments.contains("-SimpaninUITestCaptureAfterScan")
         }
 
+        /// `-SimpaninUITestExpiringSamples`: samples expire within days, so the banner shows.
+        static var expiringSamples: Bool {
+            isActive && ProcessInfo.processInfo.arguments.contains("-SimpaninUITestExpiringSamples")
+        }
+
         static var scansSynthetically: Bool {
             isActive && ProcessInfo.processInfo.arguments.contains("-SimpaninUITestScan")
         }

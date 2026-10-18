@@ -59,13 +59,63 @@ struct ExpiryTextTests {
         #expect(text(.stnk, CalendarDate(year: 2026, month: 10, day: 14)) == "Pajak sudah habis sejak 14 Okt")
     }
 
-    /// The banner on the list: documents that expire within 60 days or already have, soonest first.
-    @Test func expiringSoonestFirst() {
-        let soon = CalendarDate(year: 2026, month: 11, day: 1)!
-        let later = CalendarDate(year: 2026, month: 12, day: 1)!
-        let far = CalendarDate(year: 2030, month: 1, day: 1)!
-        let past = CalendarDate(year: 2026, month: 1, day: 1)!
-        // Indices into the input, past expiry first, then the soonest. Far and no expiry stay out.
-        #expect(ExpiryText.needsAttention([later, nil, far, soon, past], today: today) == [4, 3, 0])
+    func day(_ offset: Int) -> CalendarDate {
+        CalendarDate(utc: today.utcDate!.addingTimeInterval(Double(offset) * 86_400))!
+    }
+
+    func candidate(_ offset: Int?, _ type: DocumentType = .simC, created: TimeInterval = 0)
+        -> ExpiryText.BannerCandidate
+    {
+        ExpiryText.BannerCandidate(
+            type: type, expiry: offset.map(day), createdAt: Date(timeIntervalSince1970: created))
+    }
+
+    func order(_ candidates: [ExpiryText.BannerCandidate]) -> [Int] {
+        ExpiryText.bannerOrder(candidates, today: today)
+    }
+
+    // MARK: The banner's order (indices into the input)
+
+    @Test func theNearestToTodayComesFirst() {
+        #expect(order([candidate(30), candidate(-5), candidate(10)]) == [1, 2, 0])
+    }
+
+    @Test func recentlyExpiredComesBeforeLongExpired() {
+        #expect(order([candidate(-200), candidate(-10)]) == [1, 0])
+    }
+
+    /// Nothing leaves the banner because time passed; only the user hides it.
+    @Test func longExpiredStaysInTheBanner() {
+        #expect(order([candidate(-1000)]) == [0])
+    }
+
+    @Test func farAheadOrUndatedIsLeftOut() {
+        #expect(order([candidate(61), candidate(nil), candidate(200)]).isEmpty)
+    }
+
+    /// 60 days either side is near; on the same distance, the expired one comes first.
+    @Test func theSixtyDayBoundaryIsInclusive() {
+        #expect(order([candidate(60), candidate(-60), candidate(61), candidate(-61)]) == [1, 0, 3])
+    }
+
+    /// Same date: by type, then by when the document was made, so the banner never shuffles.
+    @Test func sameDayDocumentsHaveAStableOrder() {
+        let same = [
+            candidate(10, .stnk, created: 2), candidate(10, .passport, created: 1),
+            candidate(10, .passport, created: 0),
+        ]
+        #expect(order(same) == [2, 1, 0])
+    }
+
+    /// The day comes from the phone's own calendar: a minute before midnight is still today.
+    @Test func theDayFollowsThePhonesCalendar() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(identifier: "Asia/Makassar"))
+        let lastMinute = try #require(
+            calendar.date(from: DateComponents(year: 2026, month: 10, day: 15, hour: 23, minute: 59)))
+        #expect(CalendarDate.day(of: lastMinute, in: calendar) == CalendarDate(year: 2026, month: 10, day: 15))
+        #expect(
+            CalendarDate.day(of: lastMinute.addingTimeInterval(60), in: calendar)
+                == CalendarDate(year: 2026, month: 10, day: 16))
     }
 }

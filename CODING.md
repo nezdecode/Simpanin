@@ -58,7 +58,7 @@ A folder grows subfolders when it passes about eight files, split by part of the
 
 **A view never keeps its own copy of state that lives elsewhere.** `@State` is for what only the view knows, like a text field's draft. A stored setting or a model's value is read from the model each time: a copy in `@State` is taken once and goes stale, which made Settings show an old Kunci otomatis choice after it had been changed.
 
-**Small views get only the data they show.** `ExpiryBanner(documents:today:)`, not the whole screen model. Callbacks are named for the event: `onDelete`, `onRestore`, `onDismiss`.
+**Small views get only the data they show.** `ExpiryBanner(documents:today:onHide:)`, not the whole screen model. Callbacks are named for the event: `onHide`, `onDelete`, `onRestore`, `onDismiss`.
 
 **Pick the right tool to reuse or customise:**
 
