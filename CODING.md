@@ -18,15 +18,15 @@ Simpanin has two parts: a core that keeps documents safe, and an app around it.
 | `Features/<Feature>/` | One folder per feature: something the user can name (`Library`, `Scan`, `Settings`, `Lock`), with its views and models side by side. |
 | `Documents/` | How a document reads: `DocumentStyle`, `ExpiryText`, dates in Indonesian and on calendar days. |
 | `Platform/` | The app's side of VaultCore and iOS: `Vault/` (`AppVault`, which creates the one `VaultStore`, the Keychain, file protection), `Lock/` (`LockController`, the engine that locks and unlocks, and the recovery table), `Logging/` and `System/` (build settings, system links). |
-| `DesignSystem/` | Views, styles, texts and helpers that two or more features use. |
+| `DesignSystem/` | Views, styles, texts and helpers that know nothing of the domain: no VaultCore, `Documents/` or feature types. |
 | `Resources/` | The asset catalog (colours, icon) and the string catalog. |
 | `Debug/` | DEBUG-only tools. |
 
 Five rules keep the folders honest:
 
 1. **A feature is something the user can name.** Its own screens and state live in its folder.
-2. **A feature uses only `Platform/`, `Documents/`, `DesignSystem/`, and other features' entry points.** Today those are `LibraryView`, `RecentlyDeletedView` and `LibraryModel` (Library); `ScanFlowView`, `DocumentCamera.isSupported` and `DocumentCameraCache.clear()` (Scan); `SettingsView` (Settings); and `LockCoverView` (Lock). `App/` uses entry points too. Anything else that crosses features goes through `DesignSystem/` or `Platform/`.
-3. **`DesignSystem/` holds only what two or more features use.** A piece with one user stays in that feature until a second needs it.
+2. **A feature uses only `Platform/`, `Documents/`, `DesignSystem/`, and other features' entry points.** Today those are `LibraryView`, `RecentlyDeletedView` and `LibraryModel` (Library); `ScanFlowView`, `DocumentCamera.isSupported` and `DocumentCameraCache.clear()` (Scan); `SettingsView` (Settings); and `LockCoverView` (Lock). `App/` uses entry points too. `scripts/check-folder-rules.py` holds the checked list and runs before every commit, so a new entry point is added there and here. Anything else that crosses features goes through `DesignSystem/` or `Platform/`.
+3. **`DesignSystem/` holds views and styles with no knowledge of the domain, from their first use.** They never name a VaultCore, `Documents/` or feature type; SwiftLint rejects `import VaultCore` there. A view that knows the domain stays in its feature; when two features need it, its look moves to `DesignSystem/` or the view moves to `Documents/`.
 4. **There's no folder for extensions.** An extension sits beside its user or in its domain's folder; one that two or more features use goes to `DesignSystem/` (UI) or `Platform/` (system).
 5. **`Platform/` knows nothing about features.** It reports the vault's state and errors; which screen shows is a feature's decision. (For now the recovery table and its texts still live with the lock engine in `Platform/Lock/`, until they're split.)
 
@@ -37,10 +37,20 @@ Tests follow the code. `SimpaninTests` mirrors the app's folders (`Platform/Lock
 A few rules keep it that way:
 
 - **There is one `VaultStore` per vault folder.** `AppVault` creates it at launch; nothing else creates one for the real vault.
-- **Models depend on small protocols** (`VaultOpening`, `DocumentStoring`) rather than on `VaultStore`, so tests can use stand-ins. Add a protocol when a test needs one, not before.
 - **DEBUG-only code stays inside `#if DEBUG`**, in `Debug/` where possible, so it can never reach a release build.
 
-A folder grows subfolders when it passes about eight files, split by part of the feature (`Scan/Camera/`, `Scan/Review/`), never by layer (`Models/`, `Views/`). Layer folders would mostly hold one file each.
+A folder grows subfolders by part of the feature, never by layer (`Models/`, `Views/`): when it passes about eight files and a part of it has at least three (`Library/Banner/`, `Scan/Camera/`). The same rule applies again inside a part, at most two levels below the feature, and a part's main model and view stay at its root. The branch that takes a folder past the threshold splits it first, in a move-only commit, before adding its files.
+
+### Architecture
+
+The layout doesn't show layers, so the names and these rules do:
+
+- **One `@MainActor @Observable` model per screen or flow, and a thin view.** The model holds state and logic; the view shows state and passes on taps (section 4).
+- **Decisions are pure functions** (`ExpiryText`, `HiddenBanner`, `RecoveryMapping`), tested without UI.
+- **Dependencies come in through `init`, as small protocols** (`DocumentStoring`, `VaultOpening`) rather than `VaultStore` itself, so tests can use stand-ins. Add a protocol when a test needs one, not before. No singletons of our own.
+- **VaultCore is the only storage for documents.** Small app-side files that hold no document data, like the banner's hidden list, sit beside the projection and follow its rules.
+- **App-wide system services go through `Platform/`:** the Keychain, Face ID, file protection, build settings, system links and logging. A framework only one feature needs stays in that feature, behind a protocol when tests need a stand-in (Vision and VisionKit in `Features/Scan`, `TextRecognizer`).
+- **Name suffixes replace layer folders:** `…Model`, `…View`, `…Row`, `…Card`.
 
 ## 2. Files and names
 
