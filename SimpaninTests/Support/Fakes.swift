@@ -95,6 +95,7 @@ actor FakeDocuments: DocumentStoring {
     private var binFailure: VaultError?
     private var createGated = false
     private var createGate: CheckedContinuation<Void, Never>?
+    private var missingOnce: Set<DocumentID> = []
 
     func setFailure(_ failure: VaultError?) { self.failure = failure }
     func setLoadFailure(_ failure: VaultError?) { loadFailure = failure }
@@ -115,14 +116,18 @@ actor FakeDocuments: DocumentStoring {
         createGate = nil
     }
 
+    /// The next reload sees the document in neither list, like a restore landing between its two reads.
+    func missFromNextReload(_ id: DocumentID) { missingOnce.insert(id) }
+
     func documents() async throws -> [Document] {
         if let loadFailure { throw loadFailure }
-        return live
+        return live.filter { !missingOnce.contains($0.id) }
     }
 
     func recentlyDeleted() async throws -> [Document] {
         if let failure = loadFailure ?? binFailure { throw failure }
-        return bin
+        defer { missingOnce = [] }
+        return bin.filter { !missingOnce.contains($0.id) }
     }
 
     // swiftlint:disable:next function_parameter_count - mirrors VaultStore.createDocument

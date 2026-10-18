@@ -136,21 +136,28 @@ struct LibraryTests {
         #expect(relaunched.bannerDocuments.isEmpty)
     }
 
-    /// A document purged for good, in neither the list nor Baru dihapus, leaves no hidden entry behind.
+    /// A document purged for good, in neither the list nor Baru dihapus, leaves no hidden entry behind. It
+    /// takes two reloads in a row, so a restore landing mid-reload can't drop it (see the next test).
     @Test func aPermanentlyDeletedDocumentLeavesNoHiddenEntry() async throws {
-        let store = FakeDocuments()
-        let hidden = FakeHiddenBanner()
-        let soon = CalendarDate.day(of: .now.addingTimeInterval(5 * 86_400), in: .current)
-        let id = try await store.createDocument(
-            type: .simC, label: nil, expiry: soon, pinned: false, fields: DocumentFields([:]), pages: [Data([1])])
-        let library = LibraryModel(store: store, hidden: hidden)
-        await library.reload()
-        library.hideFromBanner(try #require(library.documents.first))
+        let (store, hidden, library) = try await hiddenSoonDocument()
+        let id = try #require(library.documents.first?.id)
         await library.delete(id)
         #expect(hidden.saved.entries.count == 1)
         await store.purge(id)
         await library.reload()
+        #expect(hidden.saved.entries.count == 1)
+        await library.reload()
         #expect(hidden.saved.entries.isEmpty)
+    }
+
+    @Test func aDocumentMissingFromOneReloadStaysHidden() async throws {
+        let (store, hidden, library) = try await hiddenSoonDocument()
+        let id = try #require(library.documents.first?.id)
+        await store.missFromNextReload(id)
+        await library.reload()
+        await library.reload()
+        #expect(hidden.saved.entries.map(\.id) == [id])
+        #expect(library.bannerDocuments.isEmpty)
     }
 
     /// A relaunch whose list fails to load must not take the hidden list with it.

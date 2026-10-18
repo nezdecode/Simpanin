@@ -56,6 +56,8 @@ final class LibraryModel {
     private var hiddenLoaded = false
     /// The list in memory has hides the file doesn't, from a failed save or an unread file.
     private var hiddenUnsaved = false
+    /// Ids with a hidden entry that the last reload found in neither list.
+    private var missingLastReload: Set<DocumentID> = []
 
     /// The documents the banner may show: the user hasn't hidden them.
     var bannerDocuments: [Document] {
@@ -74,7 +76,8 @@ final class LibraryModel {
     }
 
     /// Reads the hidden list, unless memory holds hides a failed save left, and drops entries for documents
-    /// in neither the list nor Baru dihapus, so a deleted and restored one stays hidden.
+    /// two reloads in a row found in neither the list nor Baru dihapus: a restore or delete can land between
+    /// those two reads. A deleted and restored document stays hidden.
     private func loadHidden() {
         if !hiddenLoaded || !hiddenUnsaved {
             do {
@@ -91,7 +94,10 @@ final class LibraryModel {
                 Logger.library.error("Hidden banner list unreadable: \(ErrorSummary.describe(error), privacy: .public)")
             }
         }
-        if hidden.prune(keeping: Set((documents + deleted).map(\.id))) { hiddenUnsaved = true }
+        let present = Set((documents + deleted).map(\.id))
+        let missing = Set(hidden.entries.map(\.id)).subtracting(present)
+        if hidden.prune(keeping: present.union(missing.subtracting(missingLastReload))) { hiddenUnsaved = true }
+        missingLastReload = missing
         if hiddenUnsaved { saveHidden() }
     }
 
