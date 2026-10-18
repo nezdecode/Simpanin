@@ -57,6 +57,24 @@ struct HiddenBannerTests {
         #expect(hidden.hides(id, expiry: soon, today: later))
     }
 
+    /// Hidden on its last day ("Habis hari ini") counts as still to come: the next day it's back as expired.
+    @Test func aDocumentHiddenOnItsExpiryDayReturnsTheNextDay() {
+        var hidden = HiddenBanner()
+        let id = DocumentID()
+        hidden.hide(id, expiry: today, today: today)
+        #expect(hidden.hides(id, expiry: today, today: today))
+        let tomorrow = CalendarDate(year: 2026, month: 10, day: 16)!
+        #expect(!hidden.hides(id, expiry: today, today: tomorrow))
+    }
+
+    @Test func aDocumentHiddenAfterExpiringStaysHidden() {
+        var hidden = HiddenBanner()
+        let id = DocumentID()
+        let yesterday = CalendarDate(year: 2026, month: 10, day: 14)!
+        hidden.hide(id, expiry: yesterday, today: today)
+        #expect(hidden.hides(id, expiry: yesterday, today: CalendarDate(year: 2026, month: 10, day: 16)!))
+    }
+
     @Test func orphanEntriesArePrunedButDeletedDocumentsKeepTheirs() {
         var hidden = HiddenBanner()
         let live = DocumentID()
@@ -76,6 +94,37 @@ struct HiddenBannerTests {
         let url = FileManager.default.temporaryDirectory.appending(path: "Projection-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
         return url
+    }
+
+    /// The stored keys never change once shipped: renaming one would make every saved list unreadable.
+    @Test func theFileFormatStaysTheSame() throws {
+        let json = """
+            {"entries":[{"id":"00000000-0000-4000-8000-000000000001","expiry":"2026-10-25","whileExpired":false}]}
+            """
+        let hidden = try JSONDecoder().decode(HiddenBanner.self, from: Data(json.utf8))
+        let id = try #require(DocumentID(string: "00000000-0000-4000-8000-000000000001"))
+        #expect(hidden.entries == [HiddenBanner.Entry(id: id, expiry: soon, whileExpired: false)])
+        let encoded = try JSONSerialization.jsonObject(with: JSONEncoder().encode(hidden)) as? [String: [[String: Any]]]
+        #expect(encoded?["entries"]?.first.map { Set($0.keys) } == ["id", "expiry", "whileExpired"])
+    }
+
+    /// VaultCore's cleanup of its own temp files, at every open, leaves the hidden list and its temp alone.
+    @Test func openingTheVaultLeavesTheHiddenList() async throws {
+        let base = try folder()
+        defer { try? FileManager.default.removeItem(at: base) }
+        let locations = VaultLocations(
+            applicationSupport: base.appending(path: "Support"), appGroupContainer: base.appending(path: "Group"))
+        try AppVault.prepareProjectionFolder(locations, protector: RecordingProtector())
+        let url = HiddenBannerFile.url(in: locations)
+        let temp = locations.projectionFolder.appending(path: ".hidden-banner.json.tmp")
+        try Data("{}".utf8).write(to: url)
+        try Data("{}".utf8).write(to: temp)
+        let store = VaultStore(
+            rootDirectory: locations.root, projectionURL: locations.projection, keyStore: PreviewKeyStore(),
+            fileProtector: RecordingProtector())
+        try await store.open()
+        #expect(FileManager.default.fileExists(atPath: url.path))
+        #expect(FileManager.default.fileExists(atPath: temp.path))
     }
 
     @Test func theHiddenListSurvivesARelaunch() throws {
