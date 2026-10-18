@@ -13,7 +13,7 @@ import Foundation
 import Observation
 import VaultCore
 
-/// A recovery screen's text and its way out, from the design doc's recovery table.
+/// A recovery screen's text and its way out, from the recovery table.
 nonisolated struct RecoveryContent: Equatable, Sendable {
     enum Action: Equatable, Sendable {
         case retry, openSettings, startNewVault, openAppStore, dismiss
@@ -69,7 +69,7 @@ nonisolated struct RecoveryContent: Equatable, Sendable {
     }
 }
 
-/// The one extra sentence some recovery screens carry, below the design doc's text.
+/// The one extra sentence some recovery screens carry, below the main text.
 nonisolated enum RecoveryText {
     static func extra(_ screen: RecoveryScreen) -> LocalizedStringResource? {
         switch screen {

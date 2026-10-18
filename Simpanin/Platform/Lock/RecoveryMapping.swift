@@ -13,7 +13,7 @@ import Foundation
 import Security
 import VaultCore
 
-/// A screen from the design doc's recovery table.
+/// A screen from the recovery table: what the user sees when the vault can't open or save.
 nonisolated enum RecoveryScreen: Equatable, Sendable {
     /// No passcode on the device yet: "Simpanin butuh passcode HP untuk mengunci dokumenmu."
     case passcodeNeeded
@@ -47,7 +47,7 @@ nonisolated enum LockOutcome: Equatable, Sendable {
     case recovery(RecoveryScreen)
 }
 
-/// The design doc's recovery screens table as a pure function, so every row is tested.
+/// The recovery screens table as a pure function, so every row is tested.
 nonisolated enum RecoveryMapping {
     /// "Any other status" prompts again once; the second failure in a row shows a screen.
     static let failuresBeforeGivingUp = 2

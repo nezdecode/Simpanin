@@ -15,7 +15,7 @@ import Testing
 @testable import Simpanin
 @testable import VaultCore
 
-/// One test per row of the design doc's recovery screens table. The statuses are the ones
+/// One test per row of the recovery screens table. The statuses are the ones
 /// the device checks returned on an iPhone (iOS 26.6.1, 14 Oct 2026).
 @Suite("Recovery screens")
 struct RecoveryMappingTests {

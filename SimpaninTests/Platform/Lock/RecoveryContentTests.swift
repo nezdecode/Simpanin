@@ -16,7 +16,7 @@ import Testing
 @testable import Simpanin
 @testable import VaultCore
 
-/// The texts and ways out of the design doc's recovery table, word for word.
+/// The texts and ways out of the recovery table, word for word.
 @Suite("Recovery screens: texts and actions")
 struct RecoveryContentTests {
     static let texts: [(RecoveryScreen, String)] = [

@@ -191,7 +191,7 @@ struct LibraryView: View {
         }
         ToolbarItem(placement: .topBarTrailing) {
             Button {
-                // The vault's key needs a passcode; checked before the first scan, as the design doc says.
+                // The vault's key needs a passcode, so each scan checks for one first.
                 if lock.passcodeState.stopsScanning {
                     passcodeNeededShown = true
                 } else {

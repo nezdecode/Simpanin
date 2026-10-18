@@ -21,7 +21,7 @@ nonisolated protocol VaultOpening: Sendable {
 
 extension VaultStore: VaultOpening {}
 
-/// The lock, following the design doc's lifecycle table. The clock, the store and the system
+/// The lock: when the vault opens, locks, and shows a recovery screen. The clock, the store and the system
 /// checks are injected, so the state machine is tested without waiting or a device.
 @MainActor @Observable
 final class LockController {

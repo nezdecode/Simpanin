@@ -44,7 +44,7 @@ identifier_name:
   excluded:  # short names that are clearer than a long one
     - id
     - i   # loop index
-    - dk  # document key, the design doc's term
+    - dk  # document key, the vault format's term
     - kk  # Kartu Keluarga, a document type
     - t0  # a test's start time
 
