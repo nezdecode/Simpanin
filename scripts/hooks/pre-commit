@@ -46,5 +46,10 @@ if [ -n "$swift_files" ]; then
     echo "pre-commit: SwiftLint found problems (see above)." >&2
     exit 1
   fi
+  # The app's folder rules: which layer and feature may use which (CODING.md section 1).
+  if ! python3 scripts/check-folder-rules.py; then
+    echo "pre-commit: a file crosses the folder rules (see above)." >&2
+    exit 1
+  fi
 fi
 exit 0
