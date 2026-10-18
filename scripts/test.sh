@@ -34,6 +34,7 @@ mkdir -p "$run"
 log="$run/xcodebuild.log"
 bundle="$run/Tests.xcresult"
 echo "test.sh: simulator $simulator; log and results in $run"
+: > "$log"  # exists before the loop reads its time
 
 # Parallel testing clones the simulator, and a clone once never finished booting.
 xcodebuild test -project Simpanin.xcodeproj -scheme Simpanin \
@@ -41,10 +42,17 @@ xcodebuild test -project Simpanin.xcodeproj -scheme Simpanin \
   -parallel-testing-enabled NO -derivedDataPath build/DerivedData-test \
   -resultBundlePath "$bundle" "${only[@]+"${only[@]}"}" > "$log" 2>&1 &
 pid=$!
+# Stops xcodebuild and its direct children (the build service, compilers) on any exit, Ctrl-C included.
+# The test runner inside the simulator is launchd_sim's, not xcodebuild's; it ends with the run.
+stop() {
+  pkill -P "$pid" 2> /dev/null || true
+  kill "$pid" 2> /dev/null || true
+}
+trap stop EXIT INT TERM
 
 idle_limit="${SIMPANIN_IDLE_TIMEOUT:-300}"
 while kill -0 "$pid" 2> /dev/null; do
-  if grep -qE '\*\* TEST (SUCCEEDED|FAILED) \*\*' "$log"; then
+  if grep -qsE '\*\* TEST (SUCCEEDED|FAILED) \*\*' "$log"; then
     sleep 10  # time to finish writing the result bundle
     break
   fi
@@ -55,9 +63,7 @@ while kill -0 "$pid" 2> /dev/null; do
   fi
   sleep 5
 done
-# Stop xcodebuild and what it started, like the test runner, so nothing is left running.
-pkill -P "$pid" 2> /dev/null || true
-kill "$pid" 2> /dev/null || true
+stop
 wait "$pid" 2> /dev/null || true
 
 grep -E 'Test run with [0-9]+ tests|Executed [0-9]+ tests|\*\* TEST|error:' "$log" | sort -u || true

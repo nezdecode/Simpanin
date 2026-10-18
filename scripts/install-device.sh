@@ -26,13 +26,15 @@ PY
   rm -f "$list"
 fi
 if [ -z "$device" ]; then
-  echo "install-device.sh: no single paired iPhone found; set SIMPANIN_DEVICE to its UDID" >&2
+  echo "install-device.sh: found no paired iPhone, or several and none connected; set SIMPANIN_DEVICE to its UDID" >&2
   exit 1
 fi
 
 mkdir -p build
 log="build/install-$(date +%Y%m%d-%H%M%S).log"
 echo "install-device.sh: building for $device (log: $log)"
+# -allowProvisioningUpdates lets Xcode renew a provisioning profile or register this iPhone in your developer
+# account without asking, so a build doesn't stop at an expired profile.
 xcodebuild build -project Simpanin.xcodeproj -scheme Simpanin -destination "id=$device" \
   -derivedDataPath build/DerivedData-device -allowProvisioningUpdates > "$log" 2>&1 || true
 

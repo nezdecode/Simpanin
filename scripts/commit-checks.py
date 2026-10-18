@@ -11,10 +11,14 @@ import re
 import subprocess
 import sys
 
-# 16 digits in a row (or more), or 4-4-4-4 split by spaces, dots or dashes, as a NIK can be written or read.
-SIXTEEN_DIGITS = re.compile(r'(?<!\d)(?:\d{16,}|\d{4}[ .-]\d{4}[ .-]\d{4}[ .-]\d{4})(?!\d)')
-# A path into the private docs/ folder, nested ones included.
-DOCS_PATH = re.compile(r'(?<![\w.-])docs/')
+# 16 or more digits with at most one space, dot or dash between them: a NIK however it's written or read
+# (0012345678900001, 0012 3456 7890 0001, 001234 567890 0001, 00.12.34.567890.0001).
+SIXTEEN_DIGITS = re.compile(r'(?<!\d)\d(?:[ .-]?\d){15,}(?!\d)')
+# Hashes and UUIDs are left out first: their digits aren't numbers.
+UUID = re.compile(r'\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b')
+HEX_HASH = re.compile(r'\b(?=[0-9a-fA-F]*[a-fA-F])[0-9a-fA-F]{20,}\b')
+# A path into the private docs/ folder, nested ones included; a URL with /docs/ in it is someone else's.
+DOCS_PATH = re.compile(r'(?<![\w./:-])docs/')
 # Files that name docs/ to guard it.
 NAMES_DOCS_ON_PURPOSE = {'.gitignore', 'scripts/hooks/pre-commit', 'scripts/commit-checks.py'}
 CREATED_BY = re.compile(r'^//  Created by (.+) on (\d{1,2})/(\d{1,2})/(\d{2})\.$', re.M)
@@ -31,6 +35,7 @@ def git(*args, check=True):
 
 def number_problem(text):
     """Why a line's 16-digit number can't be committed, or None."""
+    text = HEX_HASH.sub(' ', UUID.sub(' ', text))
     for match in SIXTEEN_DIGITS.finditer(text):
         digits = re.sub(r'\D', '', match.group(0))
         # Test NIKs start with 00; masked text turns every digit into one.
@@ -91,7 +96,7 @@ def header_problems(all_files):
         try:
             created = datetime.date(2000 + year, month, day)
         except ValueError:
-            problems.append(f'{path}: the header date {day}/{month}/{year} is not a date')
+            problems.append(f'{path}: the header date {day}/{month}/{year} is not a date; headers use d/M/yy')
             continue
         if created > today:
             problems.append(f'{path}: the header date {day}/{month}/{year} is after today; take it from the clock')
@@ -112,7 +117,8 @@ def staged(all_files):
         if disable:
             scope, rest = disable.groups()
             rules = rest.split(' - ')[0].split()
-            if 'unchecked_sendable' in rules or 'all' in rules:
+            # custom_rules and all switch unchecked_sendable off too.
+            if {'unchecked_sendable', 'custom_rules', 'all'} & set(rules):
                 if scope is None:
                     problems.append(f'{path}:{number}: unchecked_sendable can only be disabled for one line')
                 elif ' - ' not in rest or not rest.split(' - ', 1)[1].strip():
@@ -133,6 +139,8 @@ def message(path):
     # What git will keep: no text below the scissors line that -v adds, and no comment lines.
     char = git('config', '--get', 'core.commentChar', check=False).strip() or '#'
     raw = raw.split(f'{char} ------------------------ >8 ------------------------')[0]
+    # With -m, git keeps lines starting with the comment character, so the content checks read them too.
+    raw_lines = raw.splitlines()
     text = subprocess.run(['git', '-c', f'core.commentChar={char}', 'stripspace', '--strip-comments'],
                           input=raw, capture_output=True, text=True, check=True).stdout
     lines = text.splitlines()
@@ -145,7 +153,9 @@ def message(path):
         types, scopes = contributing_list('Types'), contributing_list('Scopes')
         match = re.match(r'^([a-z]+)(?:\(([a-z-]+)\))?!?: (\S.*)$', subject)
         if not match:
-            problems.append(f'the subject isn\'t "type(scope): subject" (CONTRIBUTING.md): {subject}')
+            # Digits masked: a refused subject is printed, and it mustn't show a number that could be a NIK.
+            shown = re.sub(r'\d', '9', subject)
+            problems.append(f'the subject isn\'t "type(scope): subject" (CONTRIBUTING.md): {shown}')
         else:
             kind, scope, _ = match.groups()
             if kind not in types:
@@ -158,9 +168,9 @@ def message(path):
             problems.append(f'the subject has {len(subject)} characters; at most 100, aiming for 72')
         elif len(subject) > 72:
             print(f'commit-msg: the subject has {len(subject)} characters; aim for 72 (CONTRIBUTING.md)', file=sys.stderr)
-    if AI_COAUTHOR.search(text):
+    if AI_COAUTHOR.search(raw):
         problems.append('a Co-Authored-By line names an AI; commits carry no AI attribution')
-    for number, line in enumerate(lines, 1):
+    for number, line in enumerate(raw_lines, 1):
         if AI_LINES.search(line):
             problems.append(f'line {number}: no "Generated with" lines, and public messages don\'t mention the Claude app')
         reason = number_problem(line)
