@@ -10,22 +10,29 @@ Simpanin has two parts: a core that keeps documents safe, and an app around it.
 
 **Parsers** (`Packages/VaultCore/Sources/Parsers`) turns recognised text into a document type and its fields, and marks what the user should check again. It's a separate target in the same package: it uses VaultCore's model, but VaultCore never depends on it. Text recognition stays in the app, so the parsers are tested on plain text on a Mac.
 
-**The app** (`Simpanin/`) is organised by topic at the top and by screen inside `Screens/`:
+**The app** (`Simpanin/`) is organised by feature, around a few shared layers:
 
 | Folder | Holds |
 | --- | --- |
-| `App/` | The entry point, `RootView` (lock cover or app) and the build configuration. |
-| `Vault/` | The platform side of VaultCore (`KeychainKeyStore`, `DataProtectionFileProtector`) and `AppVault`, which creates the one `VaultStore`. |
-| `Lock/` | `LockController`, `RecoveryMapping`, the lock settings every screen relies on, and how errors are summarised for the log (`ErrorSummary`). |
-| `Documents/` | How a document reads: `DocumentStyle`, `ExpiryText`, date display. |
-| `Scanning/` | From the camera to parsed fields: `DocumentCamera`, `TextRecognizer` (Vision), `ReadingOrder`, `ScanModel`, and `DocumentCameraCache`, which removes the page images VisionKit leaves in Caches. |
-| `Screens/<Area>/` | One folder per screen or flow, with its views and models side by side. |
-| `Screens/` (root) | Texts several screens share (`ScreenText`). |
-| `Components/` | Views and styles several screens use. |
-| `Extensions/` | Extensions on system types. |
+| `App/` | The entry point and `RootView`, which puts the features together, with `CoverWindow`, the window that covers every screen. |
+| `Features/<Feature>/` | One folder per feature: something the user can name (`Library`, `Scan`, `Settings`, `Lock`), with its views and models side by side. |
+| `Documents/` | How a document reads: `DocumentStyle`, `ExpiryText`, dates in Indonesian and on calendar days. |
+| `Platform/` | The app's side of VaultCore and iOS: `Vault/` (`AppVault`, which creates the one `VaultStore`, the Keychain, file protection), `Lock/` (`LockController`, the engine that locks and unlocks, and the recovery table), `Logging/` and `System/` (build settings, system links). |
+| `DesignSystem/` | Views, styles, texts and helpers that two or more features use. |
+| `Resources/` | The asset catalog (colours, icon) and the string catalog. |
 | `Debug/` | DEBUG-only tools. |
 
-Tests follow the code. `SimpaninTests` mirrors the app's folders (`Lock/`, `Screens/Library/` and so on), with shared stand-ins in `Support/`. VaultCore's tests are grouped by topic (`Store/`, `Durability/`, `Recovery/`, `Format/`), the parsers' by parser. `SimpaninUITests` has a class per screen (`LibraryUITests`, `ReviewUITests`), each built on `Support/UITestCase`, which is where helpers shared between screens go.
+Five rules keep the folders honest:
+
+1. **A feature is something the user can name.** Its own screens and state live in its folder.
+2. **A feature uses only `Platform/`, `Documents/`, `DesignSystem/`, and other features' entry points.** Today those are `LibraryView`, `RecentlyDeletedView` and `LibraryModel` (Library); `ScanFlowView`, `DocumentCamera.isSupported` and `DocumentCameraCache.clear()` (Scan); `SettingsView` (Settings); and `LockCoverView` (Lock). `App/` uses entry points too. Anything else that crosses features goes through `DesignSystem/` or `Platform/`.
+3. **`DesignSystem/` holds only what two or more features use.** A piece with one user stays in that feature until a second needs it.
+4. **There's no folder for extensions.** An extension sits beside its user or in its domain's folder; one that two or more features use goes to `DesignSystem/` (UI) or `Platform/` (system).
+5. **`Platform/` knows nothing about features.** It reports the vault's state and errors; which screen shows is a feature's decision. (For now the recovery table and its texts still live with the lock engine in `Platform/Lock/`, until they're split.)
+
+`Debug/` may reach anything and anything may reach it, inside `#if DEBUG`.
+
+Tests follow the code. `SimpaninTests` mirrors the app's folders (`Platform/Lock/`, `Features/Library/` and so on), with shared stand-ins in `Support/`. VaultCore's tests are grouped by topic (`Store/`, `Durability/`, `Recovery/`, `Format/`), the parsers' by parser. `SimpaninUITests` has a class per screen (`LibraryUITests`, `ReviewUITests`), each built on `Support/UITestCase`, which is where helpers shared between screens go.
 
 A few rules keep it that way:
 
@@ -33,13 +40,13 @@ A few rules keep it that way:
 - **Models depend on small protocols** (`VaultOpening`, `DocumentStoring`) rather than on `VaultStore`, so tests can use stand-ins. Add a protocol when a test needs one, not before.
 - **DEBUG-only code stays inside `#if DEBUG`**, in `Debug/` where possible, so it can never reach a release build.
 
-A folder grows subfolders when it passes about eight files, split by part of the feature (`Review/Parser/`), never by layer (`Models/`, `Views/`). Layer folders would mostly hold one file each.
+A folder grows subfolders when it passes about eight files, split by part of the feature (`Scan/Camera/`, `Scan/Review/`), never by layer (`Models/`, `Views/`). Layer folders would mostly hold one file each.
 
 ## 2. Files and names
 
-- **One main type per file, named after it.** `LibraryModel.swift`, `LibraryView.swift`, `DocumentTile.swift`. Types that belong to the main type stay with it, even when other files use them: the protocol it depends on (`DocumentStoring` in `LibraryModel.swift`), a value it returns or holds (`RecoveryScreen` from `RecoveryMapping`, `VaultLocations` in `AppVault.swift`). A type that is its own idea, or that several main types share, gets its own file (`VaultNotice`; `QuarantineStoring`, which two models depend on).
+- **One main type per file, named after it.** `LibraryModel.swift`, `LibraryView.swift`, `DocumentTile.swift`. Types that belong to the main type stay with it, even when other files use them: the protocol it depends on (`VaultOpening` in `LockController.swift`), a value it returns or holds (`RecoveryScreen` from `RecoveryMapping`, `VaultLocations` in `AppVault.swift`). A type that is its own idea, or that several main types share, gets its own file (`VaultNotice`; `DocumentStoring` and `QuarantineStoring`, which several models depend on).
 - **A screen's model ends in `Model`, its view in `View`.** A screen is `XModel` + `XView`. Objects every screen shares are named for their job: `LockController`, `AppVault`. Rows and parts of a screen are named for what they show: `OldVaultRow`, `ExpiryBanner`.
-- **Extensions go in `Type+Purpose.swift`**: `Date+Indonesian.swift`, `Logger+Simpanin.swift`.
+- **Extensions go in `Type+Purpose.swift`**, beside their user or in their domain's folder: `Documents/Date+Indonesian.swift`, `Platform/Logging/Logger+Simpanin.swift`.
 - **Follow Apple's [API Design Guidelines](https://www.swift.org/documentation/api-design-guidelines/)** and use SwiftUI's own words: `systemImage` for an SF Symbol name, `onDelete` / `onRestore` for callbacks, `.roundedRectangle(cornerRadius:)` rather than a bare number.
 - **American spelling in identifiers** (`tileColors`, `toneColor`), as in Apple's APIs. Comments and docs can use either.
 - **Test files are named after what they test**: `ExpiryTextTests.swift` tests `ExpiryText`.
@@ -85,7 +92,7 @@ A style type built on a system style keeps what the system gives for free: press
 
 ## 5. Reuse
 
-Before building a view, a style or a helper, check `Components/` and `Extensions/`. Extract a shared piece when it's used a second time, or when the design already has another screen that uses it. Not before: a shared piece with one user is harder to follow than the code it replaced.
+Before building a view, a style or a helper, check `DesignSystem/`, and the feature you're in. Extract a shared piece when it's used a second time, or when the design already has another screen that uses it. Not before: a shared piece with one user is harder to follow than the code it replaced.
 
 ## 6. Values
 
