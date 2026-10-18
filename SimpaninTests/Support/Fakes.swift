@@ -64,7 +64,6 @@ final class FixedClock: VaultClock {
     func advance(by seconds: TimeInterval) { date.withLock { $0 += seconds } }
 }
 
-/// Stands in for VaultStore's document calls, with documents kept in memory.
 /// The hidden banner list kept in memory, as a test needs it.
 final class FakeHiddenBanner: HiddenBannerStoring {
     private let stored = Mutex(HiddenBanner())
@@ -73,6 +72,7 @@ final class FakeHiddenBanner: HiddenBannerStoring {
     func save(_ hidden: HiddenBanner) throws { stored.withLock { $0 = hidden } }
 }
 
+/// Stands in for VaultStore's document calls, with documents kept in memory.
 actor FakeDocuments: DocumentStoring {
     private var live: [Document] = []
     private var bin: [Document] = []

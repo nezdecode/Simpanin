@@ -14,13 +14,13 @@ import Observation
 import VaultCore
 import os
 
-/// What the screens need from VaultStore's document calls, so tests can stand in for it.
 /// Where the documents hidden from the expiry banner are kept.
 nonisolated protocol HiddenBannerStoring: Sendable {
     func load() throws -> HiddenBanner
     func save(_ hidden: HiddenBanner) throws
 }
 
+/// What the screens need from VaultStore's document calls, so tests can stand in for it.
 nonisolated protocol DocumentStoring: Sendable {
     func documents() async throws -> [Document]
     func recentlyDeleted() async throws -> [Document]
@@ -43,10 +43,6 @@ final class LibraryModel {
     private(set) var deleted: [Document] = []
     /// The day the list and the banner read expiry against, worked out again when the app comes back.
     private(set) var today = CalendarDate.today
-
-    func refreshDay(at date: Date = .now, in calendar: Calendar = .current) {
-        today = CalendarDate.day(of: date, in: calendar)
-    }
     /// The message for a failed save, if any.
     var saveError: RecoveryScreen?
     /// Loading failed. The screen shows that instead of an empty list, which would say the
@@ -60,6 +56,10 @@ final class LibraryModel {
     /// The documents the banner may show: the user hasn't hidden them.
     var bannerDocuments: [Document] {
         documents.filter { !hidden.hides($0.id, expiry: $0.expiry, today: today) }
+    }
+
+    func refreshDay(at date: Date = .now, in calendar: Calendar = .current) {
+        today = CalendarDate.day(of: date, in: calendar)
     }
 
     func hideFromBanner(_ document: Document) {
