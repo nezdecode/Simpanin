@@ -8,9 +8,10 @@
 # points below, and App uses features only through them too. Debug may reach anything, and anything
 # may reach it.
 #
-# It matches the names of types declared at the top level of a file, in code (comments and string
-# literals are left out). It doesn't see members added in extensions of system types, such as
-# Calendar.gregorianUTC from Documents/, or global functions; review catches those.
+# It matches the names of types declared at the top level of a file, in code: comments and the text
+# of string literals are left out, and the code inside an interpolation is kept. It doesn't see
+# members added in extensions of system types, such as Calendar.gregorianUTC from Documents/, or
+# global functions; review catches those.
 
 import os
 import re
@@ -53,11 +54,58 @@ def layer(path):
 
 
 def code(text):
-    """The text without comments and string literals, so neither counts as a use."""
-    text = re.sub(r'"""(?:.|\n)*?"""', '""', text)
-    text = re.sub(r'"(?:\\.|[^"\\\n])*"', '""', text)
-    text = re.sub(r'/\*.*?\*/', '', text, flags=re.S)
-    return re.sub(r'//[^\n]*', '', text)
+    """The text without comments and string literals, keeping the code inside interpolations."""
+
+    def read_code(i, inside_interpolation):
+        # From i, keeps code and drops comments and string text. Inside an interpolation it stops
+        # after the `)` that closes it.
+        kept, depth = [], 0
+        while i < len(text):
+            if text.startswith('//', i):
+                end = text.find('\n', i)
+                i = len(text) if end < 0 else end
+            elif text.startswith('/*', i):
+                end = text.find('*/', i + 2)
+                i = len(text) if end < 0 else end + 2
+            elif re.match(r'#*"', text[i:]):
+                hashes = len(re.match(r'#*', text[i:]).group(0))
+                i, interpolated = read_string(i + hashes, hashes)
+                kept.append(' "" ' + interpolated)
+            else:
+                ch = text[i]
+                if inside_interpolation and ch == '(':
+                    depth += 1
+                elif inside_interpolation and ch == ')':
+                    if depth == 0:
+                        return i + 1, ''.join(kept)
+                    depth -= 1
+                kept.append(ch)
+                i += 1
+        return i, ''.join(kept)
+
+    def read_string(i, hashes):
+        # i is at the opening quote. Returns the index after the string and the code of its
+        # interpolations, so a type named there still counts.
+        multiline = text.startswith('"""', i)
+        i += 3 if multiline else 1
+        close = ('"""' if multiline else '"') + '#' * hashes
+        escape = '\\' + '#' * hashes
+        interpolated = []
+        while i < len(text):
+            if text.startswith(close, i):
+                return i + len(close), ' '.join(interpolated)
+            if text.startswith(escape + '(', i):
+                i, inner = read_code(i + len(escape) + 1, inside_interpolation=True)
+                interpolated.append(inner)
+            elif text.startswith(escape, i):
+                i += len(escape) + 1
+            elif text[i] == '\n' and not multiline:
+                break
+            else:
+                i += 1
+        return i, ' '.join(interpolated)
+
+    return read_code(0, inside_interpolation=False)[1]
 
 
 def main():
