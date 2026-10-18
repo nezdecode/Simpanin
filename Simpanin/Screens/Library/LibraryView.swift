@@ -22,6 +22,7 @@ struct LibraryView: View {
     @State private var passcodeNeededShown = false
     @Environment(\.dynamicTypeSize) private var typeSize
     @Environment(\.scenePhase) private var scenePhase
+    private let dayChanges = NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)
 
     init(vault: AppVault, lock: LockController) {
         self.vault = vault
@@ -123,6 +124,8 @@ struct LibraryView: View {
             .onChange(of: scenePhase) { _, phase in
                 if phase == .active { library.refreshDay() }
             }
+            // Midnight with the app open, and a changed time zone.
+            .onReceive(dayChanges) { _ in library.refreshDay() }
             .fullScreenCover(isPresented: $scanShown) {
                 ScanFlowView(
                     store: Self.documentStore(for: vault), onScanStarted: lock.scanStarted,
