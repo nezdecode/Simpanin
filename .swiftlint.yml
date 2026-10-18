@@ -95,9 +95,9 @@ custom_rules:
     severity: error
   hand_built_dates:
     name: Hand-built date formats
-    message: "Use the FormatStyles in Extensions/Date+Indonesian.swift; the device's own locale and formats are not what Simpanin shows."
+    message: "Use the FormatStyles in Documents/Date+Indonesian.swift; the device's own locale and formats are not what Simpanin shows."
     included: "/Simpanin/.*\\.swift"
-    excluded: "/(SimpaninTests|SimpaninUITests|Packages|Extensions)/"
+    excluded: "(/(SimpaninTests|SimpaninUITests|Packages)/|/Documents/Date\\+Indonesian\\.swift$)"
     regex: "(\\bDateFormatter\\(\\)|Locale\\(identifier: \"id([-_]ID)?\"\\)|\\.formatted\\((date|time):)"
     excluded_match_kinds: [comment, doccomment]
     severity: error
