@@ -1,0 +1,5 @@
+#!/bin/sh
+# Checks the commit message: Conventional Commits with CONTRIBUTING.md's types and scopes, a subject of
+# at most 100 characters (aim for 72), no AI attribution, and no 16-digit number that isn't a test NIK.
+# Install once per clone: git config core.hooksPath scripts/hooks
+exec python3 scripts/commit-checks.py message "$1"
