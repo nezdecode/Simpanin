@@ -30,7 +30,7 @@ How code is written here (structure, naming, SwiftUI patterns, reuse, tests, sty
 Commit messages follow [Conventional Commits](https://www.conventionalcommits.org): `type(scope): subject`, for example `fix(lock): keep the vault locked when the phone locks during the prompt`.
 
 - **Types:** `feat` (something new for the user), `fix` (a bug), `test` (tests only), `refactor` (no change in behaviour), `docs`, `style` (formatting), `build` (project, signing, entitlements), `ci`, `chore`.
-- **Scopes:** `vaultcore`, `parsers` (the Parsers target in the VaultCore package), `keychain`, `lock`, `screens`, `debug`, `app` (anything else in the app target). Leave the scope out when a change spans several.
+- **Scopes:** `vaultcore`, `parsers` (the Parsers target in the VaultCore package), `keychain`, `lock` (the lock engine in `Platform/Lock/`), `features` (anything in `Features/`), `debug`, `app` (anything else in the app target). Older commits use `screens` for what's now `features`. Leave the scope out when a change spans several.
 - **Subject:** imperative and lowercase, no full stop, at most about 72 characters.
 - **Body:** say why, when it isn't obvious. Break lines only where you mean a break, like a new paragraph or a separate point. Don't break inside a sentence to keep lines short: GitHub keeps those breaks, and the text turns choppy.
 - **Breaking changes:** a change to the on-disk format, a key derivation label, an associated-data string or a Keychain value gets a `!` after the type and a `BREAKING CHANGE:` footer. These need a migration and a fixture test (see Formats in CODING.md).

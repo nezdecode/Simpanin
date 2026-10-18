@@ -20,21 +20,6 @@ nonisolated protocol HiddenBannerStoring: Sendable {
     func save(_ hidden: HiddenBanner) throws
 }
 
-/// What the screens need from VaultStore's document calls, so tests can stand in for it.
-nonisolated protocol DocumentStoring: Sendable {
-    func documents() async throws -> [Document]
-    func recentlyDeleted() async throws -> [Document]
-    // swiftlint:disable:next function_parameter_count - mirrors VaultStore.createDocument
-    func createDocument(
-        type: DocumentType, label: String?, expiry: CalendarDate?, pinned: Bool, fields: DocumentFields,
-        pages: [Data]
-    ) async throws -> DocumentID
-    func delete(_ id: DocumentID) async throws
-    func restore(_ id: DocumentID) async throws
-}
-
-extension VaultStore: DocumentStoring {}
-
 /// The live documents and Recently deleted, for the list screens. Shows only type and expiry;
 /// fields and pages stay sealed until a document is opened.
 @MainActor @Observable

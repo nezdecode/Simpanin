@@ -15,7 +15,7 @@
     import VaultCore
 
     /// Keeps vault keys in memory, for previews and tests.
-    actor PreviewKeyStore: KeyStore {
+    actor PreviewKeyStore {
         private var keys: [VaultID: SymmetricKey] = [:]
 
         func readVaultKey(for vaultID: VaultID) async throws -> SymmetricKey {
@@ -34,4 +34,8 @@
             guard keys.removeValue(forKey: vaultID) != nil else { throw KeyStoreError.itemNotFound }
         }
     }
+
+    // In an extension, like the actors in UITestSetup: a conformance declared on an actor can trip a Swift 6.4
+    // bug that depends on the order files are type-checked in.
+    extension PreviewKeyStore: KeyStore {}
 #endif

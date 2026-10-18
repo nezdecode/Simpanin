@@ -1,0 +1,157 @@
+#!/usr/bin/env python3
+# Checks the app's folder rules (CODING.md section 1) on the app's files in git, the staged ones
+# included. Exits 1 and lists every use that crosses them. Run by scripts/hooks/pre-commit; run it by
+# hand with:
+#   python3 scripts/check-folder-rules.py
+#
+# A layer may use only the layers listed for it. Features use each other only through the entry
+# points below, and App uses features only through them too. Debug may reach anything, and anything
+# may reach it.
+#
+# It matches the names of types declared at the top level of a file, in code: comments and the text
+# of string literals are left out, and the code inside an interpolation is kept. It doesn't see
+# members added in extensions of system types, such as Calendar.gregorianUTC from Documents/, or
+# global functions; review catches those.
+
+import os
+import re
+import subprocess
+import sys
+
+MAY_USE = {
+    'App': {'Platform', 'Documents', 'DesignSystem', 'Debug'},
+    'Features': {'Platform', 'Documents', 'DesignSystem', 'Debug'},
+    'DesignSystem': set(),  # no domain: no Platform, Documents or feature types
+    'Documents': {'Platform'},
+    'Platform': set(),  # knows nothing about features
+}
+
+# Each feature's entry points: a type name, or a pattern when only one member of it is allowed.
+ENTRY_POINTS = {
+    'LibraryView': None,
+    'RecentlyDeletedView': None,
+    'LibraryModel': None,
+    'ScanFlowView': None,
+    'DocumentCamera': r'\bDocumentCamera\.isSupported\b',
+    'DocumentCameraCache': r'\bDocumentCameraCache\.clear\(\)',
+    'SettingsView': None,
+    'LockCoverView': None,
+}
+
+DECLARATION = re.compile(
+    r'^(?:@\w+(?:\([^)]*\))?\s+)*(?:(?:public|private|fileprivate|internal|nonisolated|final)\s+)*'
+    r'(?:struct|class|enum|actor|protocol)\s+([A-Z]\w*)',
+    re.M)
+
+
+def layer(path):
+    parts = path.split('/')[1:]
+    if len(parts) < 2 or parts[0] not in MAY_USE and parts[0] != 'Debug':
+        return None
+    if parts[0] == 'Features':
+        return 'Features/' + parts[1] if len(parts) > 2 else None
+    return parts[0]
+
+
+def code(text):
+    """The text without comments and string literals, keeping the code inside interpolations."""
+
+    def read_code(i, inside_interpolation):
+        # From i, keeps code and drops comments and string text. Inside an interpolation it stops
+        # after the `)` that closes it.
+        kept, depth = [], 0
+        while i < len(text):
+            if text.startswith('//', i):
+                end = text.find('\n', i)
+                i = len(text) if end < 0 else end
+            elif text.startswith('/*', i):
+                end = text.find('*/', i + 2)
+                i = len(text) if end < 0 else end + 2
+            elif re.match(r'#*"', text[i:]):
+                hashes = len(re.match(r'#*', text[i:]).group(0))
+                i, interpolated = read_string(i + hashes, hashes)
+                kept.append(' "" ' + interpolated)
+            else:
+                ch = text[i]
+                if inside_interpolation and ch == '(':
+                    depth += 1
+                elif inside_interpolation and ch == ')':
+                    if depth == 0:
+                        return i + 1, ''.join(kept)
+                    depth -= 1
+                kept.append(ch)
+                i += 1
+        return i, ''.join(kept)
+
+    def read_string(i, hashes):
+        # i is at the opening quote. Returns the index after the string and the code of its
+        # interpolations, so a type named there still counts.
+        multiline = text.startswith('"""', i)
+        i += 3 if multiline else 1
+        close = ('"""' if multiline else '"') + '#' * hashes
+        escape = '\\' + '#' * hashes
+        interpolated = []
+        while i < len(text):
+            if text.startswith(close, i):
+                return i + len(close), ' '.join(interpolated)
+            if text.startswith(escape + '(', i):
+                i, inner = read_code(i + len(escape) + 1, inside_interpolation=True)
+                interpolated.append(inner)
+            elif text.startswith(escape, i):
+                i += len(escape) + 1
+            elif text[i] == '\n' and not multiline:
+                break
+            else:
+                i += 1
+        return i, ' '.join(interpolated)
+
+    return read_code(0, inside_interpolation=False)[1]
+
+
+def main():
+    os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    listed = subprocess.run(['git', 'ls-files', '--cached', '--', 'Simpanin/*.swift'],
+                            capture_output=True, text=True, check=True).stdout.split()
+    files = sorted(path for path in listed if os.path.exists(path))
+    if not files:
+        print('check-folder-rules: found no Swift files under Simpanin/', file=sys.stderr)
+        return 1
+    problems = [f'{path}: not in a folder the rules know (CODING.md section 1)'
+                for path in files if layer(path) is None]
+    files = [path for path in files if layer(path) is not None]
+    raw = {path: open(path, encoding='utf-8').read() for path in files}
+    sources = {path: code(text) for path, text in raw.items()}
+    # Column 0 only: a nested type isn't a layer's own, and Debug's types sit inside #if DEBUG.
+    home = {}
+    for path, text in raw.items():
+        for match in DECLARATION.finditer(text):
+            home.setdefault(match.group(1), path)
+    for name, declared_in in sorted(home.items()):
+        owner = layer(declared_in)
+        if owner == 'Debug':
+            continue
+        for path, text in sources.items():
+            user = layer(path)
+            if user in (owner, 'Debug'):
+                continue
+            uses = len(re.findall(r'\b%s\b' % name, text))
+            if not uses:
+                continue
+            user_top, owner_top = user.split('/')[0], owner.split('/')[0]
+            if owner_top in MAY_USE[user_top] and owner_top != 'Features':
+                continue
+            if owner_top == 'Features' and user_top in ('App', 'Features') and name in ENTRY_POINTS:
+                pattern = ENTRY_POINTS[name]
+                if pattern is None or len(re.findall(pattern, text)) == uses:
+                    continue
+            problems.append(f'{path}: uses {name} from {owner}')
+    if problems:
+        print('Folder rules (CODING.md section 1) broken:', file=sys.stderr)
+        for problem in problems:
+            print('  ' + problem, file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

@@ -125,7 +125,7 @@
 
     /// Fails the first loads of the document list, so a test sees the "couldn't load" state and
     /// then "Coba lagi" working. Everything else goes to the real (throwaway) store.
-    actor ScriptedDocuments: DocumentStoring {
+    actor ScriptedDocuments {
         private let store: VaultStore
         private var failingLoads: Int
 
@@ -157,8 +157,12 @@
         func restore(_ id: DocumentID) async throws { try await store.restore(id) }
     }
 
+    // In an extension: declared on the actor, a conformance to a nonisolated protocol makes Swift 6.4 mark the
+    // actor's init nonisolated, and reject it, when a file using the actor is type-checked first.
+    extension ScriptedDocuments: DocumentStoring {}
+
     /// Fails the first opens with a chosen error, then opens the real (throwaway) store.
-    actor ScriptedOpening: VaultOpening {
+    actor ScriptedOpening {
         private let store: VaultStore
         private let failure: VaultError
         private var remaining: Int
@@ -179,4 +183,6 @@
 
         func lock() async { await store.lock() }
     }
+
+    extension ScriptedOpening: VaultOpening {}  // in an extension, see ScriptedDocuments
 #endif

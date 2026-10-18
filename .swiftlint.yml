@@ -93,11 +93,17 @@ custom_rules:
     regex: "\"(vault\\.json|index\\.enc|index\\.prev\\.enc)\""
     excluded_match_kinds: [comment, doccomment]
     severity: error
+  design_system_without_domain:
+    name: DesignSystem knows no domain
+    message: "DesignSystem/ holds views and styles with no domain knowledge: no VaultCore or Parsers import, and no Platform, Documents/ or feature types (CODING section 1)."
+    included: "/Simpanin/DesignSystem/.*\\.swift"
+    regex: "^\\s*(@\\w+\\s+)*((public|package|internal|fileprivate|private)\\s+)?import\\s+(\\w+\\s+)?(VaultCore|Parsers)\\b"
+    severity: error
   hand_built_dates:
     name: Hand-built date formats
-    message: "Use the FormatStyles in Extensions/Date+Indonesian.swift; the device's own locale and formats are not what Simpanin shows."
+    message: "Use the FormatStyles in Documents/Date+Indonesian.swift; the device's own locale and formats are not what Simpanin shows."
     included: "/Simpanin/.*\\.swift"
-    excluded: "/(SimpaninTests|SimpaninUITests|Packages|Extensions)/"
+    excluded: "(/(SimpaninTests|SimpaninUITests|Packages)/|/Documents/Date\\+Indonesian\\.swift$)"
     regex: "(\\bDateFormatter\\(\\)|Locale\\(identifier: \"id([-_]ID)?\"\\)|\\.formatted\\((date|time):)"
     excluded_match_kinds: [comment, doccomment]
     severity: error
