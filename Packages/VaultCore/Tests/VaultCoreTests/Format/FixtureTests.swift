@@ -21,6 +21,7 @@ import Testing
 struct FixtureTests {
     /// <repo>/Fixtures/Synthetic/VaultV1
     static let fixtureURL = URL(filePath: #filePath)
+        .deletingLastPathComponent()  // Format
         .deletingLastPathComponent()  // VaultCoreTests
         .deletingLastPathComponent()  // Tests
         .deletingLastPathComponent()  // VaultCore
