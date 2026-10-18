@@ -25,7 +25,7 @@ Simpanin has two parts: a core that keeps documents safe, and an app around it.
 | `Extensions/` | Extensions on system types. |
 | `Debug/` | DEBUG-only tools. |
 
-Tests follow the code: VaultCore's in `Packages/VaultCore/Tests`, the app's in `SimpaninTests` with shared stand-ins in `SimpaninTests/Support/`, screens in `SimpaninUITests`.
+Tests follow the code. `SimpaninTests` mirrors the app's folders (`Lock/`, `Screens/Library/` and so on), with shared stand-ins in `Support/`. VaultCore's tests are grouped by topic (`Store/`, `Durability/`, `Recovery/`, `Format/`), the parsers' by parser. `SimpaninUITests` has a class per screen (`LibraryUITests`, `ReviewUITests`), each built on `Support/UITestCase`, which is where helpers shared between screens go.
 
 A few rules keep it that way:
 
