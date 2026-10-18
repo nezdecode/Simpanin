@@ -64,12 +64,24 @@ final class FixedClock: VaultClock {
     func advance(by seconds: TimeInterval) { date.withLock { $0 += seconds } }
 }
 
-/// The hidden banner list kept in memory, as a test needs it.
+/// The hidden banner list kept in memory, as a test needs it, with a read or a write that can fail.
 final class FakeHiddenBanner: HiddenBannerStoring {
     private let stored = Mutex(HiddenBanner())
+    private let loadFailure = Mutex<(any Error)?>(nil)
+    private let saveFailure = Mutex<(any Error)?>(nil)
     var saved: HiddenBanner { stored.withLock { $0 } }
-    func load() throws -> HiddenBanner { stored.withLock { $0 } }
-    func save(_ hidden: HiddenBanner) throws { stored.withLock { $0 = hidden } }
+    func setLoadFailure(_ error: (any Error)?) { loadFailure.withLock { $0 = error } }
+    func setSaveFailure(_ error: (any Error)?) { saveFailure.withLock { $0 = error } }
+
+    func load() throws -> HiddenBanner {
+        if let error = loadFailure.withLock({ $0 }) { throw error }
+        return stored.withLock { $0 }
+    }
+
+    func save(_ hidden: HiddenBanner) throws {
+        if let error = saveFailure.withLock({ $0 }) { throw error }
+        stored.withLock { $0 = hidden }
+    }
 }
 
 /// Stands in for VaultStore's document calls, with documents kept in memory.

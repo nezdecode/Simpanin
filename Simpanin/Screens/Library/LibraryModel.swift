@@ -52,6 +52,10 @@ final class LibraryModel {
 
     private(set) var hidden = HiddenBanner()
     private let hiddenStore: any HiddenBannerStoring
+    /// The file has been read, or holds nothing to keep, so writing it loses nothing.
+    private var hiddenLoaded = false
+    /// The list in memory has hides the file doesn't, from a failed save or an unread file.
+    private var hiddenUnsaved = false
 
     /// The documents the banner may show: the user hasn't hidden them.
     var bannerDocuments: [Document] {
@@ -65,23 +69,37 @@ final class LibraryModel {
     func hideFromBanner(_ document: Document) {
         guard let expiry = document.expiry else { return }
         hidden.hide(document.id, expiry: expiry, today: today)
+        hiddenUnsaved = true
         saveHidden()
     }
 
-    /// Loads the hidden list and drops entries for documents in neither the list nor Baru dihapus, so a
-    /// deleted and restored one stays hidden. A list that can't be read only costs the banner its hiding.
+    /// Reads the hidden list, unless memory holds hides a failed save left, and drops entries for documents
+    /// in neither the list nor Baru dihapus, so a deleted and restored one stays hidden.
     private func loadHidden() {
-        do {
-            hidden = try hiddenStore.load()
-        } catch {
-            Logger.library.error("Hidden banner list unreadable: \(ErrorSummary.describe(error), privacy: .public)")
+        if !hiddenLoaded || !hiddenUnsaved {
+            do {
+                let stored = try hiddenStore.load()
+                hidden = hiddenUnsaved ? stored.merging(hidden) : stored
+                hiddenLoaded = true
+            } catch is DecodingError {
+                // Not a hidden list at all: there's nothing in it to keep.
+                Logger.library.error("Hidden banner list corrupt, replaced")
+                hiddenLoaded = true
+                hiddenUnsaved = true
+            } catch {
+                // Maybe readable later, so it isn't overwritten meanwhile.
+                Logger.library.error("Hidden banner list unreadable: \(ErrorSummary.describe(error), privacy: .public)")
+            }
         }
-        if hidden.prune(keeping: Set((documents + deleted).map(\.id))) { saveHidden() }
+        if hidden.prune(keeping: Set((documents + deleted).map(\.id))) { hiddenUnsaved = true }
+        if hiddenUnsaved { saveHidden() }
     }
 
     private func saveHidden() {
+        guard hiddenLoaded else { return }
         do {
             try hiddenStore.save(hidden)
+            hiddenUnsaved = false
         } catch {
             Logger.library.error("Hidden banner list not saved: \(ErrorSummary.describe(error), privacy: .public)")
         }

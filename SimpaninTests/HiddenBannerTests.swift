@@ -75,6 +75,19 @@ struct HiddenBannerTests {
         #expect(hidden.hides(id, expiry: yesterday, today: CalendarDate(year: 2026, month: 10, day: 16)!))
     }
 
+    /// Hides made while the file couldn't be read are kept when it can be again.
+    @Test func mergingKeepsTheHidesOnlyOneListHas() {
+        var older = HiddenBanner()
+        var newer = HiddenBanner()
+        let stored = DocumentID()
+        let unsaved = DocumentID()
+        older.hide(stored, expiry: past, today: today)
+        newer.hide(unsaved, expiry: soon, today: today)
+        let merged = older.merging(newer)
+        #expect(merged.hides(stored, expiry: past, today: today))
+        #expect(merged.hides(unsaved, expiry: soon, today: today))
+    }
+
     @Test func orphanEntriesArePrunedButDeletedDocumentsKeepTheirs() {
         var hidden = HiddenBanner()
         let live = DocumentID()

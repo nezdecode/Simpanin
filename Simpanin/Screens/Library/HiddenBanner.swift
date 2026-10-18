@@ -37,6 +37,15 @@ nonisolated struct HiddenBanner: Codable, Equatable, Sendable {
         entries.append(Entry(id: id, expiry: expiry, whileExpired: ExpiryText.days(from: today, to: expiry) < 0))
     }
 
+    /// The entries of `newer`, plus the ones only this list has.
+    func merging(_ newer: HiddenBanner) -> HiddenBanner {
+        let newerIDs = Set(newer.entries.map(\.id))
+        var merged = self
+        merged.entries.removeAll { newerIDs.contains($0.id) }
+        merged.entries += newer.entries
+        return merged
+    }
+
     /// Drops entries for documents that no longer exist. True when any went.
     mutating func prune(keeping ids: Set<DocumentID>) -> Bool {
         let before = entries.count

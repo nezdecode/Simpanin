@@ -152,4 +152,76 @@ struct LibraryTests {
         await library.reload()
         #expect(hidden.saved.entries.isEmpty)
     }
+
+    /// A relaunch whose list fails to load must not take the hidden list with it.
+    @Test func nothingIsPrunedWhenAListFailsToLoad() async throws {
+        let (store, hidden, _) = try await hiddenSoonDocument()
+        await store.setBinFailure(.locked)
+        let relaunched = LibraryModel(store: store, hidden: hidden)
+        await relaunched.reload()
+        await relaunched.reload()
+        #expect(hidden.saved.entries.count == 1)
+    }
+
+    /// A list that can't be read is never overwritten, and hides made meanwhile join it once it can be.
+    @Test func anUnreadableHiddenListIsNeverOverwritten() async throws {
+        let (store, hidden, _) = try await hiddenSoonDocument()
+        let before = hidden.saved
+        let other = try await store.createDocument(
+            type: .simA, label: nil, expiry: soonDay, pinned: false, fields: DocumentFields([:]), pages: [Data([1])])
+        hidden.setLoadFailure(CocoaError(.fileReadUnknown))
+        let relaunched = LibraryModel(store: store, hidden: hidden)
+        await relaunched.reload()
+        relaunched.hideFromBanner(try #require(relaunched.documents.first { $0.id == other }))
+        #expect(hidden.saved == before)
+        hidden.setLoadFailure(nil)
+        await relaunched.reload()
+        #expect(Set(hidden.saved.entries.map(\.id)).count == 2)
+        #expect(relaunched.bannerDocuments.isEmpty)
+    }
+
+    /// A file that isn't a hidden list at all holds nothing to keep, so hiding replaces it.
+    @Test func aCorruptHiddenListIsReplaced() async throws {
+        let store = FakeDocuments()
+        let hidden = FakeHiddenBanner()
+        hidden.setLoadFailure(DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "not JSON")))
+        _ = try await store.createDocument(
+            type: .simC, label: nil, expiry: soonDay, pinned: false, fields: DocumentFields([:]), pages: [Data([1])])
+        let library = LibraryModel(store: store, hidden: hidden)
+        await library.reload()
+        library.hideFromBanner(try #require(library.documents.first))
+        #expect(hidden.saved.entries.count == 1)
+    }
+
+    /// A save that fails (a full disk) keeps the hide on screen and tries again at the next reload,
+    /// instead of quietly bringing the document back.
+    @Test func aFailedSaveKeepsTheHideAndRetries() async throws {
+        let store = FakeDocuments()
+        let hidden = FakeHiddenBanner()
+        _ = try await store.createDocument(
+            type: .simC, label: nil, expiry: soonDay, pinned: false, fields: DocumentFields([:]), pages: [Data([1])])
+        let library = LibraryModel(store: store, hidden: hidden)
+        await library.reload()
+        hidden.setSaveFailure(CocoaError(.fileWriteOutOfSpace))
+        library.hideFromBanner(try #require(library.documents.first))
+        await library.reload()
+        #expect(library.bannerDocuments.isEmpty)
+        hidden.setSaveFailure(nil)
+        await library.reload()
+        #expect(hidden.saved.entries.count == 1)
+    }
+
+    private var soonDay: CalendarDate { CalendarDate.day(of: .now.addingTimeInterval(5 * 86_400), in: .current) }
+
+    /// One document expiring in five days, loaded and hidden from the banner.
+    private func hiddenSoonDocument() async throws -> (FakeDocuments, FakeHiddenBanner, LibraryModel) {
+        let store = FakeDocuments()
+        let hidden = FakeHiddenBanner()
+        _ = try await store.createDocument(
+            type: .simC, label: nil, expiry: soonDay, pinned: false, fields: DocumentFields([:]), pages: [Data([1])])
+        let library = LibraryModel(store: store, hidden: hidden)
+        await library.reload()
+        library.hideFromBanner(try #require(library.documents.first))
+        return (store, hidden, library)
+    }
 }
