@@ -95,9 +95,9 @@ custom_rules:
     severity: error
   design_system_without_domain:
     name: DesignSystem knows no domain
-    message: "DesignSystem/ holds views and styles with no domain knowledge: no VaultCore, Documents/ or feature types (CODING section 1)."
+    message: "DesignSystem/ holds views and styles with no domain knowledge: no VaultCore or Parsers import, and no Platform, Documents/ or feature types (CODING section 1)."
     included: "/Simpanin/DesignSystem/.*\\.swift"
-    regex: "^\\s*import\\s+VaultCore\\b"
+    regex: "^\\s*(@\\w+\\s+)*import\\s+(\\w+\\s+)?(VaultCore|Parsers)\\b"
     severity: error
   hand_built_dates:
     name: Hand-built date formats

@@ -1,20 +1,26 @@
 #!/usr/bin/env python3
-# Checks the app's folder rules (CODING.md section 1) on the working tree. Exits 1 and lists every
-# use that crosses them. Run by scripts/hooks/pre-commit; run it by hand with:
+# Checks the app's folder rules (CODING.md section 1) on the app's files in git, the staged ones
+# included. Exits 1 and lists every use that crosses them. Run by scripts/hooks/pre-commit; run it by
+# hand with:
 #   python3 scripts/check-folder-rules.py
 #
-# A layer may use the layers listed for it. Features use each other only through the entry points
-# below, and App uses features only through them too. Debug may reach anything, and anything may
-# reach it. Types are matched by name, in code only (comments are left out).
+# A layer may use only the layers listed for it. Features use each other only through the entry
+# points below, and App uses features only through them too. Debug may reach anything, and anything
+# may reach it.
+#
+# It matches the names of types declared at the top level of a file, in code (comments and string
+# literals are left out). It doesn't see members added in extensions of system types, such as
+# Calendar.gregorianUTC from Documents/, or global functions; review catches those.
 
-import glob
+import os
 import re
+import subprocess
 import sys
 
 MAY_USE = {
     'App': {'Platform', 'Documents', 'DesignSystem', 'Debug'},
     'Features': {'Platform', 'Documents', 'DesignSystem', 'Debug'},
-    'DesignSystem': {'Platform'},  # no domain: no Documents, no features
+    'DesignSystem': set(),  # no domain: no Platform, Documents or feature types
     'Documents': {'Platform'},
     'Platform': set(),  # knows nothing about features
 }
@@ -39,23 +45,39 @@ DECLARATION = re.compile(
 
 def layer(path):
     parts = path.split('/')[1:]
-    return 'Features/' + parts[1] if parts[0] == 'Features' else parts[0]
+    if len(parts) < 2 or parts[0] not in MAY_USE and parts[0] != 'Debug':
+        return None
+    if parts[0] == 'Features':
+        return 'Features/' + parts[1] if len(parts) > 2 else None
+    return parts[0]
 
 
 def code(text):
+    """The text without comments and string literals, so neither counts as a use."""
+    text = re.sub(r'"""(?:.|\n)*?"""', '""', text)
+    text = re.sub(r'"(?:\\.|[^"\\\n])*"', '""', text)
     text = re.sub(r'/\*.*?\*/', '', text, flags=re.S)
     return re.sub(r'//[^\n]*', '', text)
 
 
 def main():
-    files = sorted(glob.glob('Simpanin/**/*.swift', recursive=True))
-    sources = {path: code(open(path, encoding='utf-8').read()) for path in files}
+    os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    listed = subprocess.run(['git', 'ls-files', '--cached', '--', 'Simpanin/*.swift'],
+                            capture_output=True, text=True, check=True).stdout.split()
+    files = sorted(path for path in listed if os.path.exists(path))
+    if not files:
+        print('check-folder-rules: found no Swift files under Simpanin/', file=sys.stderr)
+        return 1
+    problems = [f'{path}: not in a folder the rules know (CODING.md section 1)'
+                for path in files if layer(path) is None]
+    files = [path for path in files if layer(path) is not None]
+    raw = {path: open(path, encoding='utf-8').read() for path in files}
+    sources = {path: code(text) for path, text in raw.items()}
     # Column 0 only: a nested type isn't a layer's own, and Debug's types sit inside #if DEBUG.
     home = {}
-    for path in files:
-        for match in DECLARATION.finditer(open(path, encoding='utf-8').read()):
+    for path, text in raw.items():
+        for match in DECLARATION.finditer(text):
             home.setdefault(match.group(1), path)
-    problems = []
     for name, declared_in in sorted(home.items()):
         owner = layer(declared_in)
         if owner == 'Debug':
