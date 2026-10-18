@@ -18,7 +18,7 @@ import Synchronization
 
 /// Answers open() from a list of results. A gated open waits until the test releases it, like
 /// a prompt that is still on screen.
-actor FakeVault: VaultOpening {
+actor FakeVault {
     private var results: [Result<OpenReport, VaultError>]
     private(set) var openCount = 0
     private(set) var lockCount = 0
@@ -58,6 +58,10 @@ actor FakeVault: VaultOpening {
     }
 }
 
+// In an extension: declared on the actor, a conformance to a nonisolated protocol makes Swift 6.4 mark the
+// actor's init nonisolated, and reject it, when a file using the actor is type-checked first.
+extension FakeVault: VaultOpening {}
+
 final class FixedClock: VaultClock {
     private let date = Mutex(Date(timeIntervalSince1970: 1_790_000_000))
     var now: Date { date.withLock { $0 } }
@@ -85,7 +89,7 @@ final class FakeHiddenBanner: HiddenBannerStoring {
 }
 
 /// Stands in for VaultStore's document calls, with documents kept in memory.
-actor FakeDocuments: DocumentStoring {
+actor FakeDocuments {
     private var live: [Document] = []
     private var bin: [Document] = []
     private(set) var created: [DocumentFields] = []
@@ -173,8 +177,10 @@ actor FakeDocuments: DocumentStoring {
     }
 }
 
+extension FakeDocuments: DocumentStoring {}  // in an extension, see FakeVault
+
 /// Stands in for VaultStore's quarantine calls.
-actor FakeQuarantine: QuarantineStoring {
+actor FakeQuarantine {
     private(set) var quarantinedTo: [URL] = []
     private(set) var deleted: [QuarantinedVault] = []
     var listing = QuarantineListing(vaults: [], unreadableFolders: [])
@@ -202,6 +208,8 @@ actor FakeQuarantine: QuarantineStoring {
         listing.vaults.removeAll { $0 == vault }
     }
 }
+
+extension FakeQuarantine: QuarantineStoring {}  // in an extension, see FakeVault
 
 /// Answers a page with the next list of lines. When gated, the first read waits until the test releases
 /// it, like Vision still working when the vault locks; later reads answer at once, so a read the test
