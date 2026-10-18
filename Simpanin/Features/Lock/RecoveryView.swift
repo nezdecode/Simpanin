@@ -11,8 +11,8 @@
 
 import SwiftUI
 
-/// One row of the recovery table: an icon for its tone, the design doc's text, at most one more
-/// sentence, and its way out.
+/// One row of the recovery table: an icon for its tone, its main text, any steps or
+/// hint that go with it, and its way out.
 struct RecoveryView: View {
     let screen: RecoveryScreen
     let vault: AppVault

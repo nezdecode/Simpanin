@@ -21,7 +21,7 @@
         let result: String
     }
 
-    /// The open device checks from the design doc. Results are labels, statuses and attribute
+    /// The checks only a real device can answer. Results are labels, statuses and attribute
     /// names only: never file names (page files are named after ids), ids or values.
     nonisolated enum DeviceChecks {
         // MARK: - Data Protection

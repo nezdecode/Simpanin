@@ -28,7 +28,8 @@ if [ -n "$private" ]; then
 fi
 
 # Rules a linter can't see: no commit on main, no 16-digit number that isn't a test NIK, no path into
-# docs/, and a new Swift file's header as Xcode writes it (scripts/commit-checks.py).
+# docs/ or the private specification by name, a new Swift file's header as Xcode writes it, and
+# unchecked_sendable disabled only with a reason (scripts/commit-checks.py).
 if ! python3 scripts/commit-checks.py staged; then
   exit 1
 fi

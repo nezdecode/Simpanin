@@ -128,7 +128,7 @@ struct ModelTests {
 
     // MARK: index.enc plaintext
 
-    @Test func indexJSONHasDesignDocFields() throws {
+    @Test func indexJSONKeysNeverChange() throws {
         let entry = IndexEntry(
             id: docID, type: .sim, label: nil,
             createdAt: Date(timeIntervalSince1970: 1_790_000_000),

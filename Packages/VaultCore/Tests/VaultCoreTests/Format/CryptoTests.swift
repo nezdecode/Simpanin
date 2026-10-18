@@ -24,7 +24,7 @@ struct CryptoTests {
 
     // MARK: Associated data strings are part of the v1 format and must never change.
 
-    @Test func associatedDataStringsMatchDesignDoc() {
+    @Test func associatedDataStringsNeverChange() {
         #expect(AssociatedData.index(vaultID).string == "index|v1|6f9619ff-8b86-d011-b42d-00c04fc964ff")
         #expect(AssociatedData.fields(docID).string == "fields|v1|11111111-2222-3333-4444-555555555555")
         #expect(

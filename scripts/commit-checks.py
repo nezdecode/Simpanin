@@ -19,6 +19,9 @@ UUID = re.compile(r'\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4
 HEX_HASH = re.compile(r'\b(?=[0-9a-fA-F]*[a-fA-F])[0-9a-fA-F]{20,}\b')
 # A path into the private docs/ folder, nested ones included; a URL with /docs/ in it is someone else's.
 DOCS_PATH = re.compile(r'(?<![\w./:-])docs/')
+# The private design doc by name, however it's spelled; public code says the rule itself instead. A name split
+# across two lines isn't seen, as the checks read one line at a time.
+DESIGN_DOC = re.compile(r'design[\s_\u2013-]*doc', re.I)
 # Files that name docs/ to guard it.
 NAMES_DOCS_ON_PURPOSE = {'.gitignore', 'scripts/hooks/pre-commit', 'scripts/commit-checks.py'}
 CREATED_BY = re.compile(r'^//  Created by (.+) on (\d{1,2})/(\d{1,2})/(\d{2})\.$', re.M)
@@ -113,6 +116,8 @@ def staged(all_files):
             problems.append(f'{path}:{number}: {reason}')
         if path not in NAMES_DOCS_ON_PURPOSE and DOCS_PATH.search(text):
             problems.append(f"{path}:{number}: points into the private docs/ folder, which readers can't open")
+        if path != 'scripts/commit-checks.py' and DESIGN_DOC.search(text):
+            problems.append(f"{path}:{number}: names the private design doc; say the rule itself instead")
         disable = DISABLE.search(text) if path.endswith('.swift') else None
         if disable:
             scope, rest = disable.groups()
@@ -171,6 +176,8 @@ def message(path):
     if AI_COAUTHOR.search(raw):
         problems.append('a Co-Authored-By line names an AI; commits carry no AI attribution')
     for number, line in enumerate(raw_lines, 1):
+        if DESIGN_DOC.search(line):
+            problems.append(f'line {number}: names the private design doc; say what it decided instead')
         if AI_LINES.search(line):
             problems.append(f'line {number}: no "Generated with" lines, and public messages don\'t mention the Claude app')
         reason = number_problem(line)

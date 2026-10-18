@@ -18,7 +18,7 @@ Before every commit, the hooks in `scripts/hooks` refuse:
 - a commit on `main`;
 - a 16-digit number that isn't a test NIK, in the changes or the message;
 - a new Swift file whose header doesn't name you, as Xcode does, or is dated after today (headers use d/M/yy);
-- a path into the private notes folder in a public file;
+- a path into the private notes folder, or a reference to the private specification by name, in a public file or a commit message;
 - `unchecked_sendable` switched off for more than one line, or without ` - <reason>`;
 - a message that isn't `type(scope): subject` (below), runs past 100 characters, or credits an AI.
 
