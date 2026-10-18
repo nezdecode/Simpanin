@@ -17,7 +17,9 @@ Before every commit, the hooks in `scripts/hooks` refuse:
 - Swift files that fail swift-format or SwiftLint, or break the app's folder rules (CODING.md, section 1);
 - a commit on `main`;
 - a 16-digit number that isn't a test NIK, in the changes or the message;
-- a new Swift file whose header doesn't name you, as Xcode does, or is dated after today;
+- a new Swift file whose header doesn't name you, as Xcode does, or is dated after today (headers use d/M/yy);
+- a path into the private notes folder in a public file;
+- `unchecked_sendable` switched off for more than one line, or without ` - <reason>`;
 - a message that isn't `type(scope): subject` (below), runs past 100 characters, or credits an AI.
 
 Never skip them with `--no-verify`; if one is wrong, fix the check.
@@ -30,7 +32,7 @@ scripts/test.sh --only SimpaninTests # one target, or Target/Class
 scripts/install-device.sh            # build, and install on your iPhone only if the build succeeded
 ```
 
-`test.sh` fails when no test ran, which `xcodebuild` reports as a success.
+`test.sh` fails when no test ran, which `xcodebuild` reports as a success. Without the iOS 27 iPhone 17 simulator, name another with `SIMPANIN_SIMULATOR=<id>`. `install-device.sh` lets Xcode renew a provisioning profile or register your iPhone in your developer account; with several iPhones, name one with `SIMPANIN_DEVICE=<udid>`. Piping a script into `tail` hides its exit status, so check the last lines it prints.
 
 ## Privacy
 
