@@ -99,6 +99,17 @@ custom_rules:
     included: "/Simpanin/DesignSystem/.*\\.swift"
     regex: "^\\s*(@\\w+\\s+)*((public|package|internal|fileprivate|private)\\s+)?import\\s+(\\w+\\s+)?(VaultCore|Parsers)\\b"
     severity: error
+  unchecked_sendable:
+    name: Unchecked concurrency
+    message: "@unchecked Sendable and nonisolated(unsafe) need Inez's OK first, and the reason in the PR. An agreed one gets // swiftlint:disable:next unchecked_sendable - <reason>."
+    regex: "(@unchecked\\s+Sendable|nonisolated\\(unsafe\\))"
+    excluded_match_kinds: [comment, doccomment, string]
+    severity: error
+  orphan_doc_comment:
+    name: Doc comment with nothing under it
+    message: "A doc comment belongs directly above its declaration. Inserting code between them moves the comment onto the wrong one."
+    regex: "///[^\\n]*\\n[ \\t]*\\n"
+    severity: error
   hand_built_dates:
     name: Hand-built date formats
     message: "Use the FormatStyles in Documents/Date+Indonesian.swift; the device's own locale and formats are not what Simpanin shows."
