@@ -169,30 +169,37 @@
             case .failed: Text("Recognition failed.")
             case .read:
                 if let result = scan.result {
-                    row(Text(DocumentStyle.name(result.type)), label: "type", marked: result.typeNeedsCheck)
+                    row(Text(DocumentStyle.name(result.type)), label: "type", reasons: result.typeReasons)
                     ForEach(Self.shownFields, id: \.self) { key in
                         if let value = result.fields.values[key] {
-                            row(Text(verbatim: value), label: key, marked: result.needsCheck.contains(key))
-                        } else if result.needsCheck.contains(key) {
-                            row(Text(verbatim: "–"), label: key, marked: true)
+                            row(Text(verbatim: value), label: key, reasons: result.reasons[key] ?? [])
+                        } else if let reasons = result.reasons[key] {
+                            row(Text(verbatim: "–"), label: key, reasons: reasons)
                         }
                     }
                     if result.expiry != nil || result.expiryNeedsCheck {
                         row(
                             Text(verbatim: result.expiry?.displayText ?? "–"), label: "expiry",
-                            marked: result.expiryNeedsCheck)
+                            reasons: result.expiryReasons)
                     }
+                    row(
+                        Text(verbatim: result.birthDateConfirmed ? "yes" : "no"), label: "birth date confirmed",
+                        reasons: [])
                 } else {
                     Text("Not a KTP or SIM: the review screen will offer Lainnya.")
                 }
             }
         }
 
-        private func row(_ value: Text, label: String, marked: Bool) -> some View {
+        /// Every reason, first the one Periksa data shows, by its code, so a failed scan can be shared as text.
+        private func row(_ value: Text, label: String, reasons: Set<CheckReason>) -> some View {
             LabeledContent {
                 VStack(alignment: .trailing) {
                     value
-                    if marked { Text("Periksa lagi").font(.caption).foregroundStyle(Color(.onWarning)) }
+                    if !reasons.isEmpty {
+                        Text(verbatim: "Periksa lagi: " + reasons.sorted().map(\.rawValue).joined(separator: ", "))
+                            .font(.caption).foregroundStyle(Color(.onWarning))
+                    }
                 }
             } label: {
                 Text(verbatim: label)
