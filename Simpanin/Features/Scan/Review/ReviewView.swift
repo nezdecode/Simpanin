@@ -163,7 +163,9 @@ struct ReviewView: View {
             } label: {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("review.type").foregroundStyle(Color.primary)
-                    if let note = review.typeNote { WarningText(Self.text(for: note, numberKey: review.numberKey)) }
+                    if let note = review.typeNote {
+                        WarningText(Self.text(for: note, numberKey: review.numberKey, onType: true))
+                    }
                 }
             }
         }
@@ -327,20 +329,23 @@ extension ReviewView {
     }
 
     /// What shows under the type or the expiry: "Periksa lagi", with its reason when one is known.
-    static func text(for note: ReviewModel.Note, numberKey: String?) -> LocalizedStringResource {
+    static func text(for note: ReviewModel.Note, numberKey: String?, onType: Bool = false) -> LocalizedStringResource {
         switch note {
         case .refusal(let problem): reason(for: problem)
         case .mark(nil): "review.checkAgain"
-        case .mark(let reason?): "review.markWithReason \(String(localized: reasonText(reason, numberKey: numberKey)))"
+        case .mark(let reason?):
+            "review.markWithReason \(String(localized: reasonText(reason, numberKey: numberKey, onType: onType)))"
         case .dateFromAnotherType: "review.markWithReason \(String(localized: "review.dateFromAnotherType"))"
         }
     }
 
-    /// The text of a reason. Two name the number that holds the birth date: the NIK on a KTP, the number
-    /// on a SIM. The key is built as a plain string: interpolated, the code would become an argument.
-    static func reasonText(_ reason: CheckReason, numberKey: String?) -> LocalizedStringResource {
+    /// The text of a reason. Three name the number that holds the birth date: the NIK on a KTP, the number
+    /// on a SIM. On the type, a lookalike is a SIM class read with a 1 for an I. The key is built as a plain
+    /// string: interpolated, the code would become an argument.
+    static func reasonText(_ reason: CheckReason, numberKey: String?, onType: Bool = false) -> LocalizedStringResource {
         var key = "review.reason." + reason.rawValue
-        if reason == .noDateInNumber || reason == .disagreesWithBirthDate {
+        if onType && reason == .lookalike { key += ".type" }
+        if [.noDateInNumber, .disagreesWithBirthDate, .sexDisagrees].contains(reason) {
             key += numberKey == FieldKey.simNumber ? ".simNumber" : ".nik"
         }
         return LocalizedStringResource(String.LocalizationValue(key))

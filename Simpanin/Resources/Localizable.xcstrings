@@ -1387,6 +1387,17 @@
         }
       }
     },
+    "review.reason.lookalike.type" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "golongan terbaca kurang jelas."
+          }
+        }
+      }
+    },
     "review.reason.mayContinue" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1481,7 +1492,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ada lebih dari satu tanggal habis."
+            "value" : "beberapa tanggal terbaca, belum jelas mana tanggal habisnya."
           }
         }
       }
@@ -1497,13 +1508,24 @@
         }
       }
     },
-    "review.reason.sexDisagrees" : {
+    "review.reason.sexDisagrees.nik" : {
       "extractionState" : "manual",
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "jenis kelamin tidak cocok dengan NIK."
+          }
+        }
+      }
+    },
+    "review.reason.sexDisagrees.simNumber" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "jenis kelamin tidak cocok dengan nomor SIM."
           }
         }
       }

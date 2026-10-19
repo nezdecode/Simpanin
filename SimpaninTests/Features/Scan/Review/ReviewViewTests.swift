@@ -38,6 +38,21 @@ struct ReviewViewTests {
         let sim = String(
             localized: ReviewView.text(for: .mark(.disagreesWithBirthDate), numberKey: FieldKey.simNumber))
         #expect(sim == "Periksa lagi: nomor dan tanggal lahir tidak cocok.")
+        let sex = String(localized: ReviewView.text(for: .mark(.sexDisagrees), numberKey: FieldKey.simNumber))
+        #expect(sex == "Periksa lagi: jenis kelamin tidak cocok dengan nomor SIM.")
+    }
+
+    /// On the type, a lookalike is a SIM class read with a 1 for an I.
+    @Test func aLookalikeOnTheTypeSpeaksOfTheClass() {
+        let type = String(localized: ReviewView.text(for: .mark(.lookalike), numberKey: nil, onType: true))
+        #expect(type == "Periksa lagi: golongan terbaca kurang jelas.")
+        let field = String(localized: ReviewView.text(for: .mark(.lookalike), numberKey: FieldKey.nik))
+        #expect(field == "Periksa lagi: ada huruf yang terbaca mirip angka.")
+    }
+
+    @Test func severalDatesDontClaimEitherIsTheExpiry() {
+        let text = String(localized: ReviewView.text(for: .mark(.severalDates), numberKey: nil))
+        #expect(text == "Periksa lagi: beberapa tanggal terbaca, belum jelas mana tanggal habisnya.")
     }
 
     @Test func aMarkWithoutAReasonIsPlain() {
