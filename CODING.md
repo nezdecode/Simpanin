@@ -8,7 +8,7 @@ Simpanin has two parts: a core that keeps documents safe, and an app around it.
 
 **VaultCore** (`Packages/VaultCore`) holds everything about storing documents: encryption, the file format, the order of writes, recovery and purging. It imports only Foundation and Crypto, so its tests run on a Mac without a simulator. It reaches the platform through small protocols (`KeyStore`, `VaultClock`, `FileProtector`) that the app implements. `VaultStore` is an actor and the only way in, and every change goes through its write order. The document model is in `Models.swift`; everything it writes to disk is in `Format.swift`. If logic doesn't need UIKit, SwiftUI, the Keychain or Face ID, it probably belongs here.
 
-**Parsers** (`Packages/VaultCore/Sources/Parsers`) turns recognised text into a document type and its fields, and marks what the user should check again. It's a separate target in the same package: it uses VaultCore's model, but VaultCore never depends on it. Text recognition stays in the app, so the parsers are tested on plain text on a Mac.
+**Parsers** (`Packages/VaultCore/Sources/Parsers`) turns recognised text into a document type and its fields, and marks what the user should check again, with every reason as a `CheckReason` code; the app turns the first into text. It's a separate target in the same package: it uses VaultCore's model, but VaultCore never depends on it. Text recognition stays in the app, so the parsers are tested on plain text on a Mac.
 
 **The app** (`Simpanin/`) is organised by feature, around a few shared layers:
 
@@ -95,7 +95,8 @@ A style type built on a system style keeps what the system gives for free: press
 
 **Design details that keep coming back:**
 
-- Colours come from the asset catalog's generated symbols, `Color(.warning)`, never `Color("Warning")`: a typo then fails to compile instead of showing nothing. Every colour has a Dark Mode variant, and text keeps a contrast of at least 4.5:1 (white on the dark-mode accent didn't).
+- Colours come from the asset catalog's generated symbols, `Color(.warning)`, never `Color("Warning")`: a typo then fails to compile instead of showing nothing. Every colour has a Dark Mode variant, and text keeps a contrast of at least 4.5:1 (white on the dark-mode accent didn't). A ground colour is never text: `Warning` is a notice card's ground and `OnWarning` its text, and "Periksa lagi" drawn in `Warning` was barely visible on a form row. `ColorContrastTests` checks the pairs that matter.
+- A refusal and a mark look different. A refusal (`RefusalText`, red with a circled "!") is what has to change before an action works; a mark (`WarningText`, "Periksa lagi: <reason>", amber with a triangle) can be left as it is. A refusal replaces a mark, and VoiceOver reads either in the field's label.
 - Every text the user sees is in `Localizable.xcstrings` under a short key. What the user typed and numbers use `Text(verbatim:)`, so they're never looked up as keys. DEBUG-only screens may use plain strings.
 - Layouts work at accessibility text sizes (the list drops to one column).
 - Decorative images are hidden from VoiceOver; the text next to them says what they mean.
