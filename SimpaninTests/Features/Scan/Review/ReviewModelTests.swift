@@ -66,7 +66,7 @@ struct ReviewModelTests {
         #expect(review.fieldKeys == [FieldKey.simNumber, FieldKey.name, FieldKey.birthDate])
         #expect(review.hasExpiry)
         #expect(review.expiry == CalendarDate(year: 2027, month: 1, day: 4))
-        #expect(review.expiryNeedsCheck)
+        #expect(review.expiryNote != nil)
     }
 
     /// Text the parsers don't know: the user picks the type.
@@ -74,7 +74,7 @@ struct ReviewModelTests {
         let review = model()
         review.load(nil, pages: [try page()])
         #expect(review.type == .other)
-        #expect(review.typeNeedsCheck)
+        #expect(review.typeNote != nil)
         #expect(review.fieldKeys.isEmpty)
     }
 
@@ -113,7 +113,7 @@ struct ReviewModelTests {
         review.load(Self.sim, pages: [try page()])
         review.setExpiry(CalendarDate(year: 2028, month: 1, day: 4))
         #expect(review.expiry == CalendarDate(year: 2028, month: 1, day: 4))
-        #expect(!review.expiryNeedsCheck)
+        #expect(review.expiryNote == nil)
     }
 
     /// An expired SIM is real, not a misread: its expiry isn't marked for having passed.
@@ -122,7 +122,7 @@ struct ReviewModelTests {
         let expired = ParsedDocument(
             type: .simC, fields: DocumentFields([:]), expiry: CalendarDate(year: 2001, month: 1, day: 4))
         review.load(expired, pages: [try page()])
-        #expect(!review.expiryNeedsCheck)
+        #expect(review.expiryNote == nil)
         #expect(!review.expiryMissing)
     }
 
@@ -138,9 +138,9 @@ struct ReviewModelTests {
     @Test func pickingATypeClearsItsMark() throws {
         let review = model()
         review.load(nil, pages: [try page()])
-        #expect(review.typeNeedsCheck)
+        #expect(review.typeNote != nil)
         review.type = .ktp
-        #expect(!review.typeNeedsCheck)
+        #expect(review.typeNote == nil)
     }
 
     /// A type, a SIM class or a date picked by hand is the user's choice too, and a rescan would undo it.

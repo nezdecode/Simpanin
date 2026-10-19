@@ -84,9 +84,6 @@ final class ReviewModel {
     /// replace it.
     var hasUserChanges: Bool { values != scanned || type != scannedType || expiry != scannedExpiry }
 
-    var typeNeedsCheck: Bool { typeNote != nil }
-    var expiryNeedsCheck: Bool { expiryNote != nil }
-
     /// After a scan or a rescan: every field comes from the new pages. The label stays.
     func load(_ result: ParsedDocument?, pages: [CGImage]) {
         self.pages = pages
@@ -134,15 +131,23 @@ final class ReviewModel {
             // Dashes and spaces are only for display. An old SIM's 14 digits hold no date, so they give nil.
             let agrees = NIK.agrees(
                 values[number, default: ""].filter { $0.isASCII && $0.isNumber }, withBirthDate: birth)
-        else { return }
+        else {
+            // One of them can't be compared any more, so the other no longer disagrees with anything.
+            for key in [numberKey, FieldKey.birthDate].compactMap(\.self) { drop(.disagreesWithBirthDate, from: key) }
+            return
+        }
         for key in [number, FieldKey.birthDate] {
             if agrees {
-                marked[key]?.remove(.disagreesWithBirthDate)
-                if marked[key]?.isEmpty == true { marked[key] = nil }
+                drop(.disagreesWithBirthDate, from: key)
             } else {
                 marked[key, default: []].insert(.disagreesWithBirthDate)
             }
         }
+    }
+
+    private func drop(_ reason: CheckReason, from key: String) {
+        marked[key]?.remove(reason)
+        if marked[key]?.isEmpty == true { marked[key] = nil }
     }
 
     func setExpiry(_ date: CalendarDate?) {
@@ -231,13 +236,21 @@ extension ReviewModel {
 
     func note(for key: String) -> Note? {
         if let problem = problems[key] { return .refusal(problem) }
-        return marked[key]?.min().map(Note.mark)
+        var reasons = marked[key] ?? []
+        // These speak of the scanned document's number and layout, which another kind of document doesn't have.
+        if Self.dateKind(type) != Self.dateKind(scannedType) {
+            reasons.subtract([.disagreesWithBirthDate, .mixedLayout])
+        }
+        return reasons.min().map(Note.mark)
     }
 
     var typeNote: Note? { typeReasons.min().map(Note.mark) }
 
     var expiryNote: Note? {
-        if expiry != nil, Self.dateKind(type) != Self.dateKind(expiryType) { return .dateFromAnotherType }
+        // What was said of the date belongs to the kind of document it was read or picked for.
+        if Self.dateKind(type) != Self.dateKind(expiryType) {
+            return expiry != nil ? .dateFromAnotherType : marksMissingExpiry ? .mark(nil) : nil
+        }
         if let reason = expiryReasons.min() { return .mark(reason) }
         // Switched to a SIM by hand, nothing was read, so no reason is true.
         return marksMissingExpiry ? .mark(nil) : nil

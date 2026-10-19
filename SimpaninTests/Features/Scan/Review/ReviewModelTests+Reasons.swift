@@ -92,7 +92,8 @@ extension ReviewModelTests {
         #expect(review.note(for: FieldKey.birthDate) == .mark(.disagreesWithBirthDate))
     }
 
-    /// An old number holds no birth date, so nothing is compared.
+    /// An old number holds no birth date, so nothing is compared. This can't fail on its own: `NIK.agrees`
+    /// gives nil for 14 digits, which NIKTests' aNIKWithoutADateSaysNothing guards. It shows the case here.
     @Test func anOldSIMNumberIsNeverCheckedAgainstTheBirthDate() throws {
         let review = model()
         review.load(Self.sim, pages: [try page()])
@@ -214,5 +215,41 @@ extension ReviewModelTests {
         review.load(Self.confirmedKTP, pages: [try page()])
         #expect(review.marked.isEmpty)
         #expect(review.showsBirthDateMatch)
+    }
+
+    /// An STNK or a passport has no parser yet, so its empty date isn't a misread, whatever the SIM scan said.
+    @Test func aSIMsMissingExpiryIsntMarkedOnAnotherKind() throws {
+        let review = model()
+        let scan = ParsedDocument(type: .simC, fields: DocumentFields([:]), expiry: nil, expiryReasons: [.notFound])
+        review.load(scan, pages: [try page()])
+        #expect(review.expiryNote == .mark(.notFound))
+        review.type = .stnk
+        #expect(review.expiryNote == nil)
+    }
+
+    /// A SIM's number and birth date disagreeing says nothing about a KTP, whose NIK is another field.
+    @Test func aTypeChangeHidesReasonsAboutTheOtherDocument() throws {
+        let review = model()
+        let scan = ParsedDocument(
+            type: .simA, fields: Self.confirmedSIM.fields, expiry: nil,
+            reasons: [
+                FieldKey.simNumber: [.disagreesWithBirthDate],
+                FieldKey.birthDate: [.disagreesWithBirthDate, .lookalike],
+            ])
+        review.load(scan, pages: [try page()])
+        review.type = .ktp
+        #expect(review.note(for: FieldKey.birthDate) == .mark(.lookalike))
+        review.type = .simA
+        #expect(review.note(for: FieldKey.birthDate) == .mark(.disagreesWithBirthDate))
+    }
+
+    /// Once one of the two can't be compared, the other no longer disagrees with anything.
+    @Test func clearingTheNIKClearsTheDisagreement() throws {
+        let review = model()
+        review.load(Self.confirmedKTP, pages: [try page()])
+        review.setValue("18-08-1990", for: FieldKey.birthDate)
+        #expect(review.note(for: FieldKey.birthDate) == .mark(.disagreesWithBirthDate))
+        review.setValue("", for: FieldKey.nik)
+        #expect(review.marked[FieldKey.birthDate] == nil)
     }
 }
