@@ -18,12 +18,12 @@ final class ScanFlowUITests: UITestCase {
         openReview(app)
         XCTAssertEqual(app.textFields["review.field.nik"].value as? String, "0012341708900001")
         XCTAssertEqual(app.textFields["review.field.birthDate"].value as? String, "17-08-1990")
-        // The synthetic name has a 0 for an O, so it's marked.
-        XCTAssertTrue(app.staticTexts["Periksa lagi"].exists)
+        // The synthetic name has a 0 for an O, so it's marked; VoiceOver reads the reason with the field.
+        XCTAssertTrue(app.textFields["review.field.name"].label.contains("periksa lagi"))
         screenshot("20 review a scanned KTP")
 
         replace(app.textFields["review.field.name"], with: "BUDI CONTOH")
-        XCTAssertFalse(app.staticTexts["Periksa lagi"].exists)
+        XCTAssertEqual(app.textFields["review.field.name"].label, "Nama")
         app.textFields["review.label"].tap()
         // Return moves on to the NIK, and Selesai closes its number pad; Simpan waits until then.
         app.textFields["review.label"].typeText("Ibu\n")

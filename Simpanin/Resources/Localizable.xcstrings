@@ -1024,6 +1024,17 @@
         }
       }
     },
+    "review.birthDateMatch" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cocok dengan tanggal lahir"
+          }
+        }
+      }
+    },
     "review.checkAgain" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1031,6 +1042,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Periksa lagi"
+          }
+        }
+      }
+    },
+    "review.dateFromAnotherType" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "tanggal ini dibaca untuk jenis dokumen lain."
           }
         }
       }
@@ -1156,6 +1178,17 @@
         }
       }
     },
+    "review.labelWithMark %@ %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@, periksa lagi: %2$@"
+          }
+        }
+      }
+    },
     "review.labelWithReason %@ %@" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1163,6 +1196,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%1$@, perlu diperbaiki: %2$@"
+          }
+        }
+      }
+    },
+    "review.markWithReason %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Periksa lagi: %@"
           }
         }
       }
@@ -1262,6 +1306,226 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Membaca dokumen…"
+          }
+        }
+      }
+    },
+    "review.reason.classUnclear" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "golongan tidak terbaca."
+          }
+        }
+      }
+    },
+    "review.reason.disagreesWithBirthDate.nik" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "NIK dan tanggal lahir tidak cocok."
+          }
+        }
+      }
+    },
+    "review.reason.disagreesWithBirthDate.simNumber" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nomor dan tanggal lahir tidak cocok."
+          }
+        }
+      }
+    },
+    "review.reason.expiryUnconfirmed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "belum bisa dicek karena tanggal lahir tidak terbaca."
+          }
+        }
+      }
+    },
+    "review.reason.implausibleExpiry" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "tanggal ini tidak masuk akal untuk SIM."
+          }
+        }
+      }
+    },
+    "review.reason.impossibleDate" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "tanggal ini tidak mungkin."
+          }
+        }
+      }
+    },
+    "review.reason.lookalike" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ada huruf yang terbaca mirip angka."
+          }
+        }
+      }
+    },
+    "review.reason.lookalike.type" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "golongan terbaca kurang jelas."
+          }
+        }
+      }
+    },
+    "review.reason.mayContinue" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nama mungkin berlanjut ke baris berikutnya."
+          }
+        }
+      }
+    },
+    "review.reason.mixedLayout" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "tata letak kartu tidak dikenali."
+          }
+        }
+      }
+    },
+    "review.reason.noDateInNumber.nik" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "bagian tanggal lahir di NIK tidak masuk akal."
+          }
+        }
+      }
+    },
+    "review.reason.noDateInNumber.simNumber" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "bagian tanggal lahir di nomor tidak masuk akal."
+          }
+        }
+      }
+    },
+    "review.reason.noDocumentRecognized" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "jenis dokumen tidak dikenali. Pilih jenisnya."
+          }
+        }
+      }
+    },
+    "review.reason.notFound" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "tidak terbaca dari kartu."
+          }
+        }
+      }
+    },
+    "review.reason.oddCharacters" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ada karakter yang tidak biasa untuk nama."
+          }
+        }
+      }
+    },
+    "review.reason.readFromAnotherLine" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "dibaca dari baris lain, belum bisa dipastikan."
+          }
+        }
+      }
+    },
+    "review.reason.severalDates" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "beberapa tanggal terbaca, belum jelas mana tanggal habisnya."
+          }
+        }
+      }
+    },
+    "review.reason.severalNumbers" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ada lebih dari satu nomor di kartu."
+          }
+        }
+      }
+    },
+    "review.reason.sexDisagrees.nik" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "jenis kelamin tidak cocok dengan NIK."
+          }
+        }
+      }
+    },
+    "review.reason.sexDisagrees.simNumber" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "jenis kelamin tidak cocok dengan nomor SIM."
           }
         }
       }

@@ -129,7 +129,8 @@ final class ReviewUITests: UITestCase {
         XCTAssertTrue(app.staticTexts["Pajak berlaku sampai"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Tanggal pajak tahunan, bukan masa berlaku STNK 5 tahun."].exists)
         XCTAssertTrue(app.staticTexts["Belum diisi"].exists)
-        XCTAssertFalse(app.staticTexts["Periksa lagi"].exists)
+        let marks = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH %@", "Periksa lagi"))
+        XCTAssertEqual(marks.count, 0)
         screenshot("29 STNK tax date")
     }
 

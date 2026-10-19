@@ -35,5 +35,7 @@ struct NIKTests {
     /// A NIK too short to hold a date says nothing, so nothing is marked because of it.
     @Test func aNIKWithoutADateSaysNothing() {
         #expect(NIK.agrees("00123417", withBirthDate: birth) == nil)
+        // An old SIM's number: 14 digits, no date.
+        #expect(NIK.agrees("00000000000001", withBirthDate: birth) == nil)
     }
 }

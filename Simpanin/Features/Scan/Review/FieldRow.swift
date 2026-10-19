@@ -12,14 +12,18 @@
 import SwiftUI
 import VaultCore
 
-/// One field of the document: its title, the value, and under it why Simpan refused it or "Periksa lagi".
+/// One field of the document: its title, the value, and under it why Simpan refused it or why it's marked
+/// "Periksa lagi". VoiceOver reads either with the field's name.
 struct FieldRow: View {
     let key: String
     let value: String
     let isLast: Bool
-    let warning: LocalizedStringResource?
-    /// Why Simpan refused the value, read by VoiceOver with the field's name.
+    /// Why Simpan refused the value. It replaces a mark: it's what has to change before Simpan works.
     let refusal: LocalizedStringResource?
+    /// Why the value is marked, without "Periksa lagi".
+    let markReason: LocalizedStringResource?
+    /// "Cocok dengan tanggal lahir", under the number only.
+    let footnote: LocalizedStringResource?
     var focus: FocusState<String?>.Binding
     var voiceOverFocus: AccessibilityFocusState<String?>.Binding
     let onChange: (String) -> Void
@@ -50,14 +54,26 @@ struct FieldRow: View {
             .font(key == FieldKey.nik || key == FieldKey.simNumber ? .body.monospaced() : .body)
             // In the label, not a hint: hints can be turned off and are often cut short. A TextField ignores
             // accessibilityValue (its value is always the text), so the reason goes with the field's name.
-            .accessibilityLabel(
-                refusal.map { Text("review.labelWithReason \(title) \(String(localized: $0))") } ?? Text(title)
-            )
+            .accessibilityLabel(accessibilityLabel)
             .accessibilityFocused(voiceOverFocus, equals: key)
             .accessibilityIdentifier("review.field.\(key)")
-            // A refusal is already in the field's label, so VoiceOver doesn't read it twice; Periksa lagi stays.
-            if let warning { WarningText(warning).accessibilityHidden(refusal != nil) }
+            // Both are in the field's label already, so VoiceOver doesn't read them twice.
+            if let refusal {
+                RefusalText(refusal).accessibilityHidden(true)
+            } else if let markReason {
+                WarningText("review.markWithReason \(String(localized: markReason))").accessibilityHidden(true)
+            }
+            if let footnote {
+                Text(footnote).font(.footnote).foregroundStyle(.secondary).accessibilityIdentifier(
+                    "review.birthDateMatch")
+            }
         }
+    }
+
+    private var accessibilityLabel: Text {
+        if let refusal { return Text("review.labelWithReason \(title) \(String(localized: refusal))") }
+        if let markReason { return Text("review.labelWithMark \(title) \(String(localized: markReason))") }
+        return Text(title)
     }
 }
 

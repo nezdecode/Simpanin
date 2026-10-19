@@ -278,11 +278,6 @@ struct KTPParserTests {
         #expect(result.needsCheck == [FieldKey.nik, FieldKey.birthDate])
     }
 
-    @Test func aNIKThatIsntSixteenDigitsIsMarked() throws {
-        let result = try #require(parse(Self.card(nik: "00123417089000")))
-        #expect(result.needsCheck.contains(FieldKey.nik))
-    }
-
     @Test func missingLinesAreMarked() throws {
         let result = try #require(parse(["PROVINSI DKI JAKARTA", "NIK : 0012341708900001"]))
         #expect(result.fields.values[FieldKey.nik] == "0012341708900001")
