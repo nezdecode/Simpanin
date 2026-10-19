@@ -21,62 +21,56 @@ public enum SIMParser {
         guard lines.contains(where: isTitle) else { return nil }
         let card = LabeledLines(lines: lines, labels: labels)
         var fields: [String: String] = [:]
-        var needsCheck: Set<String> = []
+        var reasons: [String: Set<CheckReason>] = [:]
 
         let labeled = hasLabels(lines)
         let number = readNumber(in: lines, digits: expectedDigits(lines))
         let classEnd = classEnd(in: lines, labeled: labeled, numberLine: number.lines.min())
-        let (type, classNeedsCheck) = simClass(in: lines[..<(classEnd ?? lines.endIndex)])
-        let typeNeedsCheck = classNeedsCheck || classEnd == nil
+        let (type, classReasons) = simClass(in: lines[..<(classEnd ?? lines.endIndex)])
+        var typeReasons = classReasons
+        if classEnd == nil { typeReasons.insert(.classUnclear) }
 
         if let text = number.text { fields[FieldKey.simNumber] = text }
-        if number.needsCheck { needsCheck.insert(FieldKey.simNumber) }
         let nikDate = number.nikDate
 
         let (name, birthText, birthLine) = nameAndBirth(
             in: lines, labeled: labeled, card: card, numberLine: number.lines.min())
-        if let name {
-            fields[FieldKey.name] = name.text
-            // A misread character is only marked, since what it should have been can't be known.
-            if name.continues || !name.text.looksLikeAName { needsCheck.insert(FieldKey.name) }
-        } else {
-            needsCheck.insert(FieldKey.name)
-        }
-
+        fields[FieldKey.name] = name?.text
         let read = birthText?.lastDateReadingLookalikes
         let birth = read?.date
-        if let birth, let read {
-            fields[FieldKey.birthDate] = birth.string
-            // A NIK only holds the last two digits of the year, and an old number holds none.
-            let implausible = birth.year < 1900 || birth > today
-            // A corrected date is a guess, unless a new card's number, the NIK, agrees with it.
-            // A corrected number confirms nothing: the same misread letter could be in both.
-            let confirmed = number.corrected ? false : nikDate?.matches(birth) ?? false
-            if implausible || (read.corrected && !confirmed) { needsCheck.insert(FieldKey.birthDate) }
-        } else {
-            needsCheck.insert(FieldKey.birthDate)
-        }
+        fields[FieldKey.birthDate] = birth?.string
+        reasons[FieldKey.simNumber] = number.reasons
+        reasons[FieldKey.name] = name.map(nameReasons) ?? [.notFound]
+        reasons[FieldKey.birthDate] = birthReasons(read, number: number, today: today)
 
         if let nikDate {
-            if let birth, !nikDate.matches(birth) { needsCheck.formUnion([FieldKey.simNumber, FieldKey.birthDate]) }
+            if let birth, !nikDate.matches(birth) {
+                reasons[FieldKey.simNumber, default: []].insert(.disagreesWithBirthDate)
+                reasons[FieldKey.birthDate, default: []].insert(.disagreesWithBirthDate)
+            }
             if let woman = isWoman(sexField(in: lines)), woman != nikDate.woman {
-                needsCheck.insert(FieldKey.simNumber)
+                reasons[FieldKey.simNumber, default: []].insert(.sexDisagrees)
             }
         }
 
-        let (expiry, expiryNeedsCheck) = readExpiry(
+        var (expiry, expiryReasons) = readExpiry(
             in: lines, labeled: labeled, number: number, birth: (birthText, birthLine, birth), today: today)
-        let conflict = conflictMarks(labeled: labeled, digits: number.digits)
+        if isMixedLayout(labeled: labeled, digits: number.digits) {
+            for key in [FieldKey.simNumber, FieldKey.name, FieldKey.birthDate] {
+                reasons[key, default: []].insert(.mixedLayout)
+            }
+            typeReasons.insert(.mixedLayout)
+            expiryReasons.insert(.mixedLayout)
+        }
 
         return ParsedDocument(
-            type: type, fields: DocumentFields(fields), expiry: expiry, needsCheck: needsCheck.union(conflict),
-            typeNeedsCheck: typeNeedsCheck || !conflict.isEmpty, expiryNeedsCheck: expiryNeedsCheck || !conflict.isEmpty
-        )
+            type: type, fields: DocumentFields(fields), expiry: expiry, reasons: reasons.filter { !$0.value.isEmpty },
+            typeReasons: typeReasons, expiryReasons: expiryReasons)
     }
 
     private struct ReadNumber {
         var text: String?
-        var needsCheck = true
+        var reasons: Set<CheckReason> = [.notFound]
         /// Lookalike letters were swapped for digits.
         var corrected = false
         /// The date inside the number, when it's a NIK.
@@ -94,11 +88,15 @@ public enum SIMParser {
         read.text = found.text
         read.digits = found.digits.count
         read.corrected = found.corrected
-        read.needsCheck = found.corrected || numbers.count > 1 || (expected.map { $0 != found.digits.count } ?? false)
+        read.reasons = []
+        if found.corrected { read.reasons.insert(.lookalike) }
+        if numbers.count > 1 { read.reasons.insert(.severalNumbers) }
+        // A number that doesn't fit the layout is a sign of both layouts at once.
+        if let expected, expected != found.digits.count { read.reasons.insert(.mixedLayout) }
         // From July 2024 the number is the holder's NIK, so it's checked like one.
         if found.digits.count == 16 {
             read.nikDate = NIK.birthDate(in: found.digits)
-            if read.nikDate == nil { read.needsCheck = true }
+            if read.nikDate == nil { read.reasons.insert(.noDateInNumber) }
         }
         return read
     }
@@ -120,13 +118,14 @@ public enum SIMParser {
     private static func readExpiry(
         in lines: [String], setAside: (Int) -> Bool, birth: CalendarDate?, today: CalendarDate
     ) -> (
-        CalendarDate?, needsCheck: Bool
+        CalendarDate?, reasons: Set<CheckReason>
     ) {
         let candidates = lines.indices.filter { !setAside($0) }.flatMap { lines[$0].numericDates }
-        guard candidates.count == 1, let expiry = candidates.first else { return (nil, true) }
+        guard let expiry = candidates.first else { return (nil, [.notFound]) }
+        guard candidates.count == 1 else { return (nil, [.severalDates]) }
         // Without the birth date, its line can't be set aside, so the one date left may be the birth date.
-        guard let birth else { return (expiry, true) }
-        return (expiry, implausible(expiry, birth: birth, today: today))
+        guard let birth else { return (expiry, [.expiryUnconfirmed]) }
+        return (expiry, implausible(expiry, birth: birth, today: today) ? [.implausibleExpiry] : [])
     }
 
     /// A SIM is valid for five years from issue and needs its holder to be 17, so anything outside is a misread.
@@ -152,7 +151,7 @@ public enum SIMParser {
     private static func readExpiry(
         in lines: [String], labeled: Bool, number: ReadNumber,
         birth: (text: String?, line: Int?, date: CalendarDate?), today: CalendarDate
-    ) -> (CalendarDate?, needsCheck: Bool) {
+    ) -> (CalendarDate?, reasons: Set<CheckReason>) {
         guard labeled else {
             return oldExpiry(in: lines, after: birth.line, setAside: number.lines, birth: birth.date, today: today)
         }
@@ -171,10 +170,9 @@ public enum SIMParser {
     }
 
     /// Signs of both layouts at once, a 14-digit number with labels or a NIK without: the rules aren't
-    /// mixed, and every field, the expiry included, is left to the user. Empty when the layout is clear.
-    private static func conflictMarks(labeled: Bool, digits: Int?) -> Set<String> {
-        guard (labeled && digits == 14) || (!labeled && digits == 16) else { return [] }
-        return [FieldKey.simNumber, FieldKey.name, FieldKey.birthDate]
+    /// mixed, and every field, the expiry included, is left to the user.
+    private static func isMixedLayout(labeled: Bool, digits: Int?) -> Bool {
+        (labeled && digits == 14) || (!labeled && digits == 16)
     }
 
     /// A field number read alone on its line, with or without its dot: "1.", "2", "3 ,".
@@ -206,8 +204,8 @@ public enum SIMParser {
     }
 
     /// The name on an older card: field 1, or else the one line between the number and the birth line.
-    /// `continues` is set when it can't be trusted as read: more than one line, or a line number removed
-    /// from a misread "1BUDI" or "I. BUDI". Without the number or the birth line, nothing is guessed.
+    /// `continues` is set for more than one line, and `misread` for a line number removed from "1BUDI" or
+    /// "I. BUDI". Without the number or the birth line, nothing is guessed.
     private static func oldName(in lines: [String], number: Int?, birth: Int?) -> LabeledLines.Found? {
         // A "1." counts only between the number and the birth line, or above a birth line when the number
         // wasn't read: the back of a card numbers its rules too, and they have no birth line.
@@ -234,19 +232,21 @@ public enum SIMParser {
         }
         .filter { !$0.isEmpty }
         guard !candidates.isEmpty else { return nil }
-        return LabeledLines.Found(text: candidates.joined(separator: " "), continues: candidates.count > 1 || corrected)
+        return LabeledLines.Found(
+            text: candidates.joined(separator: " "), continues: candidates.count > 1, misread: corrected)
     }
 
     /// The expiry on an older card: the one line after the birth line that's only a date.
     private static func oldExpiry(
         in lines: [String], after birthLine: Int?, setAside: Set<Int>, birth: CalendarDate?, today: CalendarDate
-    ) -> (CalendarDate?, needsCheck: Bool) {
-        guard let birthLine, let birth, birthLine + 1 < lines.count else { return (nil, true) }
+    ) -> (CalendarDate?, reasons: Set<CheckReason>) {
+        guard let birthLine, let birth, birthLine + 1 < lines.count else { return (nil, [.notFound]) }
         let candidates = ((birthLine + 1)..<lines.count)
             .filter { !setAside.contains($0) && !lines[$0].contains(where: \.isLetter) }
             .flatMap { lines[$0].numericDates }
-        guard candidates.count == 1, let expiry = candidates.first else { return (nil, true) }
-        return (expiry, implausible(expiry, birth: birth, today: today))
+        guard let expiry = candidates.first else { return (nil, [.notFound]) }
+        guard candidates.count == 1 else { return (nil, [.severalDates]) }
+        return (expiry, implausible(expiry, birth: birth, today: today) ? [.implausibleExpiry] : [])
     }
 
     /// The labels on a card from July 2024. Older cards number their fields instead.
@@ -305,7 +305,7 @@ public enum SIMParser {
 
     /// The class as printed ("BI", "A UMUM"), with a 1, l or | read for an I. A correction, or no single
     /// class, is marked so the user picks it.
-    private static func simClass(in lines: ArraySlice<String>) -> (DocumentType, needsCheck: Bool) {
+    private static func simClass(in lines: ArraySlice<String>) -> (type: DocumentType, reasons: Set<CheckReason>) {
         var found: [DocumentType: Bool] = [:]
         for line in lines {
             let squeezed = line.uppercased().filter { $0 != " " }
@@ -315,8 +315,8 @@ public enum SIMParser {
             guard let type = classes[String(match.1) + numerals + (match.3.map(String.init) ?? "")] else { continue }
             found[type] = (found[type] ?? false) || marks != numerals
         }
-        guard found.count == 1, let (type, corrected) = found.first else { return (.sim, true) }
-        return (type, corrected)
+        guard found.count == 1, let (type, corrected) = found.first else { return (.sim, [.classUnclear]) }
+        return (type, corrected ? [.lookalike] : [])
     }
 
     /// On a card with labels: the rest of the "Jenis Kelamin/Sex" line and the values under it, up to the
@@ -337,5 +337,28 @@ public enum SIMParser {
         let man = text.contains(/\bPRIA\b/)
         let woman = text.contains(/\bWANITA\b/)
         return man == woman ? nil : woman
+    }
+}
+
+// Why a value is marked, for the review screen.
+extension SIMParser {
+    /// A misread character is only marked, since what it should have been can't be known.
+    private static func nameReasons(_ name: LabeledLines.Found) -> Set<CheckReason> {
+        var reasons: Set<CheckReason> = name.continues ? [.mayContinue] : []
+        if name.misread || !name.text.looksLikeAName { reasons.insert(.oddCharacters) }
+        return reasons
+    }
+
+    /// A corrected date is a guess, unless a new card's number, the NIK, agrees with it. A corrected number
+    /// confirms nothing: the same misread letter could be in both.
+    private static func birthReasons(
+        _ read: (date: CalendarDate, corrected: Bool)?, number: ReadNumber, today: CalendarDate
+    ) -> Set<CheckReason> {
+        guard let read else { return [.notFound] }
+        // A NIK only holds the last two digits of the year, and an old number holds none.
+        var reasons: Set<CheckReason> = read.date.year < 1900 || read.date > today ? [.impossibleDate] : []
+        let confirmed = !number.corrected && number.nikDate?.matches(read.date) == true
+        if read.corrected && !confirmed { reasons.insert(.lookalike) }
+        return reasons
     }
 }

@@ -53,7 +53,7 @@ extension ReviewModelTests {
         let old = ParsedDocument(
             type: .ktp,
             fields: DocumentFields([FieldKey.nik: "0012341708900001", FieldKey.birthDate: "1890-08-17"]),
-            expiry: nil, needsCheck: [FieldKey.birthDate])
+            expiry: nil, reasons: [FieldKey.birthDate: [.impossibleDate]])
         review.load(old, pages: [try page()])
         review.setValue("0012341708900001", for: FieldKey.nik)
         #expect(review.marked.contains(FieldKey.birthDate))
@@ -97,7 +97,7 @@ extension ReviewModelTests {
     @Test func aWrongNIKFromTheScanShowsAtOnce() throws {
         let review = model()
         let short = ParsedDocument(
-            type: .ktp, fields: DocumentFields([FieldKey.nik: "001234170890000"]), expiry: nil, needsCheck: [])
+            type: .ktp, fields: DocumentFields([FieldKey.nik: "001234170890000"]), expiry: nil)
         review.load(short, pages: [try page()])
         #expect(review.problems[FieldKey.nik] == .nikLength)
     }
@@ -151,7 +151,8 @@ extension ReviewModelTests {
     @Test func anEmptyFieldWrittenBackStaysUntouched() throws {
         let review = model()
         let noNIK = ParsedDocument(
-            type: .ktp, fields: DocumentFields([FieldKey.name: "BUDI CONTOH"]), expiry: nil, needsCheck: [FieldKey.nik])
+            type: .ktp, fields: DocumentFields([FieldKey.name: "BUDI CONTOH"]), expiry: nil,
+            reasons: [FieldKey.nik: [.notFound]])
         review.load(noNIK, pages: [try page()])
         review.setValue("", for: FieldKey.nik)
         #expect(review.marked.contains(FieldKey.nik))

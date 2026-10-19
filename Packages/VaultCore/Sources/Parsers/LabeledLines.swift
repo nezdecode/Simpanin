@@ -24,6 +24,8 @@ struct LabeledLines {
         var fromNextLine = false
         /// The line after the value isn't a label, so the value may go on there.
         var continues = false
+        /// Part of what was read was dropped as a misread, like a line number stuck to a name.
+        var misread = false
     }
 
     func contains(_ label: String) -> Bool {

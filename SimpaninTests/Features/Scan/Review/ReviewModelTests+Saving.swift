@@ -81,8 +81,7 @@ extension ReviewModelTests {
     @Test func aDateFromAnotherKindOfDocumentIsMarked() throws {
         let review = model()
         let sim = ParsedDocument(
-            type: .simC, fields: DocumentFields([:]), expiry: CalendarDate(year: 2029, month: 1, day: 4),
-            needsCheck: [])
+            type: .simC, fields: DocumentFields([:]), expiry: CalendarDate(year: 2029, month: 1, day: 4))
         review.load(sim, pages: [try page()])
         review.type = .simA
         #expect(!review.expiryNeedsCheck)

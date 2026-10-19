@@ -18,21 +18,26 @@ public struct ParsedDocument: Sendable, Equatable {
     public var type: DocumentType
     public var fields: DocumentFields
     public var expiry: CalendarDate?
-    /// Fields the parser isn't sure about, marked "Periksa lagi" on the review screen.
-    public var needsCheck: Set<String>
-    /// The type and the expiry aren't fields, so they're marked here.
-    public var typeNeedsCheck: Bool
-    public var expiryNeedsCheck: Bool
+    /// Why each field the parser isn't sure about is marked "Periksa lagi". Every reason is kept, so
+    /// fixing one, like a birth date that now matches, never hides another.
+    public var reasons: [String: Set<CheckReason>]
+    /// The type and the expiry aren't fields, so their reasons are kept here.
+    public var typeReasons: Set<CheckReason>
+    public var expiryReasons: Set<CheckReason>
+
+    public var needsCheck: Set<String> { Set(reasons.filter { !$0.value.isEmpty }.keys) }
+    public var typeNeedsCheck: Bool { !typeReasons.isEmpty }
+    public var expiryNeedsCheck: Bool { !expiryReasons.isEmpty }
 
     public init(
-        type: DocumentType, fields: DocumentFields, expiry: CalendarDate?, needsCheck: Set<String>,
-        typeNeedsCheck: Bool = false, expiryNeedsCheck: Bool = false
+        type: DocumentType, fields: DocumentFields, expiry: CalendarDate?, reasons: [String: Set<CheckReason>] = [:],
+        typeReasons: Set<CheckReason> = [], expiryReasons: Set<CheckReason> = []
     ) {
         self.type = type
         self.fields = fields
         self.expiry = expiry
-        self.needsCheck = needsCheck
-        self.typeNeedsCheck = typeNeedsCheck
-        self.expiryNeedsCheck = expiryNeedsCheck
+        self.reasons = reasons
+        self.typeReasons = typeReasons
+        self.expiryReasons = expiryReasons
     }
 }

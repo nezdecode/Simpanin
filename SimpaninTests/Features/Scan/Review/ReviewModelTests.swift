@@ -34,12 +34,12 @@ struct ReviewModelTests {
         fields: DocumentFields([
             FieldKey.nik: "0012341708900001", FieldKey.name: "BUDI C0NTOH", FieldKey.birthDate: "1990-08-17",
         ]),
-        expiry: nil, needsCheck: [FieldKey.name])
+        expiry: nil, reasons: [FieldKey.name: [.oddCharacters]])
 
     static let sim = ParsedDocument(
         type: .simC,
         fields: DocumentFields([FieldKey.simNumber: "0000-0000-000001", FieldKey.name: "BUDI CONTOH"]),
-        expiry: CalendarDate(year: 2027, month: 1, day: 4), needsCheck: [], expiryNeedsCheck: true)
+        expiry: CalendarDate(year: 2027, month: 1, day: 4), expiryReasons: [.implausibleExpiry])
 
     func model(
         _ store: FakeDocuments = FakeDocuments(), encode: @escaping @Sendable (CGImage) -> Data? = { _ in Data([1]) }
@@ -120,8 +120,7 @@ struct ReviewModelTests {
     @Test func anExpiredSIMIsNotMarked() throws {
         let review = model()
         let expired = ParsedDocument(
-            type: .simC, fields: DocumentFields([:]), expiry: CalendarDate(year: 2001, month: 1, day: 4), needsCheck: []
-        )
+            type: .simC, fields: DocumentFields([:]), expiry: CalendarDate(year: 2001, month: 1, day: 4))
         review.load(expired, pages: [try page()])
         #expect(!review.expiryNeedsCheck)
         #expect(!review.expiryMissing)
