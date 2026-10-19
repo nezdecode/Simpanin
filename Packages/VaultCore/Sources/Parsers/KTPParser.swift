@@ -61,9 +61,13 @@ public enum KTPParser {
             reasons[FieldKey.nik, default: []].insert(.disagreesWithBirthDate)
             reasons[FieldKey.birthDate, default: []].insert(.disagreesWithBirthDate)
         }
+        let confirmed =
+            birth.confirmed && !birth.corrected && reasons[FieldKey.nik, default: []].isEmpty
+            && reasons[FieldKey.birthDate, default: []].isEmpty
         // A KTP is valid for life, so it has no expiry.
         return ParsedDocument(
-            type: .ktp, fields: DocumentFields(fields), expiry: nil, reasons: reasons.filter { !$0.value.isEmpty })
+            type: .ktp, fields: DocumentFields(fields), expiry: nil, reasons: reasons.filter { !$0.value.isEmpty },
+            birthDateConfirmed: confirmed)
     }
 
     /// Nothing confirms a name, so a guessed pairing, a possible second line or a misread character is
@@ -79,9 +83,11 @@ public enum KTPParser {
     /// The birth date, why it needs checking, and whether the NIK confirms it. Two separate readings that
     /// agree confirm each other: a value from the next line, or a corrected date, is then no longer a guess.
     private static func readBirthDate(_ found: LabeledLines.Found?, nikDate: NIK.BirthDate?, today: CalendarDate) -> (
-        date: CalendarDate?, reasons: Set<CheckReason>, confirmed: Bool
+        date: CalendarDate?, reasons: Set<CheckReason>, confirmed: Bool, corrected: Bool
     ) {
-        guard let found, let read = found.text.lastDateReadingLookalikes else { return (nil, [.notFound], false) }
+        guard let found, let read = found.text.lastDateReadingLookalikes else {
+            return (nil, [.notFound], false, false)
+        }
         let confirmed = nikDate?.matches(read.date) ?? false
         var reasons: Set<CheckReason> = []
         // The NIK only holds the last two digits of the year, so a misread century passes the cross-check.
@@ -90,7 +96,7 @@ public enum KTPParser {
             if found.fromNextLine { reasons.insert(.readFromAnotherLine) }
             if read.corrected { reasons.insert(.lookalike) }
         }
-        return (read.date, reasons, confirmed)
+        return (read.date, reasons, confirmed, read.corrected)
     }
 
     /// Every label on the front of a KTP, so a label line is never taken as another label's value.

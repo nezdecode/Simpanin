@@ -24,6 +24,9 @@ public struct ParsedDocument: Sendable, Equatable {
     /// The type and the expiry aren't fields, so their reasons are kept here.
     public var typeReasons: Set<CheckReason>
     public var expiryReasons: Set<CheckReason>
+    /// The birth date inside the NIK, or a new SIM's number, matches the printed one, and nothing about
+    /// either was corrected or marked. It checks 6 of the 16 digits, so it's never shown as a verification.
+    public var birthDateConfirmed: Bool
 
     public var needsCheck: Set<String> { Set(reasons.filter { !$0.value.isEmpty }.keys) }
     public var typeNeedsCheck: Bool { !typeReasons.isEmpty }
@@ -31,7 +34,7 @@ public struct ParsedDocument: Sendable, Equatable {
 
     public init(
         type: DocumentType, fields: DocumentFields, expiry: CalendarDate?, reasons: [String: Set<CheckReason>] = [:],
-        typeReasons: Set<CheckReason> = [], expiryReasons: Set<CheckReason> = []
+        typeReasons: Set<CheckReason> = [], expiryReasons: Set<CheckReason> = [], birthDateConfirmed: Bool = false
     ) {
         self.type = type
         self.fields = fields
@@ -39,5 +42,6 @@ public struct ParsedDocument: Sendable, Equatable {
         self.reasons = reasons
         self.typeReasons = typeReasons
         self.expiryReasons = expiryReasons
+        self.birthDateConfirmed = birthDateConfirmed
     }
 }

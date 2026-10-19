@@ -111,4 +111,36 @@ extension KTPParserTests {
         let result = try #require(parse(lines))
         #expect(result.reasons[FieldKey.birthDate] == [.readFromAnotherLine])
     }
+
+    // MARK: Cocok dengan tanggal lahir
+
+    @Test func aCleanCardIsConfirmed() throws {
+        #expect(try #require(parse(Self.card())).birthDateConfirmed)
+    }
+
+    /// Two separate readings that agree confirm each other, even when the pairing was a guess.
+    @Test func aBirthDateOnTheNextLineMatchingTheNIKIsConfirmed() throws {
+        let lines = ["NIK : 0012341708900001", "Nama : BUDI CONTOH", "Tempat/Tgl Lahir", "JAKARTA, 17-08-1990"]
+        #expect(try #require(parse(lines)).birthDateConfirmed)
+    }
+
+    @Test func aCorrectedNIKIsNeverConfirmed() throws {
+        #expect(try #require(parse(Self.card(nik: "0012341708900OO1"))).birthDateConfirmed == false)
+    }
+
+    @Test func aCorrectedBirthDateIsNeverConfirmed() throws {
+        #expect(try #require(parse(Self.card(birth: "JAKARTA, l7-08-1990"))).birthDateConfirmed == false)
+    }
+
+    /// The NIK holds only the year's last two digits, so it agrees with a misread century.
+    @Test func anImpossibleBirthDateIsNeverConfirmed() throws {
+        #expect(try #require(parse(Self.card(birth: "JAKARTA, 17-08-1890"))).birthDateConfirmed == false)
+    }
+
+    @Test func aNIKWithAnotherMarkIsNeverConfirmed() throws {
+        let sex = try #require(parse(Self.card(nik: "0012345708900001", birth: "JAKARTA, 17-08-1990")))
+        #expect(sex.birthDateConfirmed == false)
+        let disagrees = try #require(parse(Self.card(birth: "JAKARTA, 18-08-1990")))
+        #expect(disagrees.birthDateConfirmed == false)
+    }
 }

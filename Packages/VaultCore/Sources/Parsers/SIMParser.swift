@@ -63,9 +63,14 @@ public enum SIMParser {
             expiryReasons.insert(.mixedLayout)
         }
 
+        // Only a new card's number holds the birth date. A disagreement or a corrected number leaves a
+        // reason on the number, so an unmarked pair agrees.
+        let confirmed =
+            nikDate != nil && read?.corrected == false && reasons[FieldKey.simNumber, default: []].isEmpty
+            && reasons[FieldKey.birthDate, default: []].isEmpty
         return ParsedDocument(
             type: type, fields: DocumentFields(fields), expiry: expiry, reasons: reasons.filter { !$0.value.isEmpty },
-            typeReasons: typeReasons, expiryReasons: expiryReasons)
+            typeReasons: typeReasons, expiryReasons: expiryReasons, birthDateConfirmed: confirmed)
     }
 
     private struct ReadNumber {

@@ -169,4 +169,37 @@ extension SIMParserTests {
         #expect(result.expiry != nil)
         #expect(result.expiryReasons == [.expiryUnconfirmed])
     }
+
+    // MARK: Cocok dengan tanggal lahir
+
+    @Test func aCleanNewCardIsConfirmed() throws {
+        #expect(try #require(parse(Self.newCard())).birthDateConfirmed)
+    }
+
+    /// An old number holds no birth date.
+    @Test func anOldCardIsNeverConfirmed() throws {
+        #expect(try #require(parse(Self.oldCard())).birthDateConfirmed == false)
+    }
+
+    /// A NIK on an old card's layout still agrees with the date, but nothing on that card can be trusted.
+    @Test func aMixedLayoutIsNeverConfirmed() throws {
+        #expect(try #require(parse(Self.oldCard(number: "0012341708900001"))).birthDateConfirmed == false)
+    }
+
+    @Test func aCorrectedNumberOrDateIsNeverConfirmed() throws {
+        for lines in [Self.newCard(number: "0012341708900OO1"), Self.newCard(birth: "JAKARTA, l7-08-1990")] {
+            #expect(try #require(parse(lines)).birthDateConfirmed == false)
+        }
+    }
+
+    /// The number holds only the year's last two digits, so it agrees with a misread century.
+    @Test func anImpossibleBirthDateIsNeverConfirmed() throws {
+        #expect(try #require(parse(Self.newCard(birth: "JAKARTA, 17-08-2090"))).birthDateConfirmed == false)
+    }
+
+    @Test func severalNumbersAreNeverConfirmed() throws {
+        var lines = Self.newCard()
+        lines.insert("0012341708900009", at: 4)
+        #expect(try #require(parse(lines)).birthDateConfirmed == false)
+    }
 }
