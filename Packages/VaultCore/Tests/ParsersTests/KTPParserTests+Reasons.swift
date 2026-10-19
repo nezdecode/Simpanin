@@ -31,6 +31,11 @@ extension KTPParserTests {
             let result = try #require(parse(Self.card(nik: nik)))
             #expect(result.reasons[FieldKey.nik] == nil, "\(nik)")
         }
+        // Not even a correction or a guessed line: the refusal is what shows.
+        let corrected = try #require(parse(Self.card(nik: "OO123417089000")))
+        #expect(corrected.reasons[FieldKey.nik] == nil)
+        let nextLine = try #require(parse(["NIK", ": 00123417089000", "Nama : BUDI CONTOH"]))
+        #expect(nextLine.reasons[FieldKey.nik] == nil)
     }
 
     @Test func aNIKWithoutADateGivesNoDateInNumber() throws {

@@ -35,7 +35,6 @@ public enum KTPParser {
             if corrected { reasons[FieldKey.nik, default: []].insert(.lookalike) }
         }
         let nikDate = NIK.birthDate(in: number)
-        // A NIK of the wrong length, or with a letter left, is refused by the review screen instead.
         if number.isEmpty {
             reasons[FieldKey.nik, default: []].insert(.notFound)
         } else if nikDate == nil, number.count == 16, number.allSatisfy(\.isASCIIDigit) {
@@ -61,6 +60,8 @@ public enum KTPParser {
             reasons[FieldKey.nik, default: []].insert(.disagreesWithBirthDate)
             reasons[FieldKey.birthDate, default: []].insert(.disagreesWithBirthDate)
         }
+        // A NIK of the wrong length, or with a letter left, is refused by the review screen; that's what shows.
+        if !number.isEmpty, number.count != 16 || !number.allSatisfy(\.isASCIIDigit) { reasons[FieldKey.nik] = nil }
         let confirmed =
             birth.confirmed && !birth.corrected && reasons[FieldKey.nik, default: []].isEmpty
             && reasons[FieldKey.birthDate, default: []].isEmpty
