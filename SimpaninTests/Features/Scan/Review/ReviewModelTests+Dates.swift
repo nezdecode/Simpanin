@@ -56,7 +56,7 @@ extension ReviewModelTests {
             expiry: nil, reasons: [FieldKey.birthDate: [.impossibleDate]])
         review.load(old, pages: [try page()])
         review.setValue("0012341708900001", for: FieldKey.nik)
-        #expect(review.marked.contains(FieldKey.birthDate))
+        #expect(review.marked[FieldKey.birthDate] == [.impossibleDate])
     }
 
     /// Typed on a number pad: the dashes come by themselves, and only before a digit, so deleting one works.
@@ -73,11 +73,11 @@ extension ReviewModelTests {
         let review = model()
         review.load(Self.ktp, pages: [try page()])
         review.setValue("18-08-1990", for: FieldKey.birthDate)
-        #expect(review.marked.isSuperset(of: [FieldKey.nik, FieldKey.birthDate]))
+        #expect(Set(review.marked.keys).isSuperset(of: [FieldKey.nik, FieldKey.birthDate]))
         review.setValue("17-08-1990", for: FieldKey.birthDate)
-        #expect(review.marked.isDisjoint(with: [FieldKey.nik, FieldKey.birthDate]))
+        #expect(Set(review.marked.keys).isDisjoint(with: [FieldKey.nik, FieldKey.birthDate]))
         review.setValue("0012341808900001", for: FieldKey.nik)
-        #expect(review.marked.isSuperset(of: [FieldKey.nik, FieldKey.birthDate]))
+        #expect(Set(review.marked.keys).isSuperset(of: [FieldKey.nik, FieldKey.birthDate]))
     }
 
     /// A NIK that isn't 16 digits is judged when the field is left, not while it's being typed.
@@ -155,7 +155,7 @@ extension ReviewModelTests {
             reasons: [FieldKey.nik: [.notFound]])
         review.load(noNIK, pages: [try page()])
         review.setValue("", for: FieldKey.nik)
-        #expect(review.marked.contains(FieldKey.nik))
+        #expect(review.marked[FieldKey.nik] == [.notFound])
         #expect(!review.hasUserChanges)
     }
 }

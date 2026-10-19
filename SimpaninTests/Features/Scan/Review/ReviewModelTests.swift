@@ -56,7 +56,7 @@ struct ReviewModelTests {
         #expect(review.pages.count == 2)
         #expect(review.fieldKeys == [FieldKey.nik, FieldKey.name, FieldKey.birthDate])
         #expect(review.values[FieldKey.nik] == "0012341708900001")
-        #expect(review.marked == [FieldKey.name])
+        #expect(Set(review.marked.keys) == [FieldKey.name])
         #expect(!review.hasExpiry)
     }
 
@@ -226,7 +226,7 @@ struct ReviewModelTests {
         review.load(Self.ktp, pages: [try page()])
         review.setValue("31-02-1990", for: FieldKey.birthDate)
         #expect(await !review.save())
-        #expect(review.marked.contains(FieldKey.birthDate))
+        #expect(review.note(for: FieldKey.birthDate) == .refusal(.notADate))
         #expect(review.problems[FieldKey.birthDate] == .notADate)
         #expect(await store.created.isEmpty)
     }

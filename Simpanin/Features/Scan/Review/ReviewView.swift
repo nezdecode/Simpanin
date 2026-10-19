@@ -199,7 +199,7 @@ struct ReviewView: View {
     private func fieldRow(_ key: String) -> some View {
         FieldRow(
             key: key, value: review.values[key] ?? "", isLast: key == review.fieldKeys.last,
-            warning: review.problems[key].map(Self.reason) ?? (review.marked.contains(key) ? "review.checkAgain" : nil),
+            warning: review.problems[key].map(Self.reason) ?? (review.marked[key] != nil ? "review.checkAgain" : nil),
             refusal: review.problems[key].map(Self.reason), focus: $focusedField, voiceOverFocus: $voiceOverField,
             onChange: { review.setValue($0, for: key) }, onSubmit: { focusField(after: key) })
     }
