@@ -34,9 +34,3 @@ struct RefusalText: View {
         .background(Color(Self.ground), in: .rect(cornerRadius: 6))
     }
 }
-
-extension ColorResource {
-    /// Something has to change before an action works. The same red as a destructive button, so the
-    /// app has one red.
-    static let error = ColorResource.destructive
-}
