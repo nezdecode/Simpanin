@@ -9,6 +9,7 @@
 //  file, You can obtain one at https://mozilla.org/MPL/2.0/.
 //
 
+import Parsers
 import SwiftUI
 import VaultCore
 
@@ -162,7 +163,7 @@ struct ReviewView: View {
             } label: {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("review.type").foregroundStyle(Color.primary)
-                    if review.typeNeedsCheck { WarningText("review.checkAgain") }
+                    if let note = review.typeNote { WarningText(Self.text(for: note, numberKey: review.numberKey)) }
                 }
             }
         }
@@ -188,7 +189,7 @@ struct ReviewView: View {
                 } icon: {
                     Image(systemName: "exclamationmark.triangle")
                 }
-                .foregroundStyle(Color(.warning))
+                .foregroundStyle(Color(.onWarning))
                 .accessibilityIdentifier("review.labelIsNumber")
             } else {
                 Text("review.labelHint")
@@ -197,11 +198,17 @@ struct ReviewView: View {
     }
 
     private func fieldRow(_ key: String) -> some View {
-        FieldRow(
-            key: key, value: review.values[key] ?? "", isLast: key == review.fieldKeys.last,
-            warning: review.problems[key].map(Self.reason) ?? (review.marked[key] != nil ? "review.checkAgain" : nil),
-            refusal: review.problems[key].map(Self.reason), focus: $focusedField, voiceOverFocus: $voiceOverField,
-            onChange: { review.setValue($0, for: key) }, onSubmit: { focusField(after: key) })
+        let note = review.note(for: key)
+        var refusal: LocalizedStringResource?
+        var markReason: LocalizedStringResource?
+        if case .refusal(let problem) = note { refusal = Self.reason(for: problem) }
+        if case .mark(let reason?) = note { markReason = Self.reasonText(reason, numberKey: review.numberKey) }
+        let match = review.showsBirthDateMatch && key == review.numberKey
+        return FieldRow(
+            key: key, value: review.values[key] ?? "", isLast: key == review.fieldKeys.last, refusal: refusal,
+            markReason: markReason, footnote: match ? "review.birthDateMatch" : nil, focus: $focusedField,
+            voiceOverFocus: $voiceOverField, onChange: { review.setValue($0, for: key) },
+            onSubmit: { focusField(after: key) })
     }
 
     @ViewBuilder private var validitySection: some View {
@@ -265,7 +272,7 @@ struct ReviewView: View {
     private var expiryLabel: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(expiryTitle).foregroundStyle(Color.primary)
-            if review.expiryNeedsCheck || review.marksMissingExpiry { WarningText("review.checkAgain") }
+            if let note = review.expiryNote { WarningText(Self.text(for: note, numberKey: review.numberKey)) }
         }
     }
 }
@@ -319,7 +326,27 @@ extension ReviewView {
         }
     }
 
-    private static func reason(for problem: ReviewModel.FieldProblem) -> LocalizedStringResource {
+    /// What shows under the type or the expiry: "Periksa lagi", with its reason when one is known.
+    static func text(for note: ReviewModel.Note, numberKey: String?) -> LocalizedStringResource {
+        switch note {
+        case .refusal(let problem): reason(for: problem)
+        case .mark(nil): "review.checkAgain"
+        case .mark(let reason?): "review.markWithReason \(String(localized: reasonText(reason, numberKey: numberKey)))"
+        case .dateFromAnotherType: "review.markWithReason \(String(localized: "review.dateFromAnotherType"))"
+        }
+    }
+
+    /// The text of a reason. Two name the number that holds the birth date: the NIK on a KTP, the number
+    /// on a SIM. The key is built as a plain string: interpolated, the code would become an argument.
+    static func reasonText(_ reason: CheckReason, numberKey: String?) -> LocalizedStringResource {
+        var key = "review.reason." + reason.rawValue
+        if reason == .noDateInNumber || reason == .disagreesWithBirthDate {
+            key += numberKey == FieldKey.simNumber ? ".simNumber" : ".nik"
+        }
+        return LocalizedStringResource(String.LocalizationValue(key))
+    }
+
+    static func reason(for problem: ReviewModel.FieldProblem) -> LocalizedStringResource {
         switch problem {
         case .notADate: "review.notADate"
         case .birthDateInFuture: "review.birthDateInFuture"

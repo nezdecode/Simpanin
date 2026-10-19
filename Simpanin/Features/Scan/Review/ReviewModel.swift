@@ -252,7 +252,7 @@ extension ReviewModel {
     }
 
     /// The field whose digits hold the birth date: a KTP's NIK, or a SIM's number.
-    private var numberKey: String? { fieldKeys.first { $0 == FieldKey.nik || $0 == FieldKey.simNumber } }
+    var numberKey: String? { fieldKeys.first { $0 == FieldKey.nik || $0 == FieldKey.simNumber } }
 
     /// A KTP saved without its NIK is asked about first, never refused: an old photo can be blurred there.
     var nikMissing: Bool { fieldKeys.contains(FieldKey.nik) && Self.trimmed(values[FieldKey.nik]).isEmpty }

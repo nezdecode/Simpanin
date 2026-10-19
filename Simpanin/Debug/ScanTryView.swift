@@ -192,7 +192,7 @@
             LabeledContent {
                 VStack(alignment: .trailing) {
                     value
-                    if marked { Text("Periksa lagi").font(.caption).foregroundStyle(Color(.warning)) }
+                    if marked { Text("Periksa lagi").font(.caption).foregroundStyle(Color(.onWarning)) }
                 }
             } label: {
                 Text(verbatim: label)

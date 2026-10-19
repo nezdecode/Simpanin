@@ -17,6 +17,9 @@ struct WarningText: View {
 
     init(_ text: LocalizedStringResource) { self.text = text }
 
+    /// Warning is the ground of a notice card; text on a plain row needs its own colour to be read.
+    static let color = ColorResource.onWarning
+
     var body: some View {
         Label {
             Text(text)
@@ -24,6 +27,6 @@ struct WarningText: View {
             Image(systemName: "exclamationmark.triangle")
         }
         .font(.footnote)
-        .foregroundStyle(Color(.warning))
+        .foregroundStyle(Color(Self.color))
     }
 }
