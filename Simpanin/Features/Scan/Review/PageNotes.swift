@@ -51,7 +51,7 @@ nonisolated struct PageNotes: Equatable {
     init(reading: ScanReading?, pageCount: Int, chosen: DocumentType) {
         self.chosen = chosen
         guard let reading, reading.pages.count == pageCount, let source = reading.source,
-            let sourceType = reading.pages[source]?.type
+            reading.pages.indices.contains(source), let sourceType = reading.pages[source]?.type
         else {
             (notes, self.source, showsSource, self.sourceType) = (
                 Array(repeating: nil, count: pageCount), nil, false, nil
@@ -82,21 +82,31 @@ nonisolated struct PageNotes: Equatable {
         }
     }
 
-    /// The footer's sentences after "N halaman", in order: the source line, the badged notes (more than two
-    /// of them become one), then the neutral ones.
-    var sentences: [String] {
-        var sentences: [String] = []
-        if showsSource, let source { sentences.append(String(localized: "pageNotes.source \(source + 1)")) }
+    /// A line of the footer; a marked one is about a page with a badge, and is shown like it.
+    struct Line: Equatable {
+        let text: String
+        let isMarked: Bool
+    }
+
+    /// The footer's lines after "N halaman", in order: the source line, the badged notes (more than two of
+    /// them become one), then the neutral ones.
+    var lines: [Line] {
+        var lines: [Line] = []
+        if showsSource, let source {
+            lines.append(Line(text: String(localized: "pageNotes.source \(source + 1)"), isMarked: false))
+        }
         let groups = groups
         let marked = groups.filter(\.note.isMarked)
         if marked.count > 2 {
-            sentences.append(several)
+            lines.append(Line(text: several, isMarked: true))
         } else {
-            sentences += marked.map(sentence)
+            lines += marked.map { Line(text: sentence($0), isMarked: true) }
         }
-        sentences += groups.filter { !$0.note.isMarked }.map(sentence)
-        return sentences
+        lines += groups.filter { !$0.note.isMarked }.map { Line(text: sentence($0), isMarked: false) }
+        return lines
     }
+
+    var sentences: [String] { lines.map(\.text) }
 
     /// What VoiceOver reads for a page, counted from 0.
     func accessibilityLabel(page: Int) -> String {
@@ -135,7 +145,7 @@ nonisolated struct PageNotes: Equatable {
     /// With no source to compare with, the chosen type is what the other documents aren't. The key is built
     /// as a plain string: interpolated, the type would become an argument.
     private var several: String {
-        guard notes.contains(where: { if case .readAs = $0 { true } else { false } }) else {
+        guard ReviewModel.fieldKeys(for: chosen).isEmpty else {
             return String(localized: "pageNotes.several")
         }
         return String(localized: String.LocalizationValue("pageNotes.severalNot." + chosen.rawValue))

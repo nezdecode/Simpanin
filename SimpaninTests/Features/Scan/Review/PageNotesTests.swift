@@ -147,6 +147,15 @@ struct PageNotesTests {
             ])
     }
 
+    /// Its key is built at run time, so a type added to the picker without its text would show the key.
+    @Test func everyTypeWithoutAParserHasItsCollapseText() {
+        let pages: [(DocumentType, PageRelation)?] = [(.ktp, .source), (.simA, .otherType), (.simC, .otherType)]
+        for type in TypePickerView.types where ReviewModel.fieldKeys(for: type).isEmpty {
+            let sentence = Self.notes(pages, chosen: type).sentences.first ?? ""
+            #expect(sentence.hasPrefix("Beberapa halaman terbaca sebagai dokumen lain, bukan "), "\(type.rawValue)")
+        }
+    }
+
     @Test func neutralNotesStayAfterTheCollapse() {
         let notes = Self.notes([
             (.ktp, .source), (.simA, .otherType), (.simC, .otherType), (.ktp, .otherCard), (.ktp, .unsureNumber),
@@ -167,6 +176,12 @@ struct PageNotesTests {
             Self.notes([(.ktp, .source), (.sim, .otherType)]).sentences == [
                 "Halaman 2 terbaca sebagai SIM, bukan KTP di halaman 1."
             ])
+    }
+
+    /// Lines about a page with a badge are shown like a mark; the source line and neutral notes aren't.
+    @Test func linesAboutBadgedPagesAreMarked() {
+        let notes = Self.notes([nil, (.ktp, .source), (.simA, .otherType), (.ktp, .unsureNumber)])
+        #expect(notes.lines.map(\.isMarked) == [false, true, false])
     }
 
     @Test func theFooterOrder() {

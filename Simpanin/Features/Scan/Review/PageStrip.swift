@@ -30,7 +30,7 @@ struct PageStrip: View {
 
     private func thumbnail(_ page: CGImage, index: Int) -> some View {
         let number = index + 1
-        let marked = index < notes.notes.count && notes.notes[index]?.isMarked == true
+        let marked = notes.notes[index]?.isMarked == true
         return
             // A fixed size, whatever the text size: it's a preview, and the footer carries the text.
             Image(decorative: page, scale: 1)

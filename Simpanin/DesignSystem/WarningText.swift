@@ -11,18 +11,22 @@
 
 import SwiftUI
 
-/// Under a field: "Periksa lagi" when the parser isn't sure, or why Simpan refused it.
+/// Something to look at again, in amber with a triangle: "Periksa lagi" under a field, or a page of a scan
+/// read as another document.
 struct WarningText: View {
-    let text: LocalizedStringResource
+    let text: Text
 
-    init(_ text: LocalizedStringResource) { self.text = text }
+    init(_ text: LocalizedStringResource) { self.text = Text(text) }
+
+    /// A text already put together from the catalog, never looked up as a key.
+    init(verbatim text: String) { self.text = Text(verbatim: text) }
 
     /// Warning is the ground of a notice card; text on a plain row needs its own colour to be read.
     static let color = ColorResource.onWarning
 
     var body: some View {
         Label {
-            Text(text)
+            text
         } icon: {
             Image(systemName: "exclamationmark.triangle")
         }

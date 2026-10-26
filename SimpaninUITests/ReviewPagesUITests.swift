@@ -65,8 +65,11 @@ final class ReviewPagesUITests: UITestCase {
         XCTAssertTrue(app.navigationBars["Dokumen"].waitForExistence(timeout: 10))
         app.buttons["list.scan"].tap()
         XCTAssertTrue(app.descendants(matching: .any)["review.page.2"].waitForExistence(timeout: 10))
+        XCTAssertEqual(
+            app.descendants(matching: .any)["review.page.2"].label, "Halaman 2 dari 2, terbaca sebagai SIM A")
         screenshot("38 page badges at the largest text size")
         app.swipeUp()
+        XCTAssertTrue(app.staticTexts["Halaman 2 terbaca sebagai SIM A, bukan KTP di halaman 1."].exists)
         screenshot("39 page notes at the largest text size")
     }
 }
