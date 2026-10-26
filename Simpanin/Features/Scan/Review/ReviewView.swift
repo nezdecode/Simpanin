@@ -61,7 +61,10 @@ struct ReviewView: View {
                             ForEach(review.fieldKeys, id: \.self) { key in fieldRow(key) }
                         }
                     }
-                    validitySection
+                    ValiditySection(
+                        type: review.type, hasExpiry: review.hasExpiry, expiry: review.expiry,
+                        note: review.expiryNote.map { Self.text(for: $0, numberKey: review.numberKey) },
+                        onChange: { review.setExpiry($0) }, onPick: { expiryPickerShown = true })
                 }
             }
             // Nothing in the form changes while a save is being written.
@@ -146,7 +149,7 @@ struct ReviewView: View {
                 Button(action: onSave) { Text("review.saveAnyway") }
             }
             .sheet(isPresented: $expiryPickerShown) {
-                ExpiryCalendar(title: expiryTitle) { review.setExpiry($0) }
+                ExpiryCalendar(title: ValiditySection.title(for: review.type)) { review.setExpiry($0) }
             }
         }
     }
@@ -222,63 +225,6 @@ struct ReviewView: View {
             markReason: markReason, footnote: match ? "review.birthDateMatch" : nil, focus: $focusedField,
             voiceOverFocus: $voiceOverField, onChange: { review.setValue($0, for: key) },
             onSubmit: { focusField(after: key) })
-    }
-
-    @ViewBuilder private var validitySection: some View {
-        if review.type == .ktp {
-            Section {
-                LabeledContent {
-                    Text("review.forLife")
-                } label: {
-                    Text("review.validFor")
-                }
-            }
-        } else if review.hasExpiry {
-            Section {
-                if let expiry = review.expiry, let shown = expiry.utcDate {
-                    DatePicker(
-                        selection: Binding(get: { shown }, set: { review.setExpiry(CalendarDate(utc: $0)) }),
-                        displayedComponents: .date
-                    ) {
-                        expiryLabel
-                    }
-                    // Expiry dates are calendar days in UTC, so no time zone moves them.
-                    .environment(\.timeZone, .gmt)
-                    .accessibilityIdentifier("review.expiry")
-                } else {
-                    // Never shown as today: an empty expiry has to be seen, not saved quietly as none. The
-                    // calendar sets nothing until Pilih, so opening it can't fill in a date by itself.
-                    Button {
-                        expiryPickerShown = true
-                    } label: {
-                        LabeledContent {
-                            HStack(spacing: 6) {
-                                Text("review.expiryMissing")
-                                DisclosureChevron()
-                            }
-                        } label: {
-                            expiryLabel
-                        }
-                    }
-                    .accessibilityIdentifier("review.expiry")
-                }
-            } footer: {
-                // The date printed on an STNK is its five-year validity; the one that matters is the tax.
-                if review.type == .stnk { Text("review.taxHint") }
-            }
-        }
-    }
-
-    /// An STNK's date is its yearly tax; every other type's is its validity.
-    private var expiryTitle: LocalizedStringResource {
-        review.type == .stnk ? "review.taxValidUntil" : "review.validUntil"
-    }
-
-    private var expiryLabel: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(expiryTitle).foregroundStyle(Color.primary)
-            if let note = review.expiryNote { WarningText(Self.text(for: note, numberKey: review.numberKey)) }
-        }
     }
 }
 
