@@ -184,6 +184,54 @@ struct PageNotesTests {
         #expect(notes.lines.map(\.isMarked) == [false, true, false])
     }
 
+    // MARK: Saving
+
+    @Test func theSaveWarningSaysWhatTheOtherPageWasReadAs() {
+        #expect(
+            Self.notes(Self.ktpAndSIM).saveWarning
+                == "Halaman 2 terbaca sebagai SIM A. Semua halaman akan disimpan di KTP ini.")
+        #expect(
+            Self.notes([(.ktp, .source), (.ktp, .otherCard)]).saveWarning
+                == "Halaman 2 terbaca sebagai KTP lain. Semua halaman akan disimpan di KTP ini.")
+    }
+
+    /// Neutral notes claim nothing, so Simpan asks nothing.
+    @Test func noBadgeNoSaveWarning() {
+        #expect(Self.notes([(.ktp, .source)]).saveWarning == nil)
+        #expect(Self.notes([(.simA, .source), (.sim, .classUnread)], chosen: .simA).saveWarning == nil)
+        #expect(Self.notes([(.ktp, .source), (.ktp, .unsureNumber), nil]).saveWarning == nil)
+    }
+
+    @Test func theSaveWarningJoinsPagesAndCollapsesLikeTheFooter() {
+        let two = Self.notes([(.ktp, .source), (.simA, .otherType), (.simA, .otherType), (.ktp, .otherCard)])
+        #expect(
+            two.saveWarning
+                == "Halaman 2 dan 3 terbaca sebagai SIM A. Halaman 4 terbaca sebagai KTP lain. "
+                + "Semua halaman akan disimpan di KTP ini.")
+        let three = Self.notes([(.ktp, .source), (.simA, .otherType), (.simC, .otherType), (.ktp, .otherCard)])
+        #expect(
+            three.saveWarning
+                == "Beberapa halaman terbaca sebagai dokumen lain. Semua halaman akan disimpan di KTP ini.")
+    }
+
+    @Test func theSaveWarningNamesTheChosenType() {
+        #expect(
+            Self.notes(Self.ktpAndSIM, chosen: .passport).saveWarning
+                == "Halaman 1 terbaca sebagai KTP. Halaman 2 terbaca sebagai SIM A. "
+                + "Semua halaman akan disimpan di paspor ini.")
+        #expect(
+            Self.notes([(.ktp, .source), (.simA, .otherType)], chosen: .simA).saveWarning
+                == "Halaman 2 terbaca sebagai SIM A. Semua halaman akan disimpan di SIM A ini.")
+    }
+
+    /// Its key is built at run time too.
+    @Test func everyTypeWithoutAParserHasItsSaveText() {
+        for type in TypePickerView.types where ReviewModel.fieldKeys(for: type).isEmpty {
+            let warning = Self.notes(Self.ktpAndSIM, chosen: type).saveWarning ?? ""
+            #expect(warning.contains(". Semua halaman akan disimpan di "), "\(type.rawValue)")
+        }
+    }
+
     @Test func theFooterOrder() {
         let notes = Self.notes([nil, (.ktp, .source), (.simA, .otherType)])
         #expect(

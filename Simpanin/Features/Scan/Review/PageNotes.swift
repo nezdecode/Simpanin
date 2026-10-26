@@ -108,6 +108,31 @@ nonisolated struct PageNotes: Equatable {
 
     var sentences: [String] { lines.map(\.text) }
 
+    /// What Simpan asks when a page has a badge: what those pages were read as, and that every page is
+    /// saved with the chosen document. Nil without a badge.
+    var saveWarning: String? {
+        let marked = groups.filter(\.note.isMarked)
+        guard !marked.isEmpty else { return nil }
+        // The chosen type is named in the second sentence, so another type says only what it was read as.
+        let read =
+            marked.count > 2
+            ? [String(localized: "pageNotes.several")]
+            : marked.map { group in
+                guard case .otherType(let type) = group.note else { return sentence(group) }
+                return sentence((.readAs(type), group.pages))
+            }
+        return (read + [savedInto]).joined(separator: " ")
+    }
+
+    /// "Semua halaman akan disimpan di KTP ini." A type without a parser has its own words, like "paspor";
+    /// its key is built as a plain string, as in `several`.
+    private var savedInto: String {
+        guard ReviewModel.fieldKeys(for: chosen).isEmpty else {
+            return String(localized: "pageNotes.savedInto \(Self.name(chosen))")
+        }
+        return String(localized: String.LocalizationValue("pageNotes.savedInto." + chosen.rawValue))
+    }
+
     /// What VoiceOver reads for a page, counted from 0.
     func accessibilityLabel(page: Int) -> String {
         guard let detail = detail(page) else { return String(localized: "review.pageOf \(page + 1) \(notes.count)") }

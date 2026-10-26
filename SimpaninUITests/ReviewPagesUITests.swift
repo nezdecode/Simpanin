@@ -55,6 +55,38 @@ final class ReviewPagesUITests: UITestCase {
         XCTAssertFalse(app.staticTexts["Isian dibaca dari halaman 1."].exists)
     }
 
+    /// A page read as another document is saved with this one, so Simpan asks; Kembali stays on the screen.
+    @MainActor
+    func testSimpanAsksAboutAnotherDocument() throws {
+        let app = launch(["-SimpaninUITestScanKTPAndSIM"])
+        openReview(app)
+        app.buttons["review.save"].tap()
+        let alert = app.alerts["Ada halaman dari dokumen lain"]
+        XCTAssertTrue(alert.waitForExistence(timeout: 5))
+        XCTAssertTrue(
+            alert.staticTexts["Halaman 2 terbaca sebagai SIM A. Semua halaman akan disimpan di KTP ini."].exists)
+        screenshot("40 another document on Simpan")
+        alert.buttons["Kembali"].tap()
+        XCTAssertTrue(app.buttons["review.save"].waitForExistence(timeout: 5))
+        app.buttons["review.save"].tap()
+        XCTAssertTrue(alert.waitForExistence(timeout: 5))
+        alert.buttons["Simpan"].tap()
+        XCTAssertTrue(rows(app).firstMatch.waitForExistence(timeout: 10))
+    }
+
+    /// The empty NIK is asked about first; Simpan saja then asks about the other page.
+    @MainActor
+    func testTheNIKIsAskedAboutBeforeTheOtherPage() throws {
+        let app = launch(["-SimpaninUITestScanKTPAndSIM"])
+        openReview(app)
+        replace(app.textFields["review.field.nik"], with: "")
+        app.navigationBars.buttons["review.done"].tap()
+        app.buttons["review.save"].tap()
+        XCTAssertTrue(app.buttons["Simpan saja"].waitForExistence(timeout: 5))
+        app.buttons["Simpan saja"].tap()
+        XCTAssertTrue(app.alerts["Ada halaman dari dokumen lain"].waitForExistence(timeout: 5))
+    }
+
     /// The badge keeps its size; the footer's sentences wrap.
     @MainActor
     func testPageNotesAtTheLargestTextSize() throws {

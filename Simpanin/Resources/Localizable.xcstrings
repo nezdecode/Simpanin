@@ -958,6 +958,83 @@
         }
       }
     },
+    "pageNotes.savedInto %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Semua halaman akan disimpan di %@ ini."
+          }
+        }
+      }
+    },
+    "pageNotes.savedInto.bpjs" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Semua halaman akan disimpan di BPJS ini."
+          }
+        }
+      }
+    },
+    "pageNotes.savedInto.kk" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Semua halaman akan disimpan di kartu keluarga ini."
+          }
+        }
+      }
+    },
+    "pageNotes.savedInto.npwp" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Semua halaman akan disimpan di NPWP ini."
+          }
+        }
+      }
+    },
+    "pageNotes.savedInto.other" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Semua halaman akan disimpan di dokumen ini."
+          }
+        }
+      }
+    },
+    "pageNotes.savedInto.passport" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Semua halaman akan disimpan di paspor ini."
+          }
+        }
+      }
+    },
+    "pageNotes.savedInto.stnk" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Semua halaman akan disimpan di STNK ini."
+          }
+        }
+      }
+    },
     "pageNotes.several" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1343,6 +1420,17 @@
         }
       }
     },
+    "review.goBack" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kembali"
+          }
+        }
+      }
+    },
     "review.keepChecking" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1471,6 +1559,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dibaca di HP ini. Tidak ada yang dikirim ke internet."
+          }
+        }
+      }
+    },
+    "review.otherPages" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ada halaman dari dokumen lain"
+          }
+        }
+      }
+    },
+    "review.otherPages.save" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Simpan"
           }
         }
       }

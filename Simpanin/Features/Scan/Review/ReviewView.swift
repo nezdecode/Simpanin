@@ -24,6 +24,7 @@ struct ReviewView: View {
     @State private var typePickerShown = false
     @State private var expiryPickerShown = false
     @State private var nikMissingShown = false
+    @State private var otherPagesShown = false
     @State private var discardConfirmShown = false
     /// Counts refused taps on Simpan, for the error haptic.
     @State private var refusals = 0
@@ -146,7 +147,18 @@ struct ReviewView: View {
                     Text("review.fillNIK")
                 }
                 .keyboardShortcut(.defaultAction)
-                Button(action: onSave) { Text("review.saveAnyway") }
+                Button(action: saveWithoutNIK) { Text("review.saveAnyway") }
+            }
+            // A page read as another document is saved with this one, so Simpan says so; Kembali is the default.
+            .alert(Text("review.otherPages"), isPresented: $otherPagesShown) {
+                Button {
+                } label: {
+                    Text("review.goBack")
+                }
+                .keyboardShortcut(.defaultAction)
+                Button(action: onSave) { Text("review.otherPages.save") }
+            } message: {
+                Text(verbatim: review.pageNotes.saveWarning ?? "")
             }
             .sheet(isPresented: $expiryPickerShown) {
                 ExpiryCalendar(title: ValiditySection.title(for: review.type)) { review.setExpiry($0) }
@@ -232,7 +244,7 @@ extension ReviewView {
     private static let labelFocus = "label"
 
     /// Simpan never quietly does nothing: a wrong value takes the user to its field, with a haptic, and
-    /// VoiceOver reads the reason; an empty NIK is asked about first.
+    /// VoiceOver reads the reason; an empty NIK is asked about first, then a page read as another document.
     private func trySave() {
         if let key = review.firstProblem() {
             focusedField = key
@@ -241,13 +253,24 @@ extension ReviewView {
             voiceOverField = key
         } else if review.nikMissing {
             nikMissingShown = true
+        } else if review.pageNotes.saveWarning != nil {
+            otherPagesShown = true
         } else {
             onSave()
         }
     }
 
-    /// Focus set while an alert is still closing can be dropped, so it waits until the alert is off the
-    /// screen, checked rather than guessed with a delay. After two seconds at most it runs anyway.
+    private func saveWithoutNIK() {
+        if review.pageNotes.saveWarning != nil {
+            afterAlertCloses { otherPagesShown = true }
+        } else {
+            onSave()
+        }
+    }
+
+    /// Focus set, or an alert shown, while an alert is still closing can be dropped, so it waits until the
+    /// alert is off the screen, checked rather than guessed with a delay. After two seconds at most it runs
+    /// anyway.
     private func afterAlertCloses(_ action: @escaping () -> Void) {
         Task {
             for _ in 0..<40 where UIApplication.shared.showsAlert {
