@@ -169,7 +169,7 @@ struct ReviewView: View {
             LabeledContent {
                 HStack(spacing: 6) {
                     Text(DocumentStyle.name(review.type))
-                    opensSheet
+                    DisclosureChevron()
                 }
             } label: {
                 VStack(alignment: .leading, spacing: 4) {
@@ -254,7 +254,7 @@ struct ReviewView: View {
                         LabeledContent {
                             HStack(spacing: 6) {
                                 Text("review.expiryMissing")
-                                opensSheet
+                                DisclosureChevron()
                             }
                         } label: {
                             expiryLabel
@@ -272,14 +272,6 @@ struct ReviewView: View {
     /// An STNK's date is its yearly tax; every other type's is its validity.
     private var expiryTitle: LocalizedStringResource {
         review.type == .stnk ? "review.taxValidUntil" : "review.validUntil"
-    }
-
-    /// The chevron of a row that opens a sheet, as in Settings, so the row reads as something to tap.
-    private var opensSheet: some View {
-        Image(systemName: "chevron.forward")
-            .font(.footnote.weight(.semibold))
-            .foregroundStyle(.tertiary)
-            .accessibilityHidden(true)
     }
 
     private var expiryLabel: some View {
