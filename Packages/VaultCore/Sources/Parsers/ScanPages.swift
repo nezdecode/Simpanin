@@ -21,8 +21,11 @@ public enum ScanPages {
         guard let first = fronts.first, let firstPage = pages[first] else {
             return ScanReading(source: nil, pages: pages.map { _ in nil })
         }
-        // Among the pages of the first front's card, the best read; on a tie, the first.
-        let group = fronts.filter { pages[$0].map { isSameCard($0, firstPage) } ?? false }
+        // Among the pages of the first front's card, the best read; on a tie, the first. A classless page
+        // matches any SIM, so the group keeps to the first class read: a SIM A and a SIM C are two cards.
+        let matching = fronts.filter { pages[$0].map { isSameCard($0, firstPage) } ?? false }
+        let firstClass = matching.lazy.compactMap { pages[$0]?.type }.first { $0 != .sim }
+        let group = matching.filter { [.sim, firstClass].contains(pages[$0]?.type) }
         let source = group.min { marks(pages[$0]) < marks(pages[$1]) } ?? first
         guard let sourcePage = pages[source] else { return ScanReading(source: nil, pages: pages.map { _ in nil }) }
         let reads = pages.indices.map { index -> PageRead? in

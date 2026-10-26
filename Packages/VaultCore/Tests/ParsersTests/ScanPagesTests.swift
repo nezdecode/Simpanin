@@ -106,6 +106,15 @@ struct ScanPagesTests {
         #expect(reading.source == 1)
     }
 
+    /// A classless page matches any SIM, but a SIM A and a SIM C with its digits are still two cards.
+    @Test func theSourceGroupKeepsToTheFirstClassRead() {
+        let classless = Self.sim(.sim, numberReasons: [.readFromAnotherLine], typeReasons: [.classUnclear])
+        let simA = Self.sim(.simA, numberReasons: [.readFromAnotherLine])
+        let reading = ScanPages.read([classless, simA, Self.sim(.simC)])
+        #expect(reading.source == 1)
+        #expect(reading.pages.map { $0?.relation } == [.classUnread, .source, .otherType])
+    }
+
     @Test func aSIMWithoutAClassAndTheSameDigitsIsClassUnread() {
         let classless = Self.sim(.sim, typeReasons: [.classUnclear])
         #expect(relations([Self.sim(.simA), classless]) == [.source, .classUnread])
