@@ -172,9 +172,22 @@ struct ScanPagesTests {
 
     // MARK: Pages and values
 
-    @Test func digitsAreComparedWithoutDashes() {
-        let dashed = Self.sim(.simA, number: "0000-0000-000001")
-        #expect(relations([Self.sim(.simA, number: Self.oldNumber), dashed]) == [.source, .sameCard])
+    /// The review refuses a NIK with dashes, and the parser leaves it unmarked, so it may be misread: never
+    /// the same card, never another one.
+    @Test func aKTPNIKWithDashesIsUnsure() {
+        let dashed = Self.ktp("0012-3417-0890-0001")
+        let reading = ScanPages.read([dashed, Self.ktp()])
+        #expect(reading.source == 0)
+        #expect(reading.pages.map { $0?.relation } == [.source, .unsureNumber])
+        #expect(relations([Self.ktp(), Self.ktp("0012-3417-0890-0002")]) == [.source, .unsureNumber])
+    }
+
+    @Test func aWellFormedSIMNumberIs14Or16ASCIIDigits() {
+        #expect(SIMParser.isWellFormedNumber(Self.oldNumber))
+        #expect(SIMParser.isWellFormedNumber(Self.nik))
+        for number in ["", "000000000000001", "0000-0000-000001", "0000000000000\u{0661}"] {
+            #expect(!SIMParser.isWellFormedNumber(number), "\(number)")
+        }
     }
 
     @Test func aBackOrAnUnreadPageHasNoRelation() {

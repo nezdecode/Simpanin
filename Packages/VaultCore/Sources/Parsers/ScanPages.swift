@@ -42,7 +42,7 @@ public enum ScanPages {
         if [page, source].contains(where: isMixedLayout) { return .unsureNumber }
         // An old SIM's 14 digits against a new one's 16 can't be a misread: an old card and its renewal.
         if page.type.isSIM, isWellFormed(page), isWellFormed(source),
-            digits(of: page).count != digits(of: source).count
+            number(of: page)?.count != number(of: source)?.count
         {
             return .otherCard
         }
@@ -57,7 +57,7 @@ public enum ScanPages {
     /// Exactly the same digits, both well formed, on the same type; a SIM read without its class counts
     /// with any SIM.
     private static func isSameCard(_ page: ParsedDocument, _ other: ParsedDocument) -> Bool {
-        isSameKind(page, other) && isWellFormed(page) && isWellFormed(other) && digits(of: page) == digits(of: other)
+        isSameKind(page, other) && isWellFormed(page) && isWellFormed(other) && number(of: page) == number(of: other)
     }
 
     private static func isSameKind(_ page: ParsedDocument, _ other: ParsedDocument) -> Bool {
@@ -68,15 +68,11 @@ public enum ScanPages {
         page.fields.values[FieldKey.nik] ?? page.fields.values[FieldKey.simNumber]
     }
 
-    private static func digits(of page: ParsedDocument) -> String {
-        number(of: page)?.filter(\.isASCIIDigit) ?? ""
-    }
-
-    /// 16 digits on a KTP, 14 or 16 on a SIM, with nothing but dashes and spaces between them.
+    /// As read, nothing between the digits: a NIK with dashes is refused by the review, and the SIM parser
+    /// stores its number as digits alone.
     private static func isWellFormed(_ page: ParsedDocument) -> Bool {
-        guard let number = number(of: page)?.filter({ $0 != "-" && $0 != " " }) else { return false }
-        guard page.type.isSIM else { return NIK.isWellFormed(number) }
-        return [14, 16].contains(number.count) && number.allSatisfy(\.isASCIIDigit)
+        guard let number = number(of: page) else { return false }
+        return page.type.isSIM ? SIMParser.isWellFormedNumber(number) : NIK.isWellFormed(number)
     }
 
     /// A number the review would refuse, or one the parser marked, may be misread.
