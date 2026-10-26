@@ -128,6 +128,7 @@ struct ScanModelTests {
         await scan.scanned([try page()])
         #expect(scan.state == .failed)
         #expect(scan.result == nil)
+        #expect(scan.reading == nil)
         #expect(scan.lines.isEmpty)
     }
 
@@ -139,6 +140,24 @@ struct ScanModelTests {
         #expect(scan.pages.isEmpty)
         #expect(scan.lines.isEmpty)
         #expect(scan.result == nil)
+        #expect(scan.reading == nil)
+    }
+
+    /// The same card scanned twice: the fields come from the page that read better.
+    @Test func theResultIsTheSourcePage() async throws {
+        let blurred = ["PROVINSI DKI JAKARTA", "NIK : OO12341708900001", "Nama : BUDI CONTOH"]
+        let scan = model(FakeRecognizer([blurred, Self.ktp]))
+        await scan.scanned([try page(), try page()])
+        #expect(scan.reading?.source == 1)
+        #expect(scan.result?.reasons[FieldKey.nik] == nil)
+    }
+
+    @Test func theReadingHasOneEntryPerPage() async throws {
+        let scan = model(FakeRecognizer([Self.ktp, Self.sim, Self.back]))
+        await scan.scanned([try page(), try page(), try page()])
+        let reading = try #require(scan.reading)
+        #expect(reading.pages.count == 3)
+        #expect(reading.pages.map { $0?.relation } == [.source, .otherType, nil])
     }
 
     /// Once a scan is dropped, the pages left aren't read: they'd keep the dropped pages in memory and

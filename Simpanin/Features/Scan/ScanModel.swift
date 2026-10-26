@@ -30,6 +30,8 @@ final class ScanModel {
     private(set) var lines: [String] = []
     /// nil when the text isn't a document type the parsers know.
     private(set) var result: ParsedDocument?
+    /// How the pages relate to the one the fields come from; nil until a read has finished.
+    private(set) var reading: ScanReading?
     private(set) var method = RecognitionMethod.text
 
     private let recognizer: @Sendable (RecognitionMethod) -> any TextRecognizer
@@ -61,6 +63,7 @@ final class ScanModel {
         state = .reading
         lines = []
         result = nil
+        reading = nil
         let recognizer = recognizer(method)
         let pages = pages
         do {
@@ -77,7 +80,7 @@ final class ScanModel {
             guard run == generation else { return }
             guard !Task.isCancelled else { return discard() }
             lines = pageLines.flatMap(\.self)
-            result = Self.parse(pageLines, today: today())
+            (result, reading) = Self.parse(pageLines, today: today())
             state = .read
         } catch {
             guard run == generation else { return }
@@ -88,15 +91,14 @@ final class ScanModel {
         }
     }
 
-    /// Each page on its own, so a back page's text and dates never mix in. The front is the first page
-    /// that reads as a KTP or SIM with a number or NIK, as the back of a SIM carries its title too; with no
-    /// number on any page, the one that gave the most fields.
-    static func parse(_ pages: [[String]], today: CalendarDate) -> ParsedDocument? {
-        let results = pages.compactMap { KTPParser.parse($0, today: today) ?? SIMParser.parse($0, today: today) }
-        let numbered = results.first { result in
-            [FieldKey.nik, FieldKey.simNumber].contains { result.fields.values[$0] != nil }
-        }
-        return numbered ?? results.max { $0.fields.values.count < $1.fields.values.count }
+    /// Each page on its own, so a back page's text and dates never mix in. The fields come from the source
+    /// page `ScanPages` picks among the fronts, as the back of a SIM carries its title too; with no number
+    /// on any page, from the one that gave the most fields.
+    static func parse(_ pages: [[String]], today: CalendarDate) -> (ParsedDocument?, ScanReading) {
+        let results = pages.map { KTPParser.parse($0, today: today) ?? SIMParser.parse($0, today: today) }
+        let reading = ScanPages.read(results)
+        let source = reading.source.flatMap { results[$0] }
+        return (source ?? results.compactMap(\.self).max { $0.fields.values.count < $1.fields.values.count }, reading)
     }
 
     func discard() {
@@ -104,6 +106,7 @@ final class ScanModel {
         pages = []
         lines = []
         result = nil
+        reading = nil
         state = .empty
     }
 }
