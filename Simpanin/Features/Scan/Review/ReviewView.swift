@@ -42,9 +42,9 @@ struct ReviewView: View {
                     .foregroundStyle(.secondary)
                 }
                 Section {
-                    PageStrip(pages: review.pages)
+                    PageStrip(pages: review.pages, notes: review.pageNotes)
                 } footer: {
-                    Text("review.pages \(review.pages.count)")
+                    pagesFooter
                 }
                 if reading {
                     Section {
@@ -148,6 +148,14 @@ struct ReviewView: View {
             .sheet(isPresented: $expiryPickerShown) {
                 ExpiryCalendar(title: expiryTitle) { review.setExpiry($0) }
             }
+        }
+    }
+
+    /// "N halaman", then which page the fields came from and what other pages were read as, one text each.
+    private var pagesFooter: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("review.pages \(review.pages.count)")
+            ForEach(review.pageNotes.sentences, id: \.self) { Text(verbatim: $0) }
         }
     }
 
