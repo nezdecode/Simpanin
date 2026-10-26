@@ -138,7 +138,7 @@ struct ReviewView: View {
             }
             .alert(Text("review.nikMissing"), isPresented: $nikMissingShown) {
                 Button {
-                    focusAfterAlertCloses(FieldKey.nik)
+                    afterAlertCloses { focusedField = FieldKey.nik }
                 } label: {
                     Text("review.fillNIK")
                 }
@@ -309,13 +309,13 @@ extension ReviewView {
     }
 
     /// Focus set while an alert is still closing can be dropped, so it waits until the alert is off the
-    /// screen, checked rather than guessed with a delay. After two seconds at most it's set anyway.
-    private func focusAfterAlertCloses(_ key: String) {
+    /// screen, checked rather than guessed with a delay. After two seconds at most it runs anyway.
+    private func afterAlertCloses(_ action: @escaping () -> Void) {
         Task {
             for _ in 0..<40 where UIApplication.shared.showsAlert {
                 try? await Task.sleep(for: .milliseconds(50))
             }
-            focusedField = key
+            action()
         }
     }
 
