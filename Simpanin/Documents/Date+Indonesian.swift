@@ -27,6 +27,11 @@ extension FormatStyle where Self == Date.FormatStyle {
     }
 
     nonisolated private static func indonesian(_ timeZone: TimeZone) -> Date.FormatStyle {
-        Date.FormatStyle(locale: Locale(identifier: "id_ID"), timeZone: timeZone)
+        Date.FormatStyle(locale: .indonesian, timeZone: timeZone)
     }
+}
+
+extension Locale {
+    /// Simpanin's one language, whatever the device is set to; dates and lists are written with it.
+    nonisolated static let indonesian = Locale(identifier: "id_ID")
 }
