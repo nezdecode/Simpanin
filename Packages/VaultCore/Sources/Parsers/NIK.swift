@@ -64,6 +64,8 @@ public enum NIK {
     static func birthDate(in number: String) -> BirthDate? {
         guard isWellFormed(number) else { return nil }
         let digits = number.compactMap(\.wholeNumberValue)
+        // Never read past what was there, whatever a character turned out to be.
+        guard digits.count == 16 else { return nil }
         func pair(_ start: Int) -> Int { digits[start] * 10 + digits[start + 1] }
         let day = pair(6) > 40 ? pair(6) - 40 : pair(6)
         guard (1...31).contains(day), (1...12).contains(pair(8)) else { return nil }

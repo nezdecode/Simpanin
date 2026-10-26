@@ -47,4 +47,16 @@ struct NIKTests {
             #expect(!NIK.isWellFormed(number), "\(number)")
         }
     }
+
+    /// A digit with a mark on it, or a keycap, sorts like a digit as text but has no value: pasted into the
+    /// NIK, it was taken as well formed and its date read past the end.
+    @Test func aDigitWithAMarkIsNoDigit() {
+        let keycaps = String(repeating: "1\u{20E3}", count: 16)
+        let accented = String(repeating: "0\u{301}", count: 16)
+        for number in [keycaps, accented] {
+            #expect(!NIK.isWellFormed(number))
+            #expect(NIK.agrees(number, withBirthDate: birth) == nil)
+        }
+        #expect(!Character("1\u{20E3}").isASCIIDigit)
+    }
 }

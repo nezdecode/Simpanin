@@ -78,6 +78,7 @@ extension String {
 }
 
 extension Character {
-    /// 0 to 9 only: `isNumber` also takes digits from other scripts, which no card number has.
-    public var isASCIIDigit: Bool { ("0"..."9").contains(self) }
+    /// 0 to 9 alone: `isNumber` also takes digits from other scripts, and comparing as text takes a digit
+    /// with a mark or a keycap on it, none of which has a value.
+    public var isASCIIDigit: Bool { asciiValue.map { (48...57).contains($0) } ?? false }
 }
