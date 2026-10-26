@@ -97,7 +97,8 @@ struct ScanFlowView: View {
             await scan.scanned(pages)
             guard !Task.isCancelled else { return }
             // Text Vision couldn't read is still a scan: the user picks the type and can save the pages.
-            review.load(scan.state == .read ? scan.result : nil, pages: pages)
+            let read = scan.state == .read
+            review.load(read ? scan.result : nil, pages: pages, reading: read ? scan.reading : nil)
             scan.discard()
             onRead()
         }

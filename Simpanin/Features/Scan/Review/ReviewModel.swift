@@ -43,6 +43,8 @@ final class ReviewModel {
     /// Fields the user typed in, so a value typed back never counts as the scan's.
     private var edited: Set<String> = []
     private var birthDateConfirmed = false
+    /// How the scan's pages relate; reasons only, no values from another person's card.
+    private var reading: ScanReading?
     /// Why Simpan refused a field, shown under it until the field is edited.
     private(set) var problems: [String: FieldProblem] = [:]
     var saveError: RecoveryScreen?
@@ -60,8 +62,14 @@ final class ReviewModel {
         self.encode = encode
     }
 
+    /// Worked out each time from the reading and the type chosen now, never stored.
+    var pageNotes: PageNotes { PageNotes(reading: reading, pageCount: pages.count, chosen: type) }
+
     /// The fields the chosen type has, in the order the screen shows them.
-    var fieldKeys: [String] {
+    var fieldKeys: [String] { Self.fieldKeys(for: type) }
+
+    /// Only the types a parser reads have fields to check; the others have none yet.
+    nonisolated static func fieldKeys(for type: DocumentType) -> [String] {
         if type == .ktp { return [FieldKey.nik, FieldKey.name, FieldKey.birthDate] }
         if type.isSIM { return [FieldKey.simNumber, FieldKey.name, FieldKey.birthDate] }
         return []
@@ -85,8 +93,10 @@ final class ReviewModel {
     var hasUserChanges: Bool { values != scanned || type != scannedType || expiry != scannedExpiry }
 
     /// After a scan or a rescan: every field comes from the new pages. The label stays.
-    func load(_ result: ParsedDocument?, pages: [CGImage]) {
+    func load(_ result: ParsedDocument?, pages: [CGImage], reading: ScanReading? = nil) {
         self.pages = pages
+        // Always replaced, so a rescan that failed never keeps the old scan's notes.
+        self.reading = reading
         type = result?.type ?? .other
         values = (result?.fields.values ?? [:]).reduce(into: [:]) { shown, field in
             shown[field.key] = Self.dateKeys.contains(field.key) ? Self.dayFirst(field.value) : field.value
