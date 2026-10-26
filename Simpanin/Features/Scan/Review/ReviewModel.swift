@@ -130,7 +130,7 @@ final class ReviewModel {
             let birth = Self.yearFirst(values[FieldKey.birthDate] ?? "").flatMap(CalendarDate.init),
             // Dashes and spaces are only for display. An old SIM's 14 digits hold no date, so they give nil.
             let agrees = NIK.agrees(
-                values[number, default: ""].filter { $0.isASCII && $0.isNumber }, withBirthDate: birth)
+                values[number, default: ""].filter(\.isASCIIDigit), withBirthDate: birth)
         else {
             // One of them can't be compared any more, so the other no longer disagrees with anything.
             for key in [numberKey, FieldKey.birthDate].compactMap(\.self) { drop(.disagreesWithBirthDate, from: key) }
@@ -282,7 +282,7 @@ extension ReviewModel {
     /// Why a value can't be stored, or nil when it can. Only a NIK's length and dates are judged.
     static func problem(with text: String, for key: String) -> FieldProblem? {
         if key == FieldKey.nik {
-            return text.count == 16 && text.allSatisfy { $0.isASCII && $0.isNumber } ? nil : .nikLength
+            return NIK.isWellFormed(text) ? nil : .nikLength
         }
         guard dateKeys.contains(key) else { return nil }
         guard let date = yearFirst(text).flatMap(CalendarDate.init) else { return .notADate }
@@ -292,7 +292,7 @@ extension ReviewModel {
     /// Digits as dd-mm-yyyy, for a number pad. A dash only goes before a digit, so backspace can remove it.
     static func typedDate(_ text: String) -> String {
         var result = ""
-        let digits = text.filter { $0.isASCII && $0.isNumber }
+        let digits = text.filter(\.isASCIIDigit)
         for (index, digit) in digits.prefix(8).enumerated() {
             if index == 2 || index == 4 { result.append("-") }
             result.append(digit)

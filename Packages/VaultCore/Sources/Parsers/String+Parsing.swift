@@ -78,5 +78,6 @@ extension String {
 }
 
 extension Character {
-    var isASCIIDigit: Bool { ("0"..."9").contains(self) }
+    /// 0 to 9 only: `isNumber` also takes digits from other scripts, which no card number has.
+    public var isASCIIDigit: Bool { ("0"..."9").contains(self) }
 }

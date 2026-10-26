@@ -38,4 +38,13 @@ struct NIKTests {
         // An old SIM's number: 14 digits, no date.
         #expect(NIK.agrees("00000000000001", withBirthDate: birth) == nil)
     }
+
+    @Test func aWellFormedNIKIsSixteenASCIIDigits() {
+        #expect(NIK.isWellFormed("0012341708900001"))
+        for number in [
+            "", "001234170890000", "00123417089000011", "001234170890000A", "0012-3417-0890-0001", "001234170890000١",
+        ] {
+            #expect(!NIK.isWellFormed(number), "\(number)")
+        }
+    }
 }

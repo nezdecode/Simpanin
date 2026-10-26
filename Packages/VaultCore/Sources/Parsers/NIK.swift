@@ -20,6 +20,11 @@ public enum NIK {
         birthDate(in: number)?.matches(birth)
     }
 
+    /// 16 ASCII digits, the only shape a NIK has; the review refuses any other.
+    public static func isWellFormed(_ number: String) -> Bool {
+        number.count == 16 && number.allSatisfy(\.isASCIIDigit)
+    }
+
     /// Letters recognition often reads in place of digits.
     static let lookalikes: [Character: Character] = [
         "O": "0", "o": "0", "D": "0", "I": "1", "l": "1", "|": "1", "Z": "2", "S": "5", "B": "8",
@@ -57,7 +62,7 @@ public enum NIK {
     /// Digits 7 to 12 of a NIK are the date of birth as ddmmyy, with 40 added to the day for women.
     /// nil when the NIK isn't 16 digits or that date can't exist.
     static func birthDate(in number: String) -> BirthDate? {
-        guard number.count == 16, number.allSatisfy(\.isASCIIDigit) else { return nil }
+        guard isWellFormed(number) else { return nil }
         let digits = number.compactMap(\.wholeNumberValue)
         func pair(_ start: Int) -> Int { digits[start] * 10 + digits[start + 1] }
         let day = pair(6) > 40 ? pair(6) - 40 : pair(6)

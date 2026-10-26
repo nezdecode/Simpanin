@@ -74,10 +74,9 @@ public enum ScanPages {
 
     /// 16 digits on a KTP, 14 or 16 on a SIM, with nothing but dashes and spaces between them.
     private static func isWellFormed(_ page: ParsedDocument) -> Bool {
-        guard let number = number(of: page)?.filter({ $0 != "-" && $0 != " " }),
-            number.allSatisfy(\.isASCIIDigit)
-        else { return false }
-        return page.type.isSIM ? [14, 16].contains(number.count) : number.count == 16
+        guard let number = number(of: page)?.filter({ $0 != "-" && $0 != " " }) else { return false }
+        guard page.type.isSIM else { return NIK.isWellFormed(number) }
+        return [14, 16].contains(number.count) && number.allSatisfy(\.isASCIIDigit)
     }
 
     /// A number the review would refuse, or one the parser marked, may be misread.

@@ -37,7 +37,7 @@ public enum KTPParser {
         let nikDate = NIK.birthDate(in: number)
         if number.isEmpty {
             reasons[FieldKey.nik, default: []].insert(.notFound)
-        } else if nikDate == nil, number.count == 16, number.allSatisfy(\.isASCIIDigit) {
+        } else if nikDate == nil, NIK.isWellFormed(number) {
             reasons[FieldKey.nik, default: []].insert(.noDateInNumber)
         }
         if let nikDate, let woman = isWoman(card.value(of: "Jenis Kelamin")?.text), woman != nikDate.woman {
@@ -61,7 +61,7 @@ public enum KTPParser {
             reasons[FieldKey.birthDate, default: []].insert(.disagreesWithBirthDate)
         }
         // A NIK of the wrong length, or with a letter left, is refused by the review screen; that's what shows.
-        if !number.isEmpty, number.count != 16 || !number.allSatisfy(\.isASCIIDigit) { reasons[FieldKey.nik] = nil }
+        if !number.isEmpty, !NIK.isWellFormed(number) { reasons[FieldKey.nik] = nil }
         let confirmed =
             birth.confirmed && !birth.corrected && reasons[FieldKey.nik, default: []].isEmpty
             && reasons[FieldKey.birthDate, default: []].isEmpty
