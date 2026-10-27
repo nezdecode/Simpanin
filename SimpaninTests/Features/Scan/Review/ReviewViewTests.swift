@@ -31,6 +31,13 @@ struct ReviewViewTests {
         #expect(other == "Periksa lagi: tanggal ini dibaca untuk jenis dokumen lain.")
     }
 
+    /// The SIM title is built from a key with the class name as its argument, so a slip would show the key.
+    @Test func theDuplicateTitleNamesTheType() {
+        #expect(String(localized: ReviewView.duplicateTitle(.ktp)) == "Kamu sudah punya KTP dengan NIK ini.")
+        #expect(String(localized: ReviewView.duplicateTitle(.simA)) == "Kamu sudah punya SIM A dengan nomor ini.")
+        #expect(String(localized: ReviewView.duplicateTitle(.sim)) == "Kamu sudah punya SIM dengan nomor ini.")
+    }
+
     /// Two reasons name the number that holds the birth date: the NIK on a KTP, the number on a SIM.
     @Test func theNIKAndNumberVariantsFollowTheDocument() {
         let ktp = String(localized: ReviewView.text(for: .mark(.disagreesWithBirthDate), numberKey: FieldKey.nik))
