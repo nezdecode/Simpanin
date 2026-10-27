@@ -11,11 +11,9 @@
 
 import CoreGraphics
 import Foundation
-import ImageIO
 import OSLog
 import Observation
 import Parsers
-import UniformTypeIdentifiers
 import VaultCore
 
 /// "Periksa data": what a scan read, for the user to check and correct before it's saved. Everything
@@ -373,17 +371,5 @@ extension ReviewModel {
             let day = Int(match.1), let month = Int(match.2), let year = Int(match.3)
         else { return nil }
         return CalendarDate(year: year, month: month, day: day)?.string
-    }
-}
-
-/// Turns a page into the bytes that are sealed in the vault.
-nonisolated enum PageEncoding {
-    /// JPEG, like VisionKit's own pages, at a quality that keeps small print readable.
-    static func jpeg(_ page: CGImage) -> Data? {
-        let data = NSMutableData()
-        guard let destination = CGImageDestinationCreateWithData(data, UTType.jpeg.identifier as CFString, 1, nil)
-        else { return nil }
-        CGImageDestinationAddImage(destination, page, [kCGImageDestinationLossyCompressionQuality: 0.8] as CFDictionary)
-        return CGImageDestinationFinalize(destination) ? data as Data : nil
     }
 }
