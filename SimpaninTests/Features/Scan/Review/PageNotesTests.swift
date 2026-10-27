@@ -189,10 +189,10 @@ struct PageNotesTests {
     @Test func theSaveWarningSaysWhatTheOtherPageWasReadAs() {
         #expect(
             Self.notes(Self.ktpAndSIM).saveWarning
-                == "Halaman 2 terbaca sebagai SIM A. Semua halaman akan disimpan di KTP ini.")
+                == "Halaman 2 terbaca sebagai SIM A. Semua halaman akan disimpan sebagai satu dokumen KTP.")
         #expect(
             Self.notes([(.ktp, .source), (.ktp, .otherCard)]).saveWarning
-                == "Halaman 2 terbaca sebagai KTP lain. Semua halaman akan disimpan di KTP ini.")
+                == "Halaman 2 terbaca sebagai KTP lain. Semua halaman akan disimpan sebagai satu dokumen KTP.")
     }
 
     /// Neutral notes claim nothing, so Simpan asks nothing.
@@ -207,28 +207,51 @@ struct PageNotesTests {
         #expect(
             two.saveWarning
                 == "Halaman 2 dan 3 terbaca sebagai SIM A. Halaman 4 terbaca sebagai KTP lain. "
-                + "Semua halaman akan disimpan di KTP ini.")
+                + "Semua halaman akan disimpan sebagai satu dokumen KTP.")
         let three = Self.notes([(.ktp, .source), (.simA, .otherType), (.simC, .otherType), (.ktp, .otherCard)])
         #expect(
             three.saveWarning
-                == "Beberapa halaman terbaca sebagai dokumen lain. Semua halaman akan disimpan di KTP ini.")
+                == "Beberapa halaman terbaca sebagai dokumen lain. "
+                + "Semua halaman akan disimpan sebagai satu dokumen KTP.")
     }
 
+    /// The KTP's fields would be saved as a SIM A, so the alert says where they were read, like the footer.
     @Test func theSaveWarningNamesTheChosenType() {
         #expect(
             Self.notes(Self.ktpAndSIM, chosen: .passport).saveWarning
                 == "Halaman 1 terbaca sebagai KTP. Halaman 2 terbaca sebagai SIM A. "
-                + "Semua halaman akan disimpan di paspor ini.")
+                + "Semua halaman akan disimpan sebagai satu dokumen paspor.")
         #expect(
-            Self.notes([(.ktp, .source), (.simA, .otherType)], chosen: .simA).saveWarning
-                == "Halaman 2 terbaca sebagai SIM A. Semua halaman akan disimpan di SIM A ini.")
+            Self.notes(Self.ktpAndSIM, chosen: .simA).saveWarning
+                == "Halaman 2 terbaca sebagai SIM A, bukan KTP di halaman 1. Isian dibaca dari halaman 1. "
+                + "Semua halaman akan disimpan sebagai satu dokumen SIM A.")
     }
 
-    /// Its key is built at run time too.
-    @Test func everyTypeWithoutAParserHasItsSaveText() {
+    /// The source is said exactly when the footer says it: a class picked by hand keeps the same fields.
+    @Test func theSaveWarningSaysTheSourceWhenTheFooterDoes() {
+        #expect(
+            Self.notes([(.simA, .source), (.ktp, .otherType)], chosen: .simC).saveWarning
+                == "Halaman 2 terbaca sebagai KTP. Semua halaman akan disimpan sebagai satu dokumen SIM C.")
+        #expect(
+            Self.notes([(.simA, .otherType), (.ktp, .source)]).saveWarning
+                == "Halaman 1 terbaca sebagai SIM A, bukan KTP di halaman 2. Isian dibaca dari halaman 2. "
+                + "Semua halaman akan disimpan sebagai satu dokumen KTP.")
+        #expect(
+            Self.notes([(.ktp, .source), (.simA, .otherType), (.simC, .otherType), (.ktp, .otherCard)], chosen: .simA)
+                .saveWarning
+                == "Beberapa halaman terbaca sebagai dokumen lain. Isian dibaca dari halaman 1. "
+                + "Semua halaman akan disimpan sebagai satu dokumen SIM A.")
+    }
+
+    /// Their keys are built at run time too.
+    @Test func everyTypeWithoutAParserHasItsSaveText() throws {
+        let names: [DocumentType: String] = [
+            .passport: " paspor", .stnk: " STNK", .kk: " kartu keluarga", .npwp: " NPWP", .bpjs: " BPJS", .other: "",
+        ]
         for type in TypePickerView.types where ReviewModel.fieldKeys(for: type).isEmpty {
-            let warning = Self.notes(Self.ktpAndSIM, chosen: type).saveWarning ?? ""
-            #expect(warning.contains(". Semua halaman akan disimpan di "), "\(type.rawValue)")
+            let warning = Self.notes(Self.ktpAndSIM, chosen: type).saveWarning
+            let name = try #require(names[type], "\(type.rawValue)")
+            #expect(warning?.hasSuffix(". Semua halaman akan disimpan sebagai satu dokumen\(name).") == true)
         }
     }
 

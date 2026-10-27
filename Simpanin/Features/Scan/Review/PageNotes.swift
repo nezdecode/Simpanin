@@ -109,28 +109,35 @@ nonisolated struct PageNotes: Equatable {
     var sentences: [String] { lines.map(\.text) }
 
     /// What Simpan asks when a page has a badge: what those pages were read as, and that every page is
-    /// saved with the chosen document. Nil without a badge.
+    /// saved as one document of the chosen type. Nil without a badge.
     var saveWarning: String? {
         let marked = groups.filter(\.note.isMarked)
         guard !marked.isEmpty else { return nil }
-        // The chosen type is named in the second sentence, so another type says only what it was read as.
-        let read =
-            marked.count > 2
-            ? [String(localized: "pageNotes.several")]
-            : marked.map { group in
+        var sentences: [String]
+        if marked.count > 2 {
+            sentences = [String(localized: "pageNotes.several")]
+        } else if showsSource {
+            sentences = marked.map(sentence)
+        } else {
+            // The chosen type is the source's, named in the last sentence, so another type says only what
+            // it was read as.
+            sentences = marked.map { group in
                 guard case .otherType(let type) = group.note else { return sentence(group) }
                 return sentence((.readAs(type), group.pages))
             }
-        return (read + [savedInto]).joined(separator: " ")
+        }
+        // As in the footer: fields read from a KTP and saved as a SIM A would otherwise go unsaid.
+        if showsSource, let source { sentences.append(String(localized: "pageNotes.source \(source + 1)")) }
+        return (sentences + [savedAs]).joined(separator: " ")
     }
 
-    /// "Semua halaman akan disimpan di KTP ini." A type without a parser has its own words, like "paspor";
-    /// its key is built as a plain string, as in `several`.
-    private var savedInto: String {
+    /// "Semua halaman akan disimpan sebagai satu dokumen KTP." A type without a parser has its own words,
+    /// like "paspor"; its key is built as a plain string, as in `several`.
+    private var savedAs: String {
         guard ReviewModel.fieldKeys(for: chosen).isEmpty else {
-            return String(localized: "pageNotes.savedInto \(Self.name(chosen))")
+            return String(localized: "pageNotes.savedAs \(Self.name(chosen))")
         }
-        return String(localized: String.LocalizationValue("pageNotes.savedInto." + chosen.rawValue))
+        return String(localized: String.LocalizationValue("pageNotes.savedAs." + chosen.rawValue))
     }
 
     /// What VoiceOver reads for a page, counted from 0.

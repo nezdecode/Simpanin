@@ -64,7 +64,8 @@ final class ReviewPagesUITests: UITestCase {
         let alert = app.alerts["Ada halaman dari dokumen lain"]
         XCTAssertTrue(alert.waitForExistence(timeout: 5))
         XCTAssertTrue(
-            alert.staticTexts["Halaman 2 terbaca sebagai SIM A. Semua halaman akan disimpan di KTP ini."].exists)
+            alert.staticTexts["Halaman 2 terbaca sebagai SIM A. Semua halaman akan disimpan sebagai satu dokumen KTP."]
+                .exists)
         screenshot("40 another document on Simpan")
         alert.buttons["Kembali"].tap()
         XCTAssertTrue(app.buttons["review.save"].waitForExistence(timeout: 5))

@@ -958,79 +958,79 @@
         }
       }
     },
-    "pageNotes.savedInto %@" : {
+    "pageNotes.savedAs %@" : {
       "extractionState" : "manual",
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Semua halaman akan disimpan di %@ ini."
+            "value" : "Semua halaman akan disimpan sebagai satu dokumen %@."
           }
         }
       }
     },
-    "pageNotes.savedInto.bpjs" : {
+    "pageNotes.savedAs.bpjs" : {
       "extractionState" : "manual",
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Semua halaman akan disimpan di BPJS ini."
+            "value" : "Semua halaman akan disimpan sebagai satu dokumen BPJS."
           }
         }
       }
     },
-    "pageNotes.savedInto.kk" : {
+    "pageNotes.savedAs.kk" : {
       "extractionState" : "manual",
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Semua halaman akan disimpan di kartu keluarga ini."
+            "value" : "Semua halaman akan disimpan sebagai satu dokumen kartu keluarga."
           }
         }
       }
     },
-    "pageNotes.savedInto.npwp" : {
+    "pageNotes.savedAs.npwp" : {
       "extractionState" : "manual",
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Semua halaman akan disimpan di NPWP ini."
+            "value" : "Semua halaman akan disimpan sebagai satu dokumen NPWP."
           }
         }
       }
     },
-    "pageNotes.savedInto.other" : {
+    "pageNotes.savedAs.other" : {
       "extractionState" : "manual",
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Semua halaman akan disimpan di dokumen ini."
+            "value" : "Semua halaman akan disimpan sebagai satu dokumen."
           }
         }
       }
     },
-    "pageNotes.savedInto.passport" : {
+    "pageNotes.savedAs.passport" : {
       "extractionState" : "manual",
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Semua halaman akan disimpan di paspor ini."
+            "value" : "Semua halaman akan disimpan sebagai satu dokumen paspor."
           }
         }
       }
     },
-    "pageNotes.savedInto.stnk" : {
+    "pageNotes.savedAs.stnk" : {
       "extractionState" : "manual",
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Semua halaman akan disimpan di STNK ini."
+            "value" : "Semua halaman akan disimpan sebagai satu dokumen STNK."
           }
         }
       }
