@@ -153,6 +153,17 @@ extension ReviewModelTests {
         #expect(review.saveStep() == nil)
     }
 
+    /// Pindai ulang or Batal in the moment before the alert opens would leave a warning nobody answers.
+    @Test func aPendingWarningKeepsTheScanFromBeingDropped() async throws {
+        let review = model(try await storeWithTheKTP())
+        review.load(Self.ktp, pages: [try page()])
+        #expect(!review.saveInProgress)
+        #expect(await !review.save())
+        #expect(review.saveInProgress)
+        review.duplicateAnswered()
+        #expect(!review.saveInProgress)
+    }
+
     @Test func kembaliOnTheWarningDoesntAskThePagesQuestionAgain() async throws {
         let review = model(try await storeWithTheKTP())
         try loadKTPAndSIM(into: review)

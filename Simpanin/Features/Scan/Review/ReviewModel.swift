@@ -51,6 +51,8 @@ final class ReviewModel {
     private var asking = false
     /// Found by the check on Simpan; Simpan asks nothing until its alert is answered.
     private(set) var duplicate: DuplicateCheck.Found?
+    /// A save is being written, or its duplicate alert is about to open: nothing may drop or replace the scan.
+    var saveInProgress: Bool { saving || duplicate != nil }
     /// Simpan in the duplicate alert, kept while the number and type stay the same, also after a failed save.
     private var acceptedDuplicate: DuplicateCheck.Candidate?
     /// What the pages alert said when it was answered; while the notes say the same, it isn't asked again.

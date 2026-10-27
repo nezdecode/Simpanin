@@ -85,7 +85,7 @@ struct ReviewView: View {
                     } label: {
                         Text(ScreenText.cancel)
                     }
-                    .disabled(review.saving)
+                    .disabled(review.saveInProgress)
                     .accessibilityIdentifier("review.cancel")
                 }
                 // In the bar, not above the keyboard: a condition inside the keyboard's own toolbar never
@@ -103,7 +103,7 @@ struct ReviewView: View {
                     // In the bar, so it's in reach wherever the form is scrolled to.
                     ToolbarItem(placement: .primaryAction) {
                         Button(action: onRescan) { Text("review.rescan") }
-                            .disabled(reading || review.saving)
+                            .disabled(reading || review.saveInProgress)
                             .accessibilityIdentifier("review.rescan")
                     }
                 }
@@ -120,7 +120,7 @@ struct ReviewView: View {
             .accessibilityAction(.escape) {
                 if focusedField != nil {
                     focusedField = nil
-                } else if !review.saving {
+                } else if !review.saveInProgress {
                     discardConfirmShown = true
                 }
             }
@@ -174,9 +174,12 @@ struct ReviewView: View {
             }
             // The check finishes inside the save, often while the pages or NIK alert is still closing, and
             // an alert shown then can be dropped; one still up after the wait means the next Simpan asks.
-            .onChange(of: review.duplicate) { _, found in
-                guard let found else { return }
+            // Initial too: a view rebuilt while a duplicate waits still opens its alert.
+            .onChange(of: review.duplicate, initial: true) { _, found in
+                guard found != nil else { return }
                 afterAlertCloses {
+                    // Read again: the wait may have outlasted the duplicate.
+                    guard let found = review.duplicate else { return }
                     if UIApplication.shared.showsAlert {
                         review.duplicateAnswered()
                     } else {
