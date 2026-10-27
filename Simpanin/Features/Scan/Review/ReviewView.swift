@@ -24,6 +24,7 @@ struct ReviewView: View {
     @State private var typePickerShown = false
     @State private var expiryPickerShown = false
     @State private var nikMissingShown = false
+    @State private var otherPagesShown = false
     @State private var discardConfirmShown = false
     /// Counts refused taps on Simpan, for the error haptic.
     @State private var refusals = 0
@@ -42,9 +43,9 @@ struct ReviewView: View {
                     .foregroundStyle(.secondary)
                 }
                 Section {
-                    PageStrip(pages: review.pages)
+                    PageStrip(pages: review.pages, notes: review.pageNotes)
                 } footer: {
-                    Text("review.pages \(review.pages.count)")
+                    pagesFooter
                 }
                 if reading {
                     Section {
@@ -61,7 +62,10 @@ struct ReviewView: View {
                             ForEach(review.fieldKeys, id: \.self) { key in fieldRow(key) }
                         }
                     }
-                    validitySection
+                    ValiditySection(
+                        type: review.type, hasExpiry: review.hasExpiry, expiry: review.expiry,
+                        note: review.expiryNote.map { Self.text(for: $0, numberKey: review.numberKey) },
+                        onChange: { review.setExpiry($0) }, onPick: { expiryPickerShown = true })
                 }
             }
             // Nothing in the form changes while a save is being written.
@@ -136,17 +140,48 @@ struct ReviewView: View {
             .onChange(of: focusedField) { left, _ in
                 if let left { review.fieldLeft(left) }
             }
+            // Cancel roles, so VoiceOver's escape gesture answers like the default button.
             .alert(Text("review.nikMissing"), isPresented: $nikMissingShown) {
-                Button {
-                    focusAfterAlertCloses(FieldKey.nik)
+                Button(role: .cancel) {
+                    // Simpan stays visible until the NIK has focus, so asking ends only then.
+                    afterAlertCloses {
+                        review.alertAnswered()
+                        focusedField = FieldKey.nik
+                    }
                 } label: {
                     Text("review.fillNIK")
                 }
                 .keyboardShortcut(.defaultAction)
-                Button(action: onSave) { Text("review.saveAnyway") }
+                Button(action: saveWithoutNIK) { Text("review.saveAnyway") }
+            }
+            // A page read as another document is saved with this one, so Simpan says so; Kembali is the default.
+            .alert(Text("review.otherPages"), isPresented: $otherPagesShown) {
+                Button(role: .cancel) {
+                } label: {
+                    Text("review.goBack")
+                }
+                .keyboardShortcut(.defaultAction)
+                Button(action: onSave) { Text("review.otherPages.save") }
+            } message: {
+                Text(verbatim: review.pageNotes.saveWarning ?? "")
+            }
+            // However the pages alert closes, it was the last question.
+            .onChange(of: otherPagesShown) { _, shown in
+                if !shown { review.alertAnswered() }
             }
             .sheet(isPresented: $expiryPickerShown) {
-                ExpiryCalendar(title: expiryTitle) { review.setExpiry($0) }
+                ExpiryCalendar(title: ValiditySection.title(for: review.type)) { review.setExpiry($0) }
+            }
+        }
+    }
+
+    /// "N halaman", then which page the fields came from and what other pages were read as, one text each.
+    /// A page with a badge is said in amber like a mark, so it's seen when the screen is skimmed.
+    private var pagesFooter: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("review.pages \(review.pages.count)")
+            ForEach(review.pageNotes.lines, id: \.text) { line in
+                if line.isMarked { WarningText(verbatim: line.text) } else { Text(verbatim: line.text) }
             }
         }
     }
@@ -158,7 +193,7 @@ struct ReviewView: View {
             LabeledContent {
                 HStack(spacing: 6) {
                     Text(DocumentStyle.name(review.type))
-                    opensSheet
+                    DisclosureChevron()
                 }
             } label: {
                 VStack(alignment: .leading, spacing: 4) {
@@ -212,99 +247,48 @@ struct ReviewView: View {
             voiceOverFocus: $voiceOverField, onChange: { review.setValue($0, for: key) },
             onSubmit: { focusField(after: key) })
     }
-
-    @ViewBuilder private var validitySection: some View {
-        if review.type == .ktp {
-            Section {
-                LabeledContent {
-                    Text("review.forLife")
-                } label: {
-                    Text("review.validFor")
-                }
-            }
-        } else if review.hasExpiry {
-            Section {
-                if let expiry = review.expiry, let shown = expiry.utcDate {
-                    DatePicker(
-                        selection: Binding(get: { shown }, set: { review.setExpiry(CalendarDate(utc: $0)) }),
-                        displayedComponents: .date
-                    ) {
-                        expiryLabel
-                    }
-                    // Expiry dates are calendar days in UTC, so no time zone moves them.
-                    .environment(\.timeZone, .gmt)
-                    .accessibilityIdentifier("review.expiry")
-                } else {
-                    // Never shown as today: an empty expiry has to be seen, not saved quietly as none. The
-                    // calendar sets nothing until Pilih, so opening it can't fill in a date by itself.
-                    Button {
-                        expiryPickerShown = true
-                    } label: {
-                        LabeledContent {
-                            HStack(spacing: 6) {
-                                Text("review.expiryMissing")
-                                opensSheet
-                            }
-                        } label: {
-                            expiryLabel
-                        }
-                    }
-                    .accessibilityIdentifier("review.expiry")
-                }
-            } footer: {
-                // The date printed on an STNK is its five-year validity; the one that matters is the tax.
-                if review.type == .stnk { Text("review.taxHint") }
-            }
-        }
-    }
-
-    /// An STNK's date is its yearly tax; every other type's is its validity.
-    private var expiryTitle: LocalizedStringResource {
-        review.type == .stnk ? "review.taxValidUntil" : "review.validUntil"
-    }
-
-    /// The chevron of a row that opens a sheet, as in Settings, so the row reads as something to tap.
-    private var opensSheet: some View {
-        Image(systemName: "chevron.forward")
-            .font(.footnote.weight(.semibold))
-            .foregroundStyle(.tertiary)
-            .accessibilityHidden(true)
-    }
-
-    private var expiryLabel: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(expiryTitle).foregroundStyle(Color.primary)
-            if let note = review.expiryNote { WarningText(Self.text(for: note, numberKey: review.numberKey)) }
-        }
-    }
 }
 
 extension ReviewView {
     private static let labelFocus = "label"
 
     /// Simpan never quietly does nothing: a wrong value takes the user to its field, with a haptic, and
-    /// VoiceOver reads the reason; an empty NIK is asked about first.
+    /// VoiceOver reads the reason; otherwise it asks what `ReviewModel.saveStep` says, or saves.
     private func trySave() {
-        if let key = review.firstProblem() {
+        guard let step = review.saveStep() else { return }
+        switch step {
+        case .refuse(let key):
             focusedField = key
             refusals += 1
             // VoiceOver goes to the field and reads its label, which carries the reason.
             voiceOverField = key
-        } else if review.nikMissing {
-            nikMissingShown = true
+        case .askNIK: nikMissingShown = true
+        case .askPages: otherPagesShown = true
+        case .save: onSave()
+        }
+    }
+
+    private func saveWithoutNIK() {
+        if review.saveStepWithoutNIK() == .askPages {
+            afterAlertCloses {
+                // Past the wait's limit the NIK alert can still be up, and this one would never show or
+                // close; the next Simpan asks again instead.
+                if UIApplication.shared.showsAlert { review.alertAnswered() } else { otherPagesShown = true }
+            }
         } else {
             onSave()
         }
     }
 
-    /// Focus set while an alert is still closing can be dropped, so it waits until the alert is off the
-    /// screen, checked rather than guessed with a delay. After two seconds at most it's set anyway.
-    private func focusAfterAlertCloses(_ key: String) {
+    /// Focus set, or an alert shown, while an alert is still closing can be dropped, so it waits until the
+    /// alert is off the screen, checked rather than guessed with a delay. After two seconds at most it runs
+    /// anyway.
+    private func afterAlertCloses(_ action: @escaping () -> Void) {
         Task {
             for _ in 0..<40 where UIApplication.shared.showsAlert {
                 try? await Task.sleep(for: .milliseconds(50))
             }
-            focusedField = key
+            action()
         }
     }
 

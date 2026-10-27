@@ -18,7 +18,8 @@ struct TypePickerView: View {
     @Environment(\.dismiss) private var dismiss
 
     /// After KTP and SIM, which have rows of their own.
-    private static let types: [DocumentType] = [.passport, .stnk, .kk, .npwp, .bpjs, .other]
+    /// Every type besides KTP and the SIMs, which have rows of their own.
+    static let types: [DocumentType] = [.passport, .stnk, .kk, .npwp, .bpjs, .other]
 
     /// Umum is read from the type id, so a class added later lands in the right section.
     static let publicSIMClasses = DocumentType.simClasses.filter { $0.rawValue.hasSuffix("-umum") }

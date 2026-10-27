@@ -291,16 +291,17 @@ public enum SIMParser {
         var corrected: Bool
     }
 
+    /// 16 digits, the NIK, on a card from July 2024, or 14 on an older one, with nothing between them.
+    public static func isWellFormedNumber(_ number: String) -> Bool {
+        [14, 16].contains(number.count) && number.allSatisfy(\.isASCIIDigit)
+    }
+
     /// 16 digits (the NIK, from July 2024) or 14 digits printed as 4-4-6 (older cards).
     private static func number(in line: String) -> Number? {
         let (digits, corrected) = NIK.digits(from: line.filter { $0 != "-" })
-        guard digits.allSatisfy(\.isASCIIDigit) else { return nil }
-        switch digits.count {
-        case 16: return Number(text: digits, digits: digits, corrected: corrected)
+        guard isWellFormedNumber(digits) else { return nil }
         // Stored as digits alone, however it was printed; dashes are for display only.
-        case 14: return Number(text: digits, digits: digits, corrected: corrected)
-        default: return nil
-        }
+        return Number(text: digits, digits: digits, corrected: corrected)
     }
 
     private static let classes: [String: DocumentType] = [

@@ -38,4 +38,25 @@ struct NIKTests {
         // An old SIM's number: 14 digits, no date.
         #expect(NIK.agrees("00000000000001", withBirthDate: birth) == nil)
     }
+
+    @Test func aWellFormedNIKIsSixteenASCIIDigits() {
+        #expect(NIK.isWellFormed("0012341708900001"))
+        for number in [
+            "", "001234170890000", "00123417089000011", "001234170890000A", "0012-3417-0890-0001", "001234170890000١",
+        ] {
+            #expect(!NIK.isWellFormed(number), "\(number)")
+        }
+    }
+
+    /// A digit with a mark on it, or a keycap, sorts like a digit as text but has no value: pasted into the
+    /// NIK, it was taken as well formed and its date read past the end.
+    @Test func aDigitWithAMarkIsNoDigit() {
+        let keycaps = String(repeating: "1\u{20E3}", count: 16)
+        let accented = String(repeating: "0\u{301}", count: 16)
+        for number in [keycaps, accented] {
+            #expect(!NIK.isWellFormed(number))
+            #expect(NIK.agrees(number, withBirthDate: birth) == nil)
+        }
+        #expect(!Character("1\u{20E3}").isASCIIDigit)
+    }
 }

@@ -67,6 +67,9 @@
                             : "The document camera only runs on an iPhone.")
                 }
                 Section("Result") { resultRows }
+                if let reading = scan.reading, reading.pages.count > 1 {
+                    Section("Pages") { pageRows(reading) }
+                }
                 if !scan.lines.isEmpty {
                     Section("Recognised text, \(scan.lines.count) lines") {
                         ForEach(Array(scan.lines.enumerated()), id: \.offset) { _, line in
@@ -158,6 +161,23 @@
                     Text("VisionKit's folder while the camera was open")
                 } footer: {
                     Text("Every line should say Complete: the folder, Scans and each page file.")
+                }
+            }
+        }
+
+        /// What each page was read as and how it relates to the source page, by code only: a page can be
+        /// another person's card, so none of its values are shown.
+        private func pageRows(_ reading: ScanReading) -> some View {
+            ForEach(reading.pages.indices, id: \.self) { index in
+                if let page = reading.pages[index] {
+                    let reasons = page.reasons.values.reduce(page.typeReasons.union(page.expiryReasons)) {
+                        $0.union($1)
+                    }
+                    row(
+                        Text(verbatim: "\(page.type.rawValue), \(page.relation)"), label: "page \(index + 1)",
+                        reasons: reasons)
+                } else {
+                    row(Text(verbatim: "not a front"), label: "page \(index + 1)", reasons: [])
                 }
             }
         }

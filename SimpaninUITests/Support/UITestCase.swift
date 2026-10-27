@@ -35,6 +35,20 @@ class UITestCase: XCTestCase {
         add(attachment)
     }
 
+    /// The same screen in Dark Mode, put back to light whatever happens, so later tests aren't affected.
+    @MainActor
+    func darkScreenshot(_ name: String) {
+        addTeardownBlock { @MainActor in XCUIDevice.shared.appearance = .light }
+        let light = XCUIScreen.main.screenshot().pngRepresentation
+        XCUIDevice.shared.appearance = .dark
+        // The app redraws a moment later. Checked rather than guessed: the screen has to change, 3 s at most.
+        let deadline = Date().addingTimeInterval(3)
+        while XCUIScreen.main.screenshot().pngRepresentation == light, Date() < deadline {
+            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        }
+        screenshot(name)
+    }
+
     @MainActor
     func rows(_ app: XCUIApplication) -> XCUIElementQuery {
         app.descendants(matching: .any).matching(identifier: "document.row")

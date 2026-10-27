@@ -18,7 +18,8 @@
     /// with an in-memory key. `-SimpaninUITestOpenError <case>` makes opening fail, so a test
     /// lands on a recovery screen; `-SimpaninUITestPasscode notSet` acts as if there's no passcode.
     /// `-SimpaninUITestBrokenOldVault` puts a folder VaultCore can't read into Data lama.
-    /// `-SimpaninUITestScan` makes "+" skip the camera, which the simulator lacks, and read a synthetic KTP.
+    /// `-SimpaninUITestScan` makes "+" skip the camera, which the simulator lacks, and read a synthetic KTP;
+    /// `-SimpaninUITestScanKTPAndSIM` does the same with two pages, a synthetic KTP and SIM A.
     nonisolated enum UITestSetup {
         static var isActive: Bool { ProcessInfo.processInfo.arguments.contains("-SimpaninUITest") }
 
@@ -80,29 +81,47 @@
             isActive && ProcessInfo.processInfo.arguments.contains("-SimpaninUITestExpiringSamples")
         }
 
-        static var scansSynthetically: Bool {
+        static var scansSynthetically: Bool { scansKTP || scansKTPAndSIM }
+
+        private static var scansKTP: Bool {
             isActive && ProcessInfo.processInfo.arguments.contains("-SimpaninUITestScan")
         }
 
-        /// One blank page: the synthetic recognizer below never looks at it.
-        static var syntheticPages: [CGImage] {
-            guard
-                let context = CGContext(
-                    data: nil, width: 8, height: 8, bitsPerComponent: 8, bytesPerRow: 32,
-                    space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue),
-                let page = context.makeImage()
-            else { return [] }
-            return [page]
+        private static var scansKTPAndSIM: Bool {
+            isActive && ProcessInfo.processInfo.arguments.contains("-SimpaninUITestScanKTPAndSIM")
         }
 
-        /// A synthetic KTP whose name is marked, so the review screen shows Periksa lagi.
+        /// Blank pages; the recognizer below tells them apart by their width alone, so a rescan reads the same.
+        static var syntheticPages: [CGImage] {
+            (scansKTPAndSIM ? [8, 9] : [8]).compactMap(blankPage)
+        }
+
+        private static func blankPage(width: Int) -> CGImage? {
+            CGContext(
+                data: nil, width: width, height: 8, bitsPerComponent: 8, bytesPerRow: 4 * width,
+                space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            )?.makeImage()
+        }
+
+        /// A synthetic KTP whose name is marked, so the review screen shows Periksa lagi, and on a page 9 wide
+        /// a synthetic SIM A with the same NIK as its number.
         struct SyntheticRecognizer: TextRecognizer {
             func lines(in page: CGImage) async throws -> [String] {
-                [
-                    "PROVINSI DKI JAKARTA", "NIK : 0012341708900001", "Nama : BUDI C0NTOH",
-                    "Tempat/Tgl Lahir : JAKARTA, 17-08-1990", "Jenis Kelamin : LAKI-LAKI",
-                ]
+                page.width == 9 ? Self.sim : Self.ktp
             }
+
+            private static let ktp = [
+                "PROVINSI DKI JAKARTA", "NIK : 0012341708900001", "Nama : BUDI C0NTOH",
+                "Tempat/Tgl Lahir : JAKARTA, 17-08-1990", "Jenis Kelamin : LAKI-LAKI",
+            ]
+
+            private static let sim = [
+                "INDONESIA", "DRIVING LICENSE", "SURAT IZIN MENGEMUDI", "0012341708900001", "A",
+                "Mobil Penumpang Pribadi/", "Passenger Car/ Personal Goods", "Nama/Name", "BUDI CONTOH",
+                "Tempat, Tgl Lahir/Place, Date of Birth", "JAKARTA, 17-08-1990", "Gol Darah/Blood Type",
+                "Jenis Kelamin/Sex", "O", "PRIA", "Alamat/Address", "JL. CONTOH NO. 1", "Pekerjaan/Occupation",
+                "KARYAWAN", "Diterbitkan Oleh/Issued by", "POLRES CONTOH", "29-07-2029",
+            ]
         }
 
         static var passcode: PasscodeState {

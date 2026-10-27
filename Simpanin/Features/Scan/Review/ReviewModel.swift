@@ -43,10 +43,14 @@ final class ReviewModel {
     /// Fields the user typed in, so a value typed back never counts as the scan's.
     private var edited: Set<String> = []
     private var birthDateConfirmed = false
+    /// How the scan's pages relate; reasons only, no values from another person's card.
+    private var reading: ScanReading?
     /// Why Simpan refused a field, shown under it until the field is edited.
     private(set) var problems: [String: FieldProblem] = [:]
     var saveError: RecoveryScreen?
     private(set) var saving = false
+    /// An alert from Simpan is up, or about to follow another.
+    private var asking = false
     /// What the scan read, to tell what the user changed.
     private var scanned: [String: String] = [:]
     private var scannedType = DocumentType.other
@@ -60,8 +64,14 @@ final class ReviewModel {
         self.encode = encode
     }
 
+    /// Worked out each time from the reading and the type chosen now, never stored.
+    var pageNotes: PageNotes { PageNotes(reading: reading, pageCount: pages.count, chosen: type) }
+
     /// The fields the chosen type has, in the order the screen shows them.
-    var fieldKeys: [String] {
+    var fieldKeys: [String] { Self.fieldKeys(for: type) }
+
+    /// Only the types a parser reads have fields to check; the others have none yet.
+    nonisolated static func fieldKeys(for type: DocumentType) -> [String] {
         if type == .ktp { return [FieldKey.nik, FieldKey.name, FieldKey.birthDate] }
         if type.isSIM { return [FieldKey.simNumber, FieldKey.name, FieldKey.birthDate] }
         return []
@@ -85,8 +95,12 @@ final class ReviewModel {
     var hasUserChanges: Bool { values != scanned || type != scannedType || expiry != scannedExpiry }
 
     /// After a scan or a rescan: every field comes from the new pages. The label stays.
-    func load(_ result: ParsedDocument?, pages: [CGImage]) {
+    func load(_ result: ParsedDocument?, pages: [CGImage], reading: ScanReading? = nil) {
         self.pages = pages
+        // Always replaced, so a rescan that failed never keeps the old scan's notes.
+        self.reading = reading
+        // An alert that was about to follow Simpan saja belongs to the old pages.
+        asking = false
         type = result?.type ?? .other
         values = (result?.fields.values ?? [:]).reduce(into: [:]) { shown, field in
             shown[field.key] = Self.dateKeys.contains(field.key) ? Self.dayFirst(field.value) : field.value
@@ -130,7 +144,7 @@ final class ReviewModel {
             let birth = Self.yearFirst(values[FieldKey.birthDate] ?? "").flatMap(CalendarDate.init),
             // Dashes and spaces are only for display. An old SIM's 14 digits hold no date, so they give nil.
             let agrees = NIK.agrees(
-                values[number, default: ""].filter { $0.isASCII && $0.isNumber }, withBirthDate: birth)
+                values[number, default: ""].filter(\.isASCIIDigit), withBirthDate: birth)
         else {
             // One of them can't be compared any more, so the other no longer disagrees with anything.
             for key in [numberKey, FieldKey.birthDate].compactMap(\.self) { drop(.disagreesWithBirthDate, from: key) }
@@ -163,6 +177,8 @@ final class ReviewModel {
         // One save at a time: a second tap while the first is being written would save a duplicate.
         guard !saving else { return false }
         saving = true
+        // Simpan was answered; if this save fails, the next tap asks again.
+        asking = false
         defer { saving = false }
         var fields: [String: String] = [:]
         // A value that can't be stored is never saved; its field shows why.
@@ -270,6 +286,42 @@ extension ReviewModel {
     /// A KTP saved without its NIK is asked about first, never refused: an old photo can be blurred there.
     var nikMissing: Bool { fieldKeys.contains(FieldKey.nik) && Self.trimmed(values[FieldKey.nik]).isEmpty }
 
+    /// What Simpan does next.
+    enum SaveStep: Equatable {
+        /// A wrong value; Simpan goes to its field.
+        case refuse(String)
+        case askNIK
+        /// A page was read as another document.
+        case askPages
+        case save
+    }
+
+    /// Simpan was tapped: a wrong value is refused first, then an empty NIK and a page read as another
+    /// document are asked about. Nil while an alert from an earlier tap is still being answered, so a quick
+    /// second tap never stacks two.
+    func saveStep() -> SaveStep? {
+        guard !asking else { return nil }
+        if let key = firstProblem() { return .refuse(key) }
+        return ask(nikMissing ? .askNIK : stepAfterNIK)
+    }
+
+    /// "Simpan saja" in the empty NIK's alert.
+    func saveStepWithoutNIK() -> SaveStep {
+        ask(stepAfterNIK)
+    }
+
+    /// An alert from Simpan closed, or won't show, so the next tap asks again.
+    func alertAnswered() {
+        asking = false
+    }
+
+    private var stepAfterNIK: SaveStep { pageNotes.saveWarning == nil ? .save : .askPages }
+
+    private func ask(_ step: SaveStep) -> SaveStep {
+        asking = step != .save
+        return step
+    }
+
     private static func trimmed(_ text: String?) -> String {
         text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
     }
@@ -282,7 +334,7 @@ extension ReviewModel {
     /// Why a value can't be stored, or nil when it can. Only a NIK's length and dates are judged.
     static func problem(with text: String, for key: String) -> FieldProblem? {
         if key == FieldKey.nik {
-            return text.count == 16 && text.allSatisfy { $0.isASCII && $0.isNumber } ? nil : .nikLength
+            return NIK.isWellFormed(text) ? nil : .nikLength
         }
         guard dateKeys.contains(key) else { return nil }
         guard let date = yearFirst(text).flatMap(CalendarDate.init) else { return .notADate }
@@ -292,7 +344,7 @@ extension ReviewModel {
     /// Digits as dd-mm-yyyy, for a number pad. A dash only goes before a digit, so backspace can remove it.
     static func typedDate(_ text: String) -> String {
         var result = ""
-        let digits = text.filter { $0.isASCII && $0.isNumber }
+        let digits = text.filter(\.isASCIIDigit)
         for (index, digit) in digits.prefix(8).enumerated() {
             if index == 2 || index == 4 { result.append("-") }
             result.append(digit)

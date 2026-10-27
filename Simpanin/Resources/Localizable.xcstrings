@@ -837,6 +837,303 @@
         }
       }
     },
+    "pageNotes.classUnread %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ juga SIM, tapi golongannya tidak terbaca."
+          }
+        }
+      }
+    },
+    "pageNotes.label.classUnread" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "juga SIM, golongan tidak terbaca"
+          }
+        }
+      }
+    },
+    "pageNotes.label.otherCard %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "terbaca sebagai %@ lain"
+          }
+        }
+      }
+    },
+    "pageNotes.label.readAs %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "terbaca sebagai %@"
+          }
+        }
+      }
+    },
+    "pageNotes.label.source" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "isian dibaca dari halaman ini"
+          }
+        }
+      }
+    },
+    "pageNotes.label.unsureNumber %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "juga %@, nomor belum pasti sama"
+          }
+        }
+      }
+    },
+    "pageNotes.labelWith %lld %lld %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Halaman %1$lld dari %2$lld, %3$@"
+          }
+        }
+      }
+    },
+    "pageNotes.otherCard %@ %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ terbaca sebagai %2$@ lain."
+          }
+        }
+      }
+    },
+    "pageNotes.otherType %@ %@ %@ %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ terbaca sebagai %2$@, bukan %3$@ di halaman %4$lld."
+          }
+        }
+      }
+    },
+    "pageNotes.pages %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Halaman %@"
+          }
+        }
+      }
+    },
+    "pageNotes.readAs %@ %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ terbaca sebagai %2$@."
+          }
+        }
+      }
+    },
+    "pageNotes.savedAs %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Semua halaman akan disimpan sebagai satu dokumen %@."
+          }
+        }
+      }
+    },
+    "pageNotes.savedAs.bpjs" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Semua halaman akan disimpan sebagai satu dokumen BPJS."
+          }
+        }
+      }
+    },
+    "pageNotes.savedAs.kk" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Semua halaman akan disimpan sebagai satu dokumen kartu keluarga."
+          }
+        }
+      }
+    },
+    "pageNotes.savedAs.npwp" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Semua halaman akan disimpan sebagai satu dokumen NPWP."
+          }
+        }
+      }
+    },
+    "pageNotes.savedAs.other" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Semua halaman akan disimpan sebagai satu dokumen."
+          }
+        }
+      }
+    },
+    "pageNotes.savedAs.passport" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Semua halaman akan disimpan sebagai satu dokumen paspor."
+          }
+        }
+      }
+    },
+    "pageNotes.savedAs.stnk" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Semua halaman akan disimpan sebagai satu dokumen STNK."
+          }
+        }
+      }
+    },
+    "pageNotes.several" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beberapa halaman terbaca sebagai dokumen lain."
+          }
+        }
+      }
+    },
+    "pageNotes.severalNot.bpjs" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beberapa halaman terbaca sebagai dokumen lain, bukan BPJS."
+          }
+        }
+      }
+    },
+    "pageNotes.severalNot.kk" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beberapa halaman terbaca sebagai dokumen lain, bukan kartu keluarga."
+          }
+        }
+      }
+    },
+    "pageNotes.severalNot.npwp" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beberapa halaman terbaca sebagai dokumen lain, bukan NPWP."
+          }
+        }
+      }
+    },
+    "pageNotes.severalNot.other" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beberapa halaman terbaca sebagai dokumen lain, bukan dokumen Lainnya."
+          }
+        }
+      }
+    },
+    "pageNotes.severalNot.passport" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beberapa halaman terbaca sebagai dokumen lain, bukan paspor."
+          }
+        }
+      }
+    },
+    "pageNotes.severalNot.stnk" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beberapa halaman terbaca sebagai dokumen lain, bukan STNK."
+          }
+        }
+      }
+    },
+    "pageNotes.source %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Isian dibaca dari halaman %lld."
+          }
+        }
+      }
+    },
+    "pageNotes.unsureNumber %@ %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ juga %2$@, tapi nomornya belum bisa dipastikan sama."
+          }
+        }
+      }
+    },
     "recovery.cannotOpenNow" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1123,6 +1420,17 @@
         }
       }
     },
+    "review.goBack" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kembali"
+          }
+        }
+      }
+    },
     "review.keepChecking" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1251,6 +1559,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dibaca di HP ini. Tidak ada yang dikirim ke internet."
+          }
+        }
+      }
+    },
+    "review.otherPages" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ada halaman dari dokumen lain"
+          }
+        }
+      }
+    },
+    "review.otherPages.save" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Simpan"
           }
         }
       }
