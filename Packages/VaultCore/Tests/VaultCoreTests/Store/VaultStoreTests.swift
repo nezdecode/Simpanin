@@ -72,6 +72,21 @@ struct VaultStoreTests {
         #expect(try await reopened.snapshot() == store.snapshot())
     }
 
+    /// The app's duplicate check reads the fields of other saved documents and must never open their pages.
+    @Test func fieldsAreReadWithoutAnyPageFile() async throws {
+        let vault = try TestVault()
+        let store = vault.makeStore()
+        try await store.open()
+        let id = try await store.createDocument(
+            type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields,
+            pages: [Synthetic.page("ktp-front"), Synthetic.page("ktp-back")])
+        let pageFiles = try vault.pageFiles()
+        try #require(pageFiles.count == 2)
+        for file in pageFiles { try FileManager.default.removeItem(at: file) }
+
+        #expect(try await store.fields(of: id) == Synthetic.ktpFields)
+    }
+
     @Test func editFieldsTypeAndExpiry() async throws {
         let vault = try TestVault()
         let store = vault.makeStore()
