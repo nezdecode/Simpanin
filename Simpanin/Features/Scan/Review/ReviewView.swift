@@ -140,8 +140,9 @@ struct ReviewView: View {
             .onChange(of: focusedField) { left, _ in
                 if let left { review.fieldLeft(left) }
             }
+            // Cancel roles, so VoiceOver's escape gesture answers like the default button.
             .alert(Text("review.nikMissing"), isPresented: $nikMissingShown) {
-                Button {
+                Button(role: .cancel) {
                     review.alertAnswered()
                     afterAlertCloses { focusedField = FieldKey.nik }
                 } label: {
@@ -152,7 +153,7 @@ struct ReviewView: View {
             }
             // A page read as another document is saved with this one, so Simpan says so; Kembali is the default.
             .alert(Text("review.otherPages"), isPresented: $otherPagesShown) {
-                Button {
+                Button(role: .cancel) {
                     review.alertAnswered()
                 } label: {
                     Text("review.goBack")
