@@ -151,6 +151,20 @@ struct DuplicateCheckTests {
         await #expect(throws: VaultError.locked) { try await find(.ktp, ktp(), in: store) }
     }
 
+    /// A lock between the list and a document's fields stops the check too, rather than skipping that document.
+    @Test func aLockDuringTheFieldReadsStopsTheCheck() async throws {
+        let store = FakeDocuments()
+        try await save(.ktp, ktp(), in: store)
+        await store.gateNextFieldsRead()
+        let candidate = try #require(DuplicateCheck.candidate(type: .ktp, values: ktp()))
+        let checking = Task { try await DuplicateCheck.find(candidate, in: store) }
+        let reading = await store.waitUntilReadingFields()
+        await store.lock()
+        await store.releaseFieldsRead()
+        try #require(reading)
+        await #expect(throws: VaultError.locked) { try await checking.value }
+    }
+
     @Test func aTypeWithoutFieldsReadsNothing() {
         for type in [DocumentType.passport, .stnk, .kk, .npwp, .bpjs, .other] {
             #expect(DuplicateCheck.candidate(type: type, values: ktp()) == nil)
