@@ -1387,6 +1387,50 @@
         }
       }
     },
+    "review.duplicate.ktp" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kamu sudah punya KTP dengan NIK ini."
+          }
+        }
+      }
+    },
+    "review.duplicate.message" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yang lama tidak diganti. Kalau disimpan, keduanya ada di daftar."
+          }
+        }
+      }
+    },
+    "review.duplicate.save" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Simpan"
+          }
+        }
+      }
+    },
+    "review.duplicate.sim %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kamu sudah punya %@ dengan nomor ini."
+          }
+        }
+      }
+    },
     "review.expiryMissing" : {
       "extractionState" : "manual",
       "localizations" : {

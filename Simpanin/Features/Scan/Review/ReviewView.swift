@@ -25,6 +25,9 @@ struct ReviewView: View {
     @State private var expiryPickerShown = false
     @State private var nikMissingShown = false
     @State private var otherPagesShown = false
+    @State private var duplicateShown = false
+    /// What the duplicate alert names, kept while it closes: answering it clears the model's duplicate.
+    @State private var duplicateName = DocumentType.ktp
     @State private var discardConfirmShown = false
     /// Counts refused taps on Simpan, for the error haptic.
     @State private var refusals = 0
@@ -165,9 +168,41 @@ struct ReviewView: View {
             } message: {
                 Text(verbatim: review.pageNotes.saveWarning ?? "")
             }
-            // However the pages alert closes, it was the last question.
+            // However the pages alert closes, it was the last question before the save.
             .onChange(of: otherPagesShown) { _, shown in
                 if !shown { review.alertAnswered() }
+            }
+            // The check finishes inside the save, often while the pages or NIK alert is still closing, and
+            // an alert shown then can be dropped; one still up after the wait means the next Simpan asks.
+            .onChange(of: review.duplicate) { _, found in
+                guard let found else { return }
+                afterAlertCloses {
+                    if UIApplication.shared.showsAlert {
+                        review.duplicateAnswered()
+                    } else {
+                        duplicateName = found.name
+                        duplicateShown = true
+                    }
+                }
+            }
+            // Kembali is the default: the likeliest reason is a document saved before and forgotten.
+            .alert(Text(Self.duplicateTitle(duplicateName)), isPresented: $duplicateShown) {
+                Button(role: .cancel) {
+                } label: {
+                    Text("review.goBack")
+                }
+                .keyboardShortcut(.defaultAction)
+                Button {
+                    review.acceptDuplicate()
+                    onSave()
+                } label: {
+                    Text("review.duplicate.save")
+                }
+            } message: {
+                Text("review.duplicate.message")
+            }
+            .onChange(of: duplicateShown) { _, shown in
+                if !shown { review.duplicateAnswered() }
             }
             .sheet(isPresented: $expiryPickerShown) {
                 ExpiryCalendar(title: ValiditySection.title(for: review.type)) { review.setExpiry($0) }
@@ -333,6 +368,11 @@ extension ReviewView {
             key += numberKey == FieldKey.simNumber ? ".simNumber" : ".nik"
         }
         return LocalizedStringResource(String.LocalizationValue(key))
+    }
+
+    /// "Kamu sudah punya SIM A dengan nomor ini.": a KTP has a NIK, a SIM a number.
+    static func duplicateTitle(_ name: DocumentType) -> LocalizedStringResource {
+        name == .ktp ? "review.duplicate.ktp" : "review.duplicate.sim \(String(localized: DocumentStyle.name(name)))"
     }
 
     static func reason(for problem: ReviewModel.FieldProblem) -> LocalizedStringResource {

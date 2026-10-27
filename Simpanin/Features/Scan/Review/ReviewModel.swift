@@ -49,6 +49,12 @@ final class ReviewModel {
     private(set) var saving = false
     /// An alert from Simpan is up, or about to follow another.
     private var asking = false
+    /// Found by the check on Simpan; Simpan asks nothing until its alert is answered.
+    private(set) var duplicate: DuplicateCheck.Found?
+    /// Simpan in the duplicate alert, kept while the number and type stay the same, also after a failed save.
+    private var acceptedDuplicate: DuplicateCheck.Candidate?
+    /// What the pages alert said when it was answered; while the notes say the same, it isn't asked again.
+    private var answeredPages: PageNotes?
     /// What the scan read, to tell what the user changed.
     private var scanned: [String: String] = [:]
     private var scannedType = DocumentType.other
@@ -97,8 +103,11 @@ final class ReviewModel {
         self.pages = pages
         // Always replaced, so a rescan that failed never keeps the old scan's notes.
         self.reading = reading
-        // An alert that was about to follow Simpan saja belongs to the old pages.
+        // An alert that was about to follow Simpan saja belongs to the old pages, as do the answers.
         asking = false
+        duplicate = nil
+        acceptedDuplicate = nil
+        answeredPages = nil
         type = result?.type ?? .other
         values = (result?.fields.values ?? [:]).reduce(into: [:]) { shown, field in
             shown[field.key] = Self.dateKeys.contains(field.key) ? Self.dayFirst(field.value) : field.value
@@ -168,15 +177,17 @@ final class ReviewModel {
         expiryReasons = []
     }
 
-    /// Seals the pages and the fields into the vault. False when it didn't; `saveError` says why.
+    /// Seals the pages and the fields into the vault. False when it didn't: `saveError` says why, or
+    /// `duplicate` holds what the vault already has.
     /// - Parameter onSaved: runs the moment the vault has the document, before anything else can, so a
     ///   lock right after never reports the saved scan as dropped.
     func save(onSaved: () -> Void = {}) async -> Bool {
         // One save at a time: a second tap while the first is being written would save a duplicate.
         guard !saving else { return false }
         saving = true
-        // Simpan was answered; if this save fails, the next tap asks again.
+        // Simpan was answered; if this save fails, the next tap asks again, except about these pages.
         asking = false
+        answeredPages = pageNotes
         defer { saving = false }
         var fields: [String: String] = [:]
         // A value that can't be stored is never saved; its field shows why.
@@ -190,6 +201,16 @@ final class ReviewModel {
         let type = type
         let trimmedLabel = label.trimmingCharacters(in: .whitespacesAndNewlines)
         let expiry = hasExpiry ? expiry : nil
+        if let candidate = DuplicateCheck.candidate(type: type, values: fields), candidate != acceptedDuplicate {
+            do {
+                duplicate = try await DuplicateCheck.find(candidate, in: store)
+                if duplicate != nil { return false }
+            } catch {
+                // Only a lock comes here; it drops the scan, as a locked save would.
+                saveError = RecoveryMapping.screen(forSaveError: error)
+                return false
+            }
+        }
         let encoded = await Self.encoded(pages, with: encode)
         // A page that can't be prepared is never left out, so nothing is saved.
         guard encoded.count == pages.count else {
@@ -298,7 +319,7 @@ extension ReviewModel {
     /// document are asked about. Nil while an alert from an earlier tap is still being answered, so a quick
     /// second tap never stacks two.
     func saveStep() -> SaveStep? {
-        guard !asking else { return nil }
+        guard !asking, duplicate == nil else { return nil }
         if let key = firstProblem() { return .refuse(key) }
         return ask(nikMissing ? .askNIK : stepAfterNIK)
     }
@@ -313,7 +334,20 @@ extension ReviewModel {
         asking = false
     }
 
-    private var stepAfterNIK: SaveStep { pageNotes.saveWarning == nil ? .save : .askPages }
+    /// Simpan in the duplicate alert.
+    func acceptDuplicate() {
+        acceptedDuplicate = duplicate?.candidate
+        duplicate = nil
+    }
+
+    /// The duplicate alert closed, or couldn't show.
+    func duplicateAnswered() {
+        duplicate = nil
+    }
+
+    private var stepAfterNIK: SaveStep {
+        pageNotes.saveWarning == nil || pageNotes == answeredPages ? .save : .askPages
+    }
 
     private func ask(_ step: SaveStep) -> SaveStep {
         asking = step != .save
