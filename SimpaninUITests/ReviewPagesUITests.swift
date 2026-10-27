@@ -75,7 +75,7 @@ final class ReviewPagesUITests: UITestCase {
         XCTAssertTrue(rows(app).firstMatch.waitForExistence(timeout: 10))
     }
 
-    /// The empty NIK is asked about first; Simpan saja then asks about the other page.
+    /// The empty NIK is asked about first; Simpan saja then asks about the other page, and Simpan there saves.
     @MainActor
     func testTheNIKIsAskedAboutBeforeTheOtherPage() throws {
         let app = launch(["-SimpaninUITestScanKTPAndSIM"])
@@ -85,7 +85,10 @@ final class ReviewPagesUITests: UITestCase {
         app.buttons["review.save"].tap()
         XCTAssertTrue(app.buttons["Simpan saja"].waitForExistence(timeout: 5))
         app.buttons["Simpan saja"].tap()
-        XCTAssertTrue(app.alerts["Ada halaman dari dokumen lain"].waitForExistence(timeout: 5))
+        let alert = app.alerts["Ada halaman dari dokumen lain"]
+        XCTAssertTrue(alert.waitForExistence(timeout: 5))
+        alert.buttons["Simpan"].tap()
+        XCTAssertTrue(rows(app).firstMatch.waitForExistence(timeout: 10))
     }
 
     /// The badge keeps its size; the footer's sentences wrap.

@@ -49,6 +49,8 @@ final class ReviewModel {
     private(set) var problems: [String: FieldProblem] = [:]
     var saveError: RecoveryScreen?
     private(set) var saving = false
+    /// An alert from Simpan is up, or about to follow another.
+    private var asking = false
     /// What the scan read, to tell what the user changed.
     private var scanned: [String: String] = [:]
     private var scannedType = DocumentType.other
@@ -279,6 +281,42 @@ extension ReviewModel {
 
     /// A KTP saved without its NIK is asked about first, never refused: an old photo can be blurred there.
     var nikMissing: Bool { fieldKeys.contains(FieldKey.nik) && Self.trimmed(values[FieldKey.nik]).isEmpty }
+
+    /// What Simpan does next.
+    enum SaveStep: Equatable {
+        /// A wrong value; Simpan goes to its field.
+        case refuse(String)
+        case askNIK
+        /// A page was read as another document.
+        case askPages
+        case save
+    }
+
+    /// Simpan was tapped: a wrong value is refused first, then an empty NIK and a page read as another
+    /// document are asked about. Nil while an alert from an earlier tap is still being answered, so a quick
+    /// second tap never stacks two.
+    func saveStep() -> SaveStep? {
+        guard !asking else { return nil }
+        if let key = firstProblem() { return .refuse(key) }
+        return ask(nikMissing ? .askNIK : stepAfterNIK)
+    }
+
+    /// "Simpan saja" in the empty NIK's alert.
+    func saveStepWithoutNIK() -> SaveStep {
+        ask(stepAfterNIK)
+    }
+
+    /// An alert from Simpan was answered, so the next tap asks again; a save that fails can then be retried.
+    func alertAnswered() {
+        asking = false
+    }
+
+    private var stepAfterNIK: SaveStep { pageNotes.saveWarning == nil ? .save : .askPages }
+
+    private func ask(_ step: SaveStep) -> SaveStep {
+        asking = step != .save
+        return step
+    }
 
     private static func trimmed(_ text: String?) -> String {
         text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""

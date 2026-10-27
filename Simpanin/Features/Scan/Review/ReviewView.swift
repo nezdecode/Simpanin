@@ -142,6 +142,7 @@ struct ReviewView: View {
             }
             .alert(Text("review.nikMissing"), isPresented: $nikMissingShown) {
                 Button {
+                    review.alertAnswered()
                     afterAlertCloses { focusedField = FieldKey.nik }
                 } label: {
                     Text("review.fillNIK")
@@ -152,11 +153,17 @@ struct ReviewView: View {
             // A page read as another document is saved with this one, so Simpan says so; Kembali is the default.
             .alert(Text("review.otherPages"), isPresented: $otherPagesShown) {
                 Button {
+                    review.alertAnswered()
                 } label: {
                     Text("review.goBack")
                 }
                 .keyboardShortcut(.defaultAction)
-                Button(action: onSave) { Text("review.otherPages.save") }
+                Button {
+                    review.alertAnswered()
+                    onSave()
+                } label: {
+                    Text("review.otherPages.save")
+                }
             } message: {
                 Text(verbatim: review.pageNotes.saveWarning ?? "")
             }
@@ -244,24 +251,23 @@ extension ReviewView {
     private static let labelFocus = "label"
 
     /// Simpan never quietly does nothing: a wrong value takes the user to its field, with a haptic, and
-    /// VoiceOver reads the reason; an empty NIK is asked about first, then a page read as another document.
+    /// VoiceOver reads the reason; otherwise it asks what `ReviewModel.saveStep` says, or saves.
     private func trySave() {
-        if let key = review.firstProblem() {
+        guard let step = review.saveStep() else { return }
+        switch step {
+        case .refuse(let key):
             focusedField = key
             refusals += 1
             // VoiceOver goes to the field and reads its label, which carries the reason.
             voiceOverField = key
-        } else if review.nikMissing {
-            nikMissingShown = true
-        } else if review.pageNotes.saveWarning != nil {
-            otherPagesShown = true
-        } else {
-            onSave()
+        case .askNIK: nikMissingShown = true
+        case .askPages: otherPagesShown = true
+        case .save: onSave()
         }
     }
 
     private func saveWithoutNIK() {
-        if review.pageNotes.saveWarning != nil {
+        if review.saveStepWithoutNIK() == .askPages {
             afterAlertCloses { otherPagesShown = true }
         } else {
             onSave()
