@@ -99,6 +99,8 @@ final class ReviewModel {
         self.pages = pages
         // Always replaced, so a rescan that failed never keeps the old scan's notes.
         self.reading = reading
+        // An alert that was about to follow Simpan saja belongs to the old pages.
+        asking = false
         type = result?.type ?? .other
         values = (result?.fields.values ?? [:]).reduce(into: [:]) { shown, field in
             shown[field.key] = Self.dateKeys.contains(field.key) ? Self.dayFirst(field.value) : field.value
@@ -175,6 +177,8 @@ final class ReviewModel {
         // One save at a time: a second tap while the first is being written would save a duplicate.
         guard !saving else { return false }
         saving = true
+        // Simpan was answered; if this save fails, the next tap asks again.
+        asking = false
         defer { saving = false }
         var fields: [String: String] = [:]
         // A value that can't be stored is never saved; its field shows why.
@@ -306,7 +310,7 @@ extension ReviewModel {
         ask(stepAfterNIK)
     }
 
-    /// An alert from Simpan was answered, so the next tap asks again; a save that fails can then be retried.
+    /// An alert from Simpan closed, or won't show, so the next tap asks again.
     func alertAnswered() {
         asking = false
     }

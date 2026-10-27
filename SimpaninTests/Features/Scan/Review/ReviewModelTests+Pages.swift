@@ -20,9 +20,13 @@ extension ReviewModelTests {
     static let ktpAndSIMReading = ScanReading(
         source: 0, pages: [PageRead(type: .ktp, relation: .source), PageRead(type: .simA, relation: .otherType)])
 
+    func loadKTPAndSIM(into review: ReviewModel) throws {
+        review.load(Self.ktp, pages: [try page(), try page()], reading: Self.ktpAndSIMReading)
+    }
+
     @Test func theNotesFollowTheReadingAndTheChosenType() throws {
         let review = model()
-        review.load(Self.ktp, pages: [try page(), try page()], reading: Self.ktpAndSIMReading)
+        try loadKTPAndSIM(into: review)
         #expect(review.pageNotes.notes == [nil, .otherType(.simA)])
         review.type = .passport
         #expect(review.pageNotes.notes == [.readAs(.ktp), .readAs(.simA)])
@@ -31,7 +35,7 @@ extension ReviewModelTests {
     /// A rescan that fails comes without a reading, so nothing of the old scan is said about the new pages.
     @Test func aFailedRescanHasNoPageNotes() throws {
         let review = model()
-        review.load(Self.ktp, pages: [try page(), try page()], reading: Self.ktpAndSIMReading)
+        try loadKTPAndSIM(into: review)
         review.load(nil, pages: [try page(), try page()], reading: nil)
         #expect(review.pageNotes.notes == [nil, nil])
         #expect(review.pageNotes.sentences.isEmpty)
@@ -39,7 +43,7 @@ extension ReviewModelTests {
 
     @Test func aRescanReplacesEveryNote() throws {
         let review = model()
-        review.load(Self.ktp, pages: [try page(), try page()], reading: Self.ktpAndSIMReading)
+        try loadKTPAndSIM(into: review)
         let again = ScanReading(source: 1, pages: [nil, PageRead(type: .ktp, relation: .source)])
         review.load(Self.ktp, pages: [try page(), try page()], reading: again)
         #expect(review.pageNotes.notes == [nil, nil])

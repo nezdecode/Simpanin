@@ -128,13 +128,9 @@ extension ReviewModelTests {
 
     // MARK: What Simpan does next
 
-    func twoPages(_ review: ReviewModel) throws {
-        review.load(Self.ktp, pages: [try page(), try page()], reading: Self.ktpAndSIMReading)
-    }
-
     @Test func aWrongValueIsRefusedBeforeAnythingIsAsked() throws {
         let review = model()
-        try twoPages(review)
+        try loadKTPAndSIM(into: review)
         review.setValue("", for: FieldKey.nik)
         review.setValue("31-02-1990", for: FieldKey.birthDate)
         #expect(review.saveStep() == .refuse(FieldKey.birthDate))
@@ -145,7 +141,7 @@ extension ReviewModelTests {
 
     @Test func anEmptyNIKIsAskedAboutBeforeTheOtherPages() throws {
         let review = model()
-        try twoPages(review)
+        try loadKTPAndSIM(into: review)
         review.setValue("", for: FieldKey.nik)
         #expect(review.saveStep() == .askNIK)
         #expect(review.saveStepWithoutNIK() == .askPages)
@@ -153,7 +149,7 @@ extension ReviewModelTests {
 
     @Test func aPageReadAsAnotherDocumentIsAskedAbout() throws {
         let review = model()
-        try twoPages(review)
+        try loadKTPAndSIM(into: review)
         #expect(review.saveStep() == .askPages)
     }
 
@@ -169,7 +165,7 @@ extension ReviewModelTests {
     /// A quick second tap, even while one alert closes and the next is about to show, never stacks two.
     @Test func aSecondTapWhileAskingAsksNothing() throws {
         let review = model()
-        try twoPages(review)
+        try loadKTPAndSIM(into: review)
         #expect(review.saveStep() == .askPages)
         #expect(review.saveStep() == nil)
         review.setValue("", for: FieldKey.nik)
@@ -182,7 +178,7 @@ extension ReviewModelTests {
     /// Isi NIK and Kembali end the questions; the next Simpan starts again from the first.
     @Test func anAnsweredAlertLetsSimpanAskAgain() throws {
         let review = model()
-        try twoPages(review)
+        try loadKTPAndSIM(into: review)
         review.setValue("", for: FieldKey.nik)
         #expect(review.saveStep() == .askNIK)
         review.alertAnswered()
@@ -200,5 +196,24 @@ extension ReviewModelTests {
         #expect(review.saveStep() == .askNIK)
         #expect(review.saveStepWithoutNIK() == .save)
         #expect(review.saveStep() == .askNIK)
+    }
+
+    /// A rescan starts over, even if the alert that was about to follow Simpan saja never showed.
+    @Test func aRescanEndsTheQuestions() throws {
+        let review = model()
+        try loadKTPAndSIM(into: review)
+        review.setValue("", for: FieldKey.nik)
+        #expect(review.saveStep() == .askNIK)
+        #expect(review.saveStepWithoutNIK() == .askPages)
+        try loadKTPAndSIM(into: review)
+        #expect(review.saveStep() == .askPages)
+    }
+
+    @Test func aFailedSaveLetsSimpanAskAgain() async throws {
+        let review = model(encode: { _ in nil })
+        try loadKTPAndSIM(into: review)
+        #expect(review.saveStep() == .askPages)
+        #expect(await !review.save())
+        #expect(review.saveStep() == .askPages)
     }
 }

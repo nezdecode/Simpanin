@@ -143,8 +143,11 @@ struct ReviewView: View {
             // Cancel roles, so VoiceOver's escape gesture answers like the default button.
             .alert(Text("review.nikMissing"), isPresented: $nikMissingShown) {
                 Button(role: .cancel) {
-                    review.alertAnswered()
-                    afterAlertCloses { focusedField = FieldKey.nik }
+                    // Simpan stays visible until the NIK has focus, so asking ends only then.
+                    afterAlertCloses {
+                        review.alertAnswered()
+                        focusedField = FieldKey.nik
+                    }
                 } label: {
                     Text("review.fillNIK")
                 }
@@ -154,19 +157,17 @@ struct ReviewView: View {
             // A page read as another document is saved with this one, so Simpan says so; Kembali is the default.
             .alert(Text("review.otherPages"), isPresented: $otherPagesShown) {
                 Button(role: .cancel) {
-                    review.alertAnswered()
                 } label: {
                     Text("review.goBack")
                 }
                 .keyboardShortcut(.defaultAction)
-                Button {
-                    review.alertAnswered()
-                    onSave()
-                } label: {
-                    Text("review.otherPages.save")
-                }
+                Button(action: onSave) { Text("review.otherPages.save") }
             } message: {
                 Text(verbatim: review.pageNotes.saveWarning ?? "")
+            }
+            // However the pages alert closes, it was the last question.
+            .onChange(of: otherPagesShown) { _, shown in
+                if !shown { review.alertAnswered() }
             }
             .sheet(isPresented: $expiryPickerShown) {
                 ExpiryCalendar(title: ValiditySection.title(for: review.type)) { review.setExpiry($0) }
@@ -269,7 +270,11 @@ extension ReviewView {
 
     private func saveWithoutNIK() {
         if review.saveStepWithoutNIK() == .askPages {
-            afterAlertCloses { otherPagesShown = true }
+            afterAlertCloses {
+                // Past the wait's limit the NIK alert can still be up, and this one would never show or
+                // close; the next Simpan asks again instead.
+                if UIApplication.shared.showsAlert { review.alertAnswered() } else { otherPagesShown = true }
+            }
         } else {
             onSave()
         }
