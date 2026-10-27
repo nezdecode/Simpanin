@@ -119,8 +119,8 @@ nonisolated struct PageNotes: Equatable {
         } else if showsSource {
             sentences = marked.map(sentence)
         } else {
-            // The chosen type is the source's, named in the last sentence, so another type says only what
-            // it was read as.
+            // Without the source line, the last sentence names the chosen type, so another type says only
+            // what it was read as.
             sentences = marked.map { group in
                 guard case .otherType(let type) = group.note else { return sentence(group) }
                 return sentence((.readAs(type), group.pages))
