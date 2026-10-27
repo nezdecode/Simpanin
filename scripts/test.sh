@@ -7,7 +7,7 @@
 # Testing's summary the limit is 60 seconds, since xcodebuild often hangs there after a failing run.
 # Its verdict comes from the result bundle, never from xcodebuild's exit status, and zero tests fail it:
 # a filter naming one Swift Testing function matches nothing and would otherwise report success.
-# A stopped run leaves an incomplete bundle, which always fails.
+# A run it stops always fails, whatever xcodebuild left in the bundle.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -55,6 +55,7 @@ trap stop EXIT INT TERM
 idle_limit="${SIMPANIN_IDLE_TIMEOUT:-300}"
 # In a full run the UI tests start about 3 s after the summary and are never quiet for more than a few.
 summary_idle_limit=60
+stopped=""
 while kill -0 "$pid" 2> /dev/null; do
   if grep -qsE '\*\* TEST (SUCCEEDED|FAILED) \*\*' "$log"; then
     sleep 10  # time to finish writing the result bundle
@@ -63,10 +64,12 @@ while kill -0 "$pid" 2> /dev/null; do
   idle=$(( $(date +%s) - $(stat -f %m "$log") ))
   if grep -qsE 'Test run with [0-9]+ tests' "$log" && [ "$idle" -gt "$summary_idle_limit" ]; then
     echo "test.sh: no output for ${summary_idle_limit}s after Swift Testing's summary; stopping xcodebuild" >&2
+    stopped=yes
     break
   fi
   if [ "$idle" -gt "$idle_limit" ]; then
     echo "test.sh: no output for ${idle_limit}s; stopping xcodebuild" >&2
+    stopped=yes
     break
   fi
   sleep 5
@@ -74,17 +77,26 @@ done
 stop
 wait "$pid" 2> /dev/null || true
 
-# Only the names of failed tests: the lines with an issue's details can hold field values.
+# Only the names of failed tests: an issue's details, and an XCTest failure's "error: -[…]" line, can
+# hold field values.
 grep -E 'Test run with [0-9]+ tests|✘ Test .+ failed after|Executed [0-9]+ tests|\*\* TEST|error:' "$log" \
-  | sort -u || true
+  | grep -v 'error: -\[' | sort -u || true
+# A stopped xcodebuild may still have written a bundle, without the tests it never ran.
+if [ -n "$stopped" ]; then
+  echo "test.sh: FAILED, xcodebuild was stopped; see $log" >&2
+  exit 1
+fi
 if [ ! -f "$bundle/Info.plist" ] \
-  || ! summary=$(xcrun xcresulttool get test-results summary --path "$bundle" 2> /dev/null); then
-  echo "test.sh: FAILED, the result bundle is incomplete or unreadable; see $log" >&2
+  || ! summary=$(xcrun xcresulttool get test-results summary --path "$bundle" 2> "$run/xcresulttool.err"); then
+  echo "test.sh: FAILED, the result bundle is incomplete or unreadable; see $log and $run/xcresulttool.err" >&2
   exit 1
 fi
 echo "$summary" | python3 -B -c '
 import json, sys
-s = json.load(sys.stdin)
+try:
+    s = json.load(sys.stdin)
+except json.JSONDecodeError:
+    sys.exit("test.sh: FAILED, xcresulttool gave no summary")
 total, failed = s.get("totalTestCount", 0), s.get("failedTests", 0)
 passed, skipped = s.get("passedTests", 0), s.get("skippedTests", 0)
 print(f"test.sh: {total} tests: {passed} passed, {failed} failed, {skipped} skipped")
