@@ -16,6 +16,8 @@ import VaultCore
 nonisolated protocol DocumentStoring: Sendable {
     func documents() async throws -> [Document]
     func recentlyDeleted() async throws -> [Document]
+    /// The duplicate check reads other saved documents through this; it must never ask for their pages.
+    func fields(of id: DocumentID) async throws -> DocumentFields
     // swiftlint:disable:next function_parameter_count - mirrors VaultStore.createDocument
     func createDocument(
         type: DocumentType, label: String?, expiry: CalendarDate?, pinned: Bool, fields: DocumentFields,

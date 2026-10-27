@@ -162,6 +162,7 @@
         }
 
         func recentlyDeleted() async throws -> [Document] { try await store.recentlyDeleted() }
+        func fields(of id: DocumentID) async throws -> DocumentFields { try await store.fields(of: id) }
 
         // swiftlint:disable:next function_parameter_count - mirrors VaultStore.createDocument
         func createDocument(
