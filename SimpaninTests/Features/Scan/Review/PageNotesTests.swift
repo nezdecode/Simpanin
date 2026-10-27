@@ -237,6 +237,10 @@ struct PageNotesTests {
                 == "Halaman 1 terbaca sebagai SIM A, bukan KTP di halaman 2. Isian dibaca dari halaman 2. "
                 + "Semua halaman akan disimpan sebagai satu dokumen KTP.")
         #expect(
+            Self.notes([(.ktp, .source), (.ktp, .otherCard)], chosen: .simA).saveWarning
+                == "Halaman 2 terbaca sebagai KTP lain. Isian dibaca dari halaman 1. "
+                + "Semua halaman akan disimpan sebagai satu dokumen SIM A.")
+        #expect(
             Self.notes([(.ktp, .source), (.simA, .otherType), (.simC, .otherType), (.ktp, .otherCard)], chosen: .simA)
                 .saveWarning
                 == "Beberapa halaman terbaca sebagai dokumen lain. Isian dibaca dari halaman 1. "
