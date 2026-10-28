@@ -311,7 +311,7 @@ public enum SIMParser {
 
     /// The class as printed ("BI", "A UMUM"), with a 1, l or | read for an I. A correction, or no single
     /// class, is marked so the user picks it.
-    private static func simClass(in lines: ArraySlice<String>) -> (type: DocumentType, reasons: Set<CheckReason>) {
+    public static func simClass(in lines: ArraySlice<String>) -> (type: DocumentType, reasons: Set<CheckReason>) {
         var found: [DocumentType: Bool] = [:]
         for line in lines {
             let squeezed = line.uppercased().filter { $0 != " " }
