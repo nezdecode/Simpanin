@@ -73,8 +73,11 @@ private struct ViewerPage: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text("review.pageOf \(index + 1) \(count)"))
         .task {
-            loaded = await image(index)
-            failed = loaded == nil
+            let read = await image(index)
+            // Swiped past while it was read: kept, it would stay in memory for a page no longer shown.
+            guard !Task.isCancelled else { return }
+            loaded = read
+            failed = read == nil
         }
         // Swiped away or closed: the full-size page goes.
         .onDisappear {

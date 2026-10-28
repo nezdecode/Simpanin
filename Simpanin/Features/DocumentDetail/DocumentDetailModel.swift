@@ -101,28 +101,23 @@ final class DocumentDetailModel {
         }
     }
 
-    /// The fields first, then each page on its own. Runs once; again only after a failure (Coba lagi).
+    /// The fields first, then each page on its own. The fields are read once, again only after a failure
+    /// (Coba lagi). Leaving the screen stops the page reads; coming back reads only the pages still missing.
     func load() async {
-        guard phase == .loading || phase == .failed else { return }
-        phase = .loading
-        do {
-            fields = try await store.fields(of: document.id)
-        } catch VaultError.locked {
-            // The lock takes this screen away; there's nothing to say.
-            return
-        } catch VaultError.documentNotFound {
-            phase = .gone
-            return
-        } catch {
-            Logger.library.error("Document not opened: \(ErrorSummary.describe(error), privacy: .public)")
-            phase = .failed
-            return
+        switch phase {
+        case .gone: return
+        case .loaded: break
+        case .loading, .failed:
+            guard await loadFields() else { return }
+            pages = document.pageIDs.map { _ in .loading }
         }
-        phase = .loaded
-        pages = document.pageIDs.map { _ in .loading }
         for (index, pageID) in document.pageIDs.enumerated() {
+            guard case .loading = pages[index] else { continue }
+            guard !Task.isCancelled else { return }
             do {
                 let data = try await pageReader.pageData(pageID, of: document.id)
+                // Not kept after the screen has gone; a return reads it again.
+                guard !Task.isCancelled else { return }
                 pages[index] = await Self.reduced(data).map(PageState.shown) ?? .failed
             } catch VaultError.locked {
                 return
@@ -131,6 +126,23 @@ final class DocumentDetailModel {
                 pages[index] = .failed
             }
         }
+    }
+
+    private func loadFields() async -> Bool {
+        phase = .loading
+        do {
+            fields = try await store.fields(of: document.id)
+            phase = .loaded
+            return true
+        } catch VaultError.locked {
+            // The lock takes this screen away; there's nothing to say.
+        } catch VaultError.documentNotFound {
+            phase = .gone
+        } catch {
+            Logger.library.error("Document not opened: \(ErrorSummary.describe(error), privacy: .public)")
+            phase = .failed
+        }
+        return false
     }
 
     /// A page at full size, for the viewer only, read again each time; the model doesn't keep it.

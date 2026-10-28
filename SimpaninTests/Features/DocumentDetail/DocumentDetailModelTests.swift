@@ -113,6 +113,22 @@ struct DocumentDetailModelTests {
         #expect(detail.phase == .loaded)
     }
 
+    /// Leaving the screen stops the reads; coming back reads the pages still missing, and only those.
+    @Test func leavingMidLoadStopsReadingPages() async throws {
+        let detail = try await model(pages: [Self.page(), Self.page(), Self.page()])
+        await store.gateNextPageRead()
+        let load = Task { await detail.load() }
+        #expect(await store.waitUntilReadingPage())
+        load.cancel()
+        await store.releasePageRead()
+        await load.value
+        #expect(await store.pageReads.count == 1)
+        await detail.load()
+        // The page read while leaving wasn't kept, so it's read again with the two never read.
+        #expect(await store.pageReads.count == 4)
+        #expect(shownCount(detail) == 3)
+    }
+
     @Test func noPagesShowsNoPager() async throws {
         let detail = try await model(pages: [])
         await detail.load()

@@ -116,6 +116,8 @@ actor FakeDocuments {
     private var unreadablePages: Set<PageID> = []
     /// Every page read, in order, so a test sees they're read one at a time.
     private(set) var pageReads: [PageID] = []
+    private var pageReadGated = false
+    private var pageReadGate: CheckedContinuation<Void, Never>?
 
     func setFailure(_ failure: VaultError?) { self.failure = failure }
     func setUnreadable(_ id: DocumentID) { unreadable.insert(id) }
@@ -143,6 +145,22 @@ actor FakeDocuments {
     func releaseFieldsRead() {
         readGate?.resume()
         readGate = nil
+    }
+
+    /// The next page read waits until the test releases it, like a page still decrypting.
+    func gateNextPageRead() { pageReadGated = true }
+
+    /// False if no gated page read started within two seconds, so a test fails instead of hanging.
+    func waitUntilReadingPage() async -> Bool {
+        for _ in 0..<2_000 where pageReadGate == nil {
+            try? await Task.sleep(for: .milliseconds(1))
+        }
+        return pageReadGate != nil
+    }
+
+    func releasePageRead() {
+        pageReadGate?.resume()
+        pageReadGate = nil
     }
     func setLoadFailure(_ failure: VaultError?) { loadFailure = failure }
     func setBinFailure(_ failure: VaultError?) { binFailure = failure }
@@ -239,6 +257,10 @@ extension FakeDocuments {
     func pageData(_ pageID: PageID, of id: DocumentID) async throws -> Data {
         if failure == .locked { throw VaultError.locked }
         pageReads.append(pageID)
+        if pageReadGated {
+            pageReadGated = false
+            await withCheckedContinuation { pageReadGate = $0 }
+        }
         guard live.contains(where: { $0.id == id && $0.pageIDs.contains(pageID) }), let data = pagesByID[pageID]
         else { throw VaultError.pageNotFound }
         if unreadablePages.contains(pageID) { throw VaultError.authenticationFailed }
