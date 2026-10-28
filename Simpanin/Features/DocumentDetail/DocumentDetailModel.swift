@@ -133,6 +133,17 @@ final class DocumentDetailModel {
         }
     }
 
+    /// A page at full size, for the viewer only, read again each time; the model doesn't keep it.
+    func fullPage(_ index: Int) async -> CGImage? {
+        guard document.pageIDs.indices.contains(index) else { return nil }
+        do {
+            return await Self.decoded(try await pageReader.pageData(document.pageIDs[index], of: document.id))
+        } catch {
+            Logger.library.error("Page not opened: \(ErrorSummary.describe(error), privacy: .public)")
+            return nil
+        }
+    }
+
     func toggleNumber() { numberShown.toggle() }
 
     func screenLeft() { numberShown = false }
@@ -180,5 +191,11 @@ final class DocumentDetailModel {
             kCGImageSourceThumbnailMaxPixelSize: reducedPixelSize,
         ]
         return CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary)
+    }
+
+    @concurrent private static func decoded(_ data: Data) async -> CGImage? {
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
+        let options: [CFString: Any] = [kCGImageSourceShouldCacheImmediately: true]
+        return CGImageSourceCreateImageAtIndex(source, 0, options as CFDictionary)
     }
 }

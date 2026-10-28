@@ -90,6 +90,16 @@ struct DocumentDetailModelTests {
         #expect(max(image.width, image.height) == DocumentDetailModel.reducedPixelSize)
     }
 
+    /// The viewer reads its page again, so the model never keeps a full-size one.
+    @Test func theViewerReadsItsPageAgainAtFullSize() async throws {
+        let detail = try await model(pages: [Self.page(width: 3_000, height: 2_000)])
+        await detail.load()
+        let image = try #require(await detail.fullPage(0))
+        #expect(image.width == 3_000)
+        #expect(await store.pageReads.count == 2)
+        #expect(await detail.fullPage(1) == nil)
+    }
+
     /// Pages are read one at a time, so one that can't be opened doesn't hide the others.
     @Test func failedPageLeavesOthers() async throws {
         let detail = try await model(pages: [Self.page(), Self.page()])
