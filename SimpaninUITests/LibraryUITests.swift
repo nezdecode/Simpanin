@@ -70,8 +70,8 @@ final class LibraryUITests: UITestCase {
     @MainActor
     func testTheBannerMenuButtonHides() throws {
         let app = launch(["-SimpaninUITestExpiringSamples"])
-        app.buttons["list.addSample"].tap()
-        app.buttons["list.addSample"].tap()
+        // The first sample is a KTP, which has no date, so it's never in the banner.
+        for _ in 0..<3 { app.buttons["list.addSample"].tap() }
         XCTAssertTrue(app.staticTexts["dan 1 dokumen lain perlu dicek"].waitForExistence(timeout: 5))
         screenshot("31 banner with two")
         app.buttons["banner.menu"].tap()
@@ -83,14 +83,15 @@ final class LibraryUITests: UITestCase {
         let gone = NSPredicate(format: "exists == false")
         expectation(for: gone, evaluatedWith: app.buttons["banner.menu"])
         waitForExpectations(timeout: 5)
-        XCTAssertEqual(rows(app).count, 2)
+        XCTAssertEqual(rows(app).count, 3)
     }
 
     /// A long press on the banner offers the same.
     @MainActor
     func testTheBannerCanBeHidden() throws {
         let app = launch(["-SimpaninUITestExpiringSamples"])
-        app.buttons["list.addSample"].tap()
+        // A KTP and a SIM A: only the SIM has a date.
+        for _ in 0..<2 { app.buttons["list.addSample"].tap() }
         let banner = app.descendants(matching: .any)["banner"]
         XCTAssertTrue(banner.waitForExistence(timeout: 5))
         banner.press(forDuration: 1)
@@ -107,7 +108,7 @@ final class LibraryUITests: UITestCase {
             "UICTContentSizeCategoryAccessibilityXXXL",
         ])
         XCTAssertTrue(app.buttons["list.addSample"].waitForExistence(timeout: 10))
-        app.buttons["list.addSample"].tap()
+        for _ in 0..<2 { app.buttons["list.addSample"].tap() }
         XCTAssertTrue(app.buttons["banner.menu"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["banner.menu"].isHittable)
         screenshot("32 banner at the largest text size")

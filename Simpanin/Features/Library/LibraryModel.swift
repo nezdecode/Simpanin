@@ -150,14 +150,14 @@ final class LibraryModel {
     #if DEBUG
         private var samples = 0
 
-        /// "Tambah dokumen contoh": a synthetic document with one generated page.
+        /// "Tambah dokumen contoh": a synthetic document with generated pages.
         func addSample() async {
             samples += 1
             let sample = SampleDocument(number: samples, expiringSoon: UITestSetup.expiringSamples)
             await save {
                 _ = try await self.store.createDocument(
                     type: sample.type, label: sample.label, expiry: sample.expiry, pinned: false, fields: sample.fields,
-                    pages: [sample.page])
+                    pages: sample.pages)
             }
         }
     #endif
