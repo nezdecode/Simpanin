@@ -34,6 +34,13 @@ struct ClassLetterSpikeTests {
         #expect(rect.height.isApproximately(0.1))
     }
 
+    /// Vision counts from the bottom, pixels from the top: a band above the middle starts above it in pixels too.
+    @Test func pixelsAreCountedFromTheTop() {
+        let rect = ClassLetterSpike.pixelRect(
+            CGRect(x: 0.1, y: 0.55, width: 0.4, height: 0.2), width: 1000, height: 500)
+        #expect(rect == CGRect(x: 100, y: 125, width: 400, height: 100))
+    }
+
     @Test func aNumberAtTheTopLeavesNothingToRead() {
         #expect(ClassLetterSpike.cropRect(aboveNumber: CGRect(x: 0.2, y: 0.95, width: 0.5, height: 0.05)) == nil)
     }

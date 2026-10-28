@@ -30,7 +30,7 @@
         @State private var newPages: [CGImage]?
         @State private var requestedMethod = RecognitionMethod.text
         /// The class letter spike's reading of the source page; nil until a SIM has been read.
-        @State private var classLetter: Result<ClassLetterSpike.Reading?, any Error>?
+        @State private var classLetter: Result<ClassLetterSpike.Reading, any Error>?
 
         /// Where VisionKit could leave page images: tmp, and Library with its Caches.
         private static var watchedFolders: [URL] { [.temporaryDirectory, .libraryDirectory] }
@@ -133,11 +133,16 @@
                 guard scan.result?.type.isSIM == true, !Task.isCancelled else { return }
                 let page = scan.reading?.source ?? 0
                 guard scan.pages.indices.contains(page) else { return }
+                let image = scan.pages[page]
+                let reading: Result<ClassLetterSpike.Reading, any Error>
                 do {
-                    classLetter = .success(try await ClassLetterSpike.read(scan.pages[page]))
+                    reading = .success(try await ClassLetterSpike.read(image))
                 } catch {
-                    classLetter = .failure(error)
+                    reading = .failure(error)
                 }
+                // Dropping the scan doesn't cancel this task, so a late reading must not bring its page back.
+                guard !Task.isCancelled, scan.pages.indices.contains(page), scan.pages[page] === image else { return }
+                classLetter = reading
             }
         }
 
@@ -168,13 +173,15 @@
             switch classLetter {
             case nil: EmptyView()
             case .failure: Section("Class letter (spike)") { Text("Recognition failed.") }
-            case .success(nil): Section("Class letter (spike)") { Text("No number line, or nothing above it.") }
-            case .success(let reading?):
+            case .success(.noNumber):
+                Section("Class letter (spike)") { Text("No piece of text was a SIM number on its own.") }
+            case .success(.nothingAbove): Section("Class letter (spike)") { Text("Nothing above the number.") }
+            case .success(.read(let crop, let outcomes)):
                 Section {
-                    Image(decorative: reading.crop, scale: 1).resizable().scaledToFit().frame(maxHeight: 120)
+                    Image(decorative: crop, scale: 1).resizable().scaledToFit().frame(maxHeight: 120)
                     ForEach(ClassLetterSpike.variants.indices, id: \.self) { index in
                         LabeledContent {
-                            Text(verbatim: reading.classes[index]?.rawValue ?? "–")
+                            Text(verbatim: Self.text(outcomes[index]))
                         } label: {
                             Text(verbatim: ClassLetterSpike.variants[index].name)
                         }
@@ -184,6 +191,14 @@
                 } footer: {
                     Text("The area above the number, read five ways. Only the class each way matched is shown.")
                 }
+            }
+        }
+
+        private static func text(_ outcome: ClassLetterSpike.Outcome) -> String {
+            switch outcome {
+            case .matched(let type): type.rawValue
+            case .noClass: "–"
+            case .failed: "failed"
             }
         }
 

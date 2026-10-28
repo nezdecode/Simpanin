@@ -38,16 +38,24 @@
         ]
 
         /// Only the class each variant matched, never the crop's text: it can catch part of the title or name.
-        struct Reading: Sendable {
-            var crop: CGImage
-            /// nil where a variant matched no single class.
-            var classes: [DocumentType?]
+        enum Outcome: Sendable {
+            case matched(DocumentType)
+            case noClass
+            case failed
+        }
+
+        enum Reading: Sendable {
+            /// No observation was a SIM number on its own, though the parser, which joins a row's pieces
+            /// and corrects lookalikes, may have found one.
+            case noNumber
+            case nothingAbove
+            /// One outcome per variant, in order.
+            case read(crop: CGImage, outcomes: [Outcome])
         }
 
         private static let languages = [Locale.Language(identifier: "id"), Locale.Language(identifier: "en")]
 
-        /// nil when the page has no SIM number line or nothing above it.
-        @concurrent static func read(_ page: CGImage) async throws -> Reading? {
+        @concurrent static func read(_ page: CGImage) async throws -> Reading {
             var request = RecognizeTextRequest()
             request.recognitionLevel = .accurate
             request.recognitionLanguages = languages
@@ -56,20 +64,26 @@
                 let text = observation.topCandidates(1).first?.string ?? ""
                 return SIMParser.isWellFormedNumber(text.filter { $0 != "-" && $0 != " " })
             }
-            guard let box = number?.boundingBox,
+            guard let box = number?.boundingBox else { return .noNumber }
+            guard
                 let rect = cropRect(
                     aboveNumber: CGRect(x: box.origin.x, y: box.origin.y, width: box.width, height: box.height)),
-                let crop = page.cropping(to: pixelRect(rect, in: page))
-            else { return nil }
-            var classes: [DocumentType?] = []
+                let crop = page.cropping(to: pixelRect(rect, width: page.width, height: page.height))
+            else { return .nothingAbove }
+            let paddedCrop = padded(crop)
+            var outcomes: [Outcome] = []
             for variant in variants {
-                guard let image = variant.padded ? padded(crop) : crop else {
-                    classes.append(nil)
+                try Task.checkCancellation()
+                // One variant failing (the fast level may not know Indonesian) leaves the others' answers.
+                guard let image = variant.padded ? paddedCrop : crop,
+                    let type = try? await simClass(in: image, using: variant)
+                else {
+                    outcomes.append(.failed)
                     continue
                 }
-                classes.append(try await simClass(in: image, using: variant))
+                outcomes.append(type == .sim ? .noClass : .matched(type))
             }
-            return Reading(crop: crop, classes: classes)
+            return .read(crop: crop, outcomes: outcomes)
         }
 
         /// The area above the number's box, in Vision's normalized coordinates (origin at the bottom left):
@@ -81,10 +95,10 @@
             return rect.isNull || rect.height < 0.001 ? nil : rect
         }
 
-        /// Pixels count from the top left.
-        private static func pixelRect(_ rect: CGRect, in image: CGImage) -> CGRect {
-            let width = CGFloat(image.width)
-            let height = CGFloat(image.height)
+        /// Pixels count from the top left, Vision's normalized coordinates from the bottom left.
+        static func pixelRect(_ rect: CGRect, width: Int, height: Int) -> CGRect {
+            let width = CGFloat(width)
+            let height = CGFloat(height)
             return CGRect(
                 x: rect.minX * width, y: (1 - rect.maxY) * height, width: rect.width * width,
                 height: rect.height * height
@@ -110,15 +124,15 @@
             return context.makeImage()
         }
 
-        private static func simClass(in image: CGImage, using variant: Variant) async throws -> DocumentType? {
+        /// `.sim` when no single class was matched.
+        private static func simClass(in image: CGImage, using variant: Variant) async throws -> DocumentType {
             var request = RecognizeTextRequest()
             request.recognitionLevel = variant.level
             request.recognitionLanguages = languages
             request.usesLanguageCorrection = variant.hints
             if variant.hints { request.customWords = ["A", "B", "C", "D", "I", "UMUM"] }
             let lines = try await request.perform(on: image).compactMap { $0.topCandidates(1).first?.string }
-            let type = SIMParser.simClass(in: lines[...]).type
-            return type == .sim ? nil : type
+            return SIMParser.simClass(in: lines[...]).type
         }
     }
 #endif
