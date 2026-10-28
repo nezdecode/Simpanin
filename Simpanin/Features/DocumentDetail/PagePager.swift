@@ -11,50 +11,106 @@
 
 import SwiftUI
 
-/// A document's pages, one per swipe, with "Halaman 1 dari 2" under them. A tap opens the page in the viewer.
+/// A document's pages, one per swipe, the next one peeking in at the edge, with dots and "Halaman 1 dari 2"
+/// under them. A tap opens the page in the viewer. VoiceOver reads it as one element: swipe up or down to
+/// change the page, double-tap to enlarge it.
 struct PagePager: View {
     let pages: [DocumentDetailModel.PageState]
     @Binding var selection: Int
     let transition: Namespace.ID
     let onOpen: (Int) -> Void
 
+    /// How much of the next page shows, so it's plain there's another to swipe to.
+    private static let peek: CGFloat = 18
+    private static let spacing: CGFloat = 8
+
     var body: some View {
         VStack(spacing: 8) {
-            TabView(selection: $selection) {
-                ForEach(pages.indices, id: \.self) { index in
-                    page(index)
-                        .padding(.horizontal, 16)
-                        .tag(index)
-                }
-            }
-            .tabViewStyle(.page(indexDisplayMode: .never))
-            // A fixed height whatever the text size: the page is the picture, the line under it the text.
-            .frame(height: 230)
-            if pages.count > 1 {
-                Text("review.pageOf \(selection + 1) \(pages.count)")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    // Each page already says it to VoiceOver.
-                    .accessibilityHidden(true)
-            }
+            scroller
+            if pages.count > 1 { indicator }
         }
     }
 
+    private var scroller: some View {
+        ScrollView(.horizontal) {
+            LazyHStack(spacing: Self.spacing) {
+                ForEach(pages.indices, id: \.self) { index in
+                    page(index)
+                        .containerRelativeFrame(.horizontal) { length, _ in pageWidth(length) }
+                        .id(index)
+                }
+            }
+            .scrollTargetLayout()
+        }
+        .contentMargins(.horizontal, 16, for: .scrollContent)
+        .scrollTargetBehavior(.viewAligned)
+        .scrollPosition(id: position)
+        .scrollIndicators(.hidden)
+        .scrollDisabled(pages.count < 2)
+        // A fixed height whatever the text size: the page is the picture, the line under it the text.
+        .frame(height: 230)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text("review.pageOf \(selection + 1) \(pages.count)"))
+        .accessibilityValue(pageFailed(selection) ? Text("detail.pageFailed") : Text(verbatim: ""))
+        .accessibilityAddTraits(canOpen(selection) ? .isButton : [])
+        .accessibilityAdjustableAction { direction in
+            switch direction {
+            case .increment where selection < pages.count - 1: withAnimation { selection += 1 }
+            case .decrement where selection > 0: withAnimation { selection -= 1 }
+            default: break
+            }
+        }
+        .accessibilityAction {
+            if canOpen(selection) { onOpen(selection) }
+        }
+        .accessibilityIdentifier("detail.pages")
+    }
+
+    private var indicator: some View {
+        VStack(spacing: 6) {
+            HStack(spacing: 7) {
+                ForEach(pages.indices, id: \.self) { index in
+                    Circle()
+                        .fill(index == selection ? Color.primary : Color.secondary.opacity(0.4))
+                        .frame(width: 7, height: 7)
+                }
+            }
+            Text("review.pageOf \(selection + 1) \(pages.count)")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        }
+        .animation(.default, value: selection)
+        // The pager already says it to VoiceOver.
+        .accessibilityHidden(true)
+    }
+
+    private func pageWidth(_ length: CGFloat) -> CGFloat {
+        pages.count > 1 ? length - Self.peek - Self.spacing : length
+    }
+
+    private var position: Binding<Int?> {
+        Binding(get: { selection }, set: { if let index = $0 { selection = index } })
+    }
+
+    private func canOpen(_ index: Int) -> Bool {
+        guard pages.indices.contains(index), case .shown = pages[index] else { return false }
+        return true
+    }
+
+    private func pageFailed(_ index: Int) -> Bool {
+        guard pages.indices.contains(index), case .failed = pages[index] else { return false }
+        return true
+    }
+
     @ViewBuilder private func page(_ index: Int) -> some View {
-        let label = Text("review.pageOf \(index + 1) \(pages.count)")
         switch pages[index] {
         case .loading:
             card { ProgressView() }
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel(label)
         case .failed:
             card {
                 Text("detail.pageFailed").font(.subheadline).foregroundStyle(.secondary)
                     .multilineTextAlignment(.center).padding()
             }
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel(label)
-            .accessibilityValue(Text("detail.pageFailed"))
         case .shown(let image):
             Button {
                 onOpen(index)
@@ -68,11 +124,6 @@ struct PagePager: View {
             }
             .buttonStyle(.plain)
             .matchedTransitionSource(id: index, in: transition)
-            // Read as its number, never as an image, so VoiceOver can't offer to describe the card aloud.
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel(label)
-            .accessibilityAddTraits(.isButton)
-            .accessibilityIdentifier("detail.page.\(index + 1)")
         }
     }
 

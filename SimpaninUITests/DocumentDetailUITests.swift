@@ -100,12 +100,12 @@ final class DocumentDetailUITests: UITestCase {
     func testTwoPagesSwipe() throws {
         let app = launch()
         open(app, samples: 2, tile: "SIM A")
-        let first = app.buttons["detail.page.1"]
-        XCTAssertTrue(first.waitForExistence(timeout: 5))
-        XCTAssertEqual(first.label, "Halaman 1 dari 2")
-        first.swipeLeft()
-        XCTAssertTrue(app.buttons["detail.page.2"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["detail.page.2"].isHittable)
+        let pager = pages(app)
+        XCTAssertEqual(pager.label, "Halaman 1 dari 2")
+        screenshot("50 the next page peeking in")
+        pager.swipeLeft()
+        expectation(for: NSPredicate(format: "label == 'Halaman 2 dari 2'"), evaluatedWith: pager)
+        waitForExpectations(timeout: 5)
     }
 
     /// Opening the viewer masks the number again.
@@ -114,7 +114,7 @@ final class DocumentDetailUITests: UITestCase {
         let app = launch()
         open(app, samples: 1, tile: "Saya")
         app.buttons["detail.reveal"].tap()
-        let page = app.buttons["detail.page.1"]
+        let page = pages(app)
         XCTAssertTrue(page.waitForExistence(timeout: 5))
         page.tap()
         let close = app.buttons["viewer.close"]
@@ -131,7 +131,7 @@ final class DocumentDetailUITests: UITestCase {
     func testPageHasNoContextMenu() throws {
         let app = launch()
         open(app, samples: 1, tile: "Saya")
-        let page = app.buttons["detail.page.1"]
+        let page = pages(app)
         XCTAssertTrue(page.waitForExistence(timeout: 5))
         page.press(forDuration: 1.5)
         XCTAssertFalse(app.buttons["Salin"].exists)
@@ -169,7 +169,7 @@ final class DocumentDetailUITests: UITestCase {
         let app = launch()
         lockImmediately(app)
         open(app, samples: 1, tile: "Saya")
-        app.buttons["detail.page.1"].tap()
+        pages(app).tap()
         XCTAssertTrue(app.buttons["viewer.close"].waitForExistence(timeout: 5))
         XCUIDevice.shared.press(.home)
         app.activate()
@@ -260,13 +260,19 @@ final class DocumentDetailUITests: UITestCase {
         if samples > 0 { addSamples(app, samples) }
         tile(app, text).tap()
         // The top of the screen: at the largest text size the rows further down aren't built until scrolled to.
-        XCTAssertTrue(app.buttons["detail.page.1"].waitForExistence(timeout: 5))
+        XCTAssertTrue(pages(app).waitForExistence(timeout: 5))
     }
 
     @MainActor
     private func tile(_ app: XCUIApplication, _ text: String, without other: String? = nil) -> XCUIElement {
         let format = other == nil ? "label CONTAINS %@" : "label CONTAINS %@ AND NOT (label CONTAINS %@)"
         return rows(app).matching(NSPredicate(format: format, argumentArray: [text, other ?? ""])).firstMatch
+    }
+
+    /// The pager is one element, for VoiceOver.
+    @MainActor
+    private func pages(_ app: XCUIApplication) -> XCUIElement {
+        app.descendants(matching: .any)["detail.pages"]
     }
 
     @MainActor
