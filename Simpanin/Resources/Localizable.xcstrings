@@ -89,6 +89,17 @@
         }
       }
     },
+    "button.close" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tutup"
+          }
+        }
+      }
+    },
     "button.delete" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -254,6 +265,28 @@
         }
       }
     },
+    "detail.added %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ditambahkan %@"
+          }
+        }
+      }
+    },
+    "detail.bannerHidden" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidak tampil di banner masa berlaku."
+          }
+        }
+      }
+    },
     "detail.copiedExpires" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -261,6 +294,94 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Hilang dari clipboard dalam 60 detik"
+          }
+        }
+      }
+    },
+    "detail.copyNIK" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Salin NIK"
+          }
+        }
+      }
+    },
+    "detail.copyName" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Salin nama"
+          }
+        }
+      }
+    },
+    "detail.copySIMNumber" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Salin nomor SIM"
+          }
+        }
+      }
+    },
+    "detail.hidden" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "tersembunyi"
+          }
+        }
+      }
+    },
+    "detail.hideNIK" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sembunyikan NIK"
+          }
+        }
+      }
+    },
+    "detail.hideSIMNumber" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sembunyikan nomor SIM"
+          }
+        }
+      }
+    },
+    "detail.labelAdded %@ %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ · ditambahkan %2$@"
+          }
+        }
+      }
+    },
+    "detail.loadFailed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dokumen tidak bisa dibuka sekarang."
           }
         }
       }
@@ -305,6 +426,50 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "NIK belum diisi"
+          }
+        }
+      }
+    },
+    "detail.pageFailed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Halaman ini tidak bisa dibuka."
+          }
+        }
+      }
+    },
+    "detail.showInBanner" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tampilkan lagi"
+          }
+        }
+      }
+    },
+    "detail.showNIK" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tampilkan NIK"
+          }
+        }
+      }
+    },
+    "detail.showSIMNumber" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tampilkan nomor SIM"
           }
         }
       }
