@@ -11,6 +11,7 @@
 
 #if DEBUG
     import CoreGraphics
+    import CoreText
     import Parsers
     import VaultCore
     import Vision
@@ -18,23 +19,34 @@
     /// DEBUG only. A spike: Vision drops the large lone "A" on an older SIM, so this re-reads only the area
     /// above the number line, where the class letter sits, in several ways, to see which one finds it.
     nonisolated enum ClassLetterSpike {
+        enum Framing: Sendable {
+            case tight
+            /// The crop drawn in the middle of a white page four times its size, so the letter is
+            /// ordinary text height there.
+            case padded
+            /// Padded, after shrinking the crop to 40 pixels high, so the letter is small in pixels too.
+            case small
+            /// Padded, with "KELAS" drawn left of the crop, so Vision sees a word rather than a lone letter.
+            case word
+        }
+
         struct Variant: Sendable {
             var name: String
             var level: RecognizeTextRequest.RecognitionLevel
-            /// The crop drawn in the middle of a white page four times its size, so the letter is
-            /// ordinary text height there.
-            var padded: Bool
+            var framing: Framing
             /// Language correction on, with the class letters as custom words. Safe here: the crop holds
             /// no number for it to turn into a word.
-            var hints: Bool
+            var hints = false
         }
 
         static let variants = [
-            Variant(name: "1 accurate, tight", level: .accurate, padded: false, hints: false),
-            Variant(name: "2 accurate, padded", level: .accurate, padded: true, hints: false),
-            Variant(name: "3 fast, tight", level: .fast, padded: false, hints: false),
-            Variant(name: "4 fast, padded", level: .fast, padded: true, hints: false),
-            Variant(name: "5 accurate, padded, hints", level: .accurate, padded: true, hints: true),
+            Variant(name: "1 accurate, tight", level: .accurate, framing: .tight),
+            Variant(name: "2 accurate, padded", level: .accurate, framing: .padded),
+            Variant(name: "3 fast, tight", level: .fast, framing: .tight),
+            Variant(name: "4 fast, padded", level: .fast, framing: .padded),
+            Variant(name: "5 accurate, padded, hints", level: .accurate, framing: .padded, hints: true),
+            Variant(name: "6 accurate, small", level: .accurate, framing: .small),
+            Variant(name: "7 accurate, beside KELAS", level: .accurate, framing: .word),
         ]
 
         /// Only the class each variant matched, never the crop's text: it can catch part of the title or name.
@@ -70,12 +82,16 @@
                     aboveNumber: CGRect(x: box.origin.x, y: box.origin.y, width: box.width, height: box.height)),
                 let crop = page.cropping(to: pixelRect(rect, width: page.width, height: page.height))
             else { return .nothingAbove }
-            let paddedCrop = padded(crop)
+            let framed: [Framing: CGImage] = [
+                .tight: crop, .padded: padded(crop), .small: shrunk(crop).flatMap { padded($0) },
+                .word: padded(crop, word: "KELAS"),
+            ]
+            .compactMapValues(\.self)
             var outcomes: [Outcome] = []
             for variant in variants {
                 try Task.checkCancellation()
                 // One variant failing (the fast level may not know Indonesian) leaves the others' answers.
-                guard let image = variant.padded ? paddedCrop : crop,
+                guard let image = framed[variant.framing],
                     let type = try? await simClass(in: image, using: variant)
                 else {
                     outcomes.append(.failed)
@@ -106,16 +122,42 @@
             .integral
         }
 
-        private static func padded(_ crop: CGImage) -> CGImage? {
-            let width = crop.width * 4
-            let height = crop.height * 4
-            guard
-                let context = CGContext(
-                    data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
-                    space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
-            else { return nil }
-            context.setFillColor(CGColor(gray: 1, alpha: 1))
-            context.fill(CGRect(x: 0, y: 0, width: width, height: height))
+        private static func shrunk(_ crop: CGImage) -> CGImage? {
+            let height = 40
+            let width = max(1, crop.width * height / max(1, crop.height))
+            guard let context = context(width: width, height: height) else { return nil }
+            context.interpolationQuality = .high
+            context.draw(crop, in: CGRect(x: 0, y: 0, width: width, height: height))
+            return context.makeImage()
+        }
+
+        private static func context(width: Int, height: Int) -> CGContext? {
+            let context = CGContext(
+                data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
+                space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+            context?.setFillColor(CGColor(gray: 1, alpha: 1))
+            context?.fill(CGRect(x: 0, y: 0, width: width, height: height))
+            return context
+        }
+
+        private static func padded(_ crop: CGImage, word: String? = nil) -> CGImage? {
+            guard let context = context(width: crop.width * 4, height: crop.height * 4) else { return nil }
+            if let word {
+                // Half the band's height, about the letter's, ending just left of the crop.
+                let size = CGFloat(crop.height) / 2
+                let font = CTFontCreateWithName("Helvetica-Bold" as CFString, size, nil)
+                let text = NSAttributedString(
+                    string: word + " ",
+                    attributes: [
+                        NSAttributedString.Key(kCTFontAttributeName as String): font,
+                        NSAttributedString.Key(kCTForegroundColorFromContextAttributeName as String): true,
+                    ])
+                let line = CTLineCreateWithAttributedString(text)
+                let width = CTLineGetTypographicBounds(line, nil, nil, nil)
+                context.setFillColor(CGColor(gray: 0, alpha: 1))
+                context.textPosition = CGPoint(x: CGFloat(crop.width) * 1.5 - width, y: CGFloat(crop.height) * 1.75)
+                CTLineDraw(line, context)
+            }
             context.draw(
                 crop,
                 in: CGRect(
@@ -132,7 +174,9 @@
             request.usesLanguageCorrection = variant.hints
             if variant.hints { request.customWords = ["A", "B", "C", "D", "I", "UMUM"] }
             let lines = try await request.perform(on: image).compactMap { $0.topCandidates(1).first?.string }
-            return SIMParser.simClass(in: lines[...]).type
+            // The drawn word isn't part of the card.
+            let card = lines.map { $0.uppercased().replacing("KELAS", with: "") }
+            return SIMParser.simClass(in: card[...]).type
         }
     }
 #endif

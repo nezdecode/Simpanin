@@ -189,7 +189,7 @@
                 } header: {
                     Text("Class letter (spike)")
                 } footer: {
-                    Text("The area above the number, read five ways. Only the class each way matched is shown.")
+                    Text("The area above the number, read seven ways. Only the class each way matched is shown.")
                 }
             }
         }
