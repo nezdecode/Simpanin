@@ -38,6 +38,8 @@ final class DocumentDetailUITests: UITestCase {
         XCTAssertTrue(banner.waitForExistence(timeout: 5))
         banner.tap()
         XCTAssertTrue(app.navigationBars["SIM A"].waitForExistence(timeout: 5))
+        let added = NSPredicate(format: "label BEGINSWITH 'Ditambahkan '")
+        XCTAssertTrue(app.staticTexts.matching(added).firstMatch.exists)
         XCTAssertTrue(app.descendants(matching: .any)["detail.validity"].label.contains("Habis dalam"))
     }
 
@@ -182,7 +184,7 @@ final class DocumentDetailUITests: UITestCase {
         let app = launch(["-SimpaninUITestDeleteError"])
         open(app, samples: 1, tile: "Saya")
         app.buttons["detail.delete"].tap()
-        let alert = app.alerts.firstMatch
+        let alert = app.alerts["Perubahan belum tersimpan. Coba lagi."]
         XCTAssertTrue(alert.waitForExistence(timeout: 5))
         screenshot("49 delete failed")
         alert.buttons.firstMatch.tap()
