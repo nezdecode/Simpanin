@@ -27,24 +27,27 @@ struct ExpiryBanner: View {
         if let first = attention.first {
             let document = documents[first]
             HStack(alignment: .top, spacing: 12) {
-                // The text opens the document it names; the menu and the long press stay as they were.
-                Button {
-                    onOpen(document)
-                } label: {
-                    HStack(spacing: 12) {
-                        IconBadge(systemImage: "clock", tint: Color(.onWarning), background: Color(.warningIcon))
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(DocumentStyle.name(document.type)).font(.headline)
-                            Text(ExpiryText.text(type: document.type, expiry: document.expiry, today: today))
-                            if attention.count > 1 {
-                                Text("banner.more \(attention.count - 1)").font(.subheadline)
+                VStack(alignment: .leading, spacing: 2) {
+                    // Only the lines naming the document open it; "dan N dokumen lain" names none.
+                    Button {
+                        onOpen(document)
+                    } label: {
+                        HStack(spacing: 12) {
+                            IconBadge(systemImage: "clock", tint: Color(.onWarning), background: Color(.warningIcon))
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(DocumentStyle.name(document.type)).font(.headline)
+                                Text(ExpiryText.text(type: document.type, expiry: document.expiry, today: today))
                             }
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(.rect)
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .contentShape(.rect)
+                    .buttonStyle(.plain)
+                    if attention.count > 1 {
+                        // Under the text, past the clock.
+                        Text("banner.more \(attention.count - 1)").font(.subheadline).padding(.leading, 48)
+                    }
                 }
-                .buttonStyle(.plain)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .accessibilityElement(children: .combine)
                 .accessibilityAction(named: Text("banner.hide")) { onHide(document) }
