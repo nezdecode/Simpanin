@@ -152,7 +152,7 @@ Once a format ships, it stays. Don't change a key derivation label, an associate
 
 ## 11. Style
 
-swift-format handles layout (`.swift-format`); SwiftLint handles naming, size, file headers and the rules above that a tool can check (`.swiftlint.yml`): colours by name, VaultCore's file names outside VaultCore, hand-built date formats, `print` and friends, common British spellings in identifiers, `@unchecked Sendable` and `nonisolated(unsafe)` (an agreed one is disabled for its line, with the reason), a doc comment with a blank line under it, and VaultCore or Parsers imported into `DesignSystem/`. The hooks check the rest before every commit (CONTRIBUTING.md, Setup). Before you commit:
+swift-format handles layout (`.swift-format`); SwiftLint handles naming, size, file headers and the rules above that a tool can check (`.swiftlint.yml`): colours by name, VaultCore's file names outside VaultCore, hand-built date formats, `print` and friends, common British spellings in identifiers, `@unchecked Sendable` and `nonisolated(unsafe)` (an agreed one is disabled for its line, with the reason), a doc comment with a blank line under it, VaultCore or Parsers imported into `DesignSystem/`, and `PageReading` or `VaultStore` named in `Features/Scan/`, which reads saved fields but never pages. The hooks check the rest before every commit (CONTRIBUTING.md, Setup). Before you commit:
 
 ```sh
 swift format format -i -r Packages/VaultCore Simpanin SimpaninTests SimpaninUITests
