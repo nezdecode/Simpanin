@@ -149,14 +149,15 @@ struct ExpiryTextTests {
                     isExpired: true))
     }
 
-    /// As on the tiles: a type that prints an expiry never claims to have none.
+    /// A type that prints an expiry never claims to have none. The title already names the date, so the
+    /// value is only "Belum diisi", as in Periksa data; the tiles, with no title, keep their long texts.
     @Test func emptyExpirySaysBelumDiisi() {
         for type in DocumentType.simClasses + [.sim, .passport] {
-            #expect(
-                validity(type, nil) == Lines(title: "Berlaku sampai", value: "Masa berlaku belum diisi"),
-                "\(type.rawValue)")
+            #expect(validity(type, nil) == Lines(title: "Berlaku sampai", value: "Belum diisi"), "\(type.rawValue)")
+            #expect(text(type, nil) == "Masa berlaku belum diisi", "\(type.rawValue)")
         }
-        #expect(validity(.stnk, nil) == Lines(title: "Pajak berlaku sampai", value: "Tanggal pajak belum diisi"))
+        #expect(validity(.stnk, nil) == Lines(title: "Pajak berlaku sampai", value: "Belum diisi"))
+        #expect(text(.stnk, nil) == "Tanggal pajak belum diisi")
     }
 
     @Test(arguments: [DocumentType.other, DocumentType(rawValue: "visa")])

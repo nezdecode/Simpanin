@@ -37,13 +37,18 @@ nonisolated enum ExpiryText {
     }
 
     /// Berlaku as the document screen shows it. A stored date reads as on the tile, whatever the type, so
-    /// the two never disagree; without one, the phrase is the tile's.
+    /// the two never disagree.
     static func validity(type: DocumentType, expiry: CalendarDate?, today: CalendarDate) -> ValidityLines {
         guard let expiry else {
-            let phrase = text(type: type, expiry: nil, today: today)
-            // A type that prints a date keeps its title, so "belum diisi" says which date is missing.
-            let title = hasPrintedExpiry(type) ? DocumentFieldStyle.validityTitle(for: type) : "review.validFor"
-            return ValidityLines(title: title, value: .phrase(phrase), status: nil)
+            // A type that prints a date keeps its title, which already names the date, so the value is
+            // only "Belum diisi", as in Periksa data. The tiles have no title, so they keep the long texts.
+            if hasPrintedExpiry(type) {
+                return ValidityLines(
+                    title: DocumentFieldStyle.validityTitle(for: type), value: .phrase("review.expiryMissing"),
+                    status: nil)
+            }
+            return ValidityLines(
+                title: "review.validFor", value: .phrase(text(type: type, expiry: nil, today: today)), status: nil)
         }
         let left = days(from: today, to: expiry)
         // Always with the year here: the date above it already has one.
