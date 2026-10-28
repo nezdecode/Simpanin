@@ -36,11 +36,14 @@ struct DocumentFieldRow: View {
             if !typeSize.isAccessibilitySize { Spacer(minLength: 0) }
             HStack(spacing: 4) {
                 if field.isNumber, field.value != nil {
-                    iconButton(numberShown ? "eye.slash" : "eye", label: toggleLabel, action: onToggleNumber)
-                        .accessibilityIdentifier("detail.reveal")
+                    iconButton(
+                        numberShown ? "eye.slash" : "eye", label: field.revealLabel(numberShown: numberShown),
+                        action: onToggleNumber
+                    )
+                    .accessibilityIdentifier("detail.reveal")
                 }
                 if field.canCopy {
-                    iconButton("doc.on.doc", label: copyLabel, action: onCopy)
+                    iconButton("doc.on.doc", label: field.copyLabel, action: onCopy)
                         .accessibilityIdentifier("detail.copy.\(field.key)")
                 }
             }
@@ -70,23 +73,6 @@ struct DocumentFieldRow: View {
         guard field.isNumber else { return Text(verbatim: value) }
         // Masked, the bullets would be read one by one; shown, the number is read digit by digit.
         return numberShown ? Text(verbatim: value).speechSpellsOutCharacters() : Text("detail.hidden")
-    }
-
-    private var toggleLabel: LocalizedStringResource {
-        switch (field.key, numberShown) {
-        case (FieldKey.simNumber, false): "detail.showSIMNumber"
-        case (FieldKey.simNumber, true): "detail.hideSIMNumber"
-        case (_, false): "detail.showNIK"
-        case (_, true): "detail.hideNIK"
-        }
-    }
-
-    private var copyLabel: LocalizedStringResource {
-        switch field.key {
-        case FieldKey.nik: "detail.copyNIK"
-        case FieldKey.simNumber: "detail.copySIMNumber"
-        default: "detail.copyName"
-        }
     }
 
     private func iconButton(

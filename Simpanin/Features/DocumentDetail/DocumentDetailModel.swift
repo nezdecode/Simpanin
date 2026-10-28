@@ -46,6 +46,32 @@ final class DocumentDetailModel {
         var id: String { key }
         /// A copied date rarely pastes into a form, so the birth date has no copy button.
         var canCopy: Bool { value != nil && key != FieldKey.birthDate }
+
+        var copyLabel: LocalizedStringResource {
+            switch key {
+            case FieldKey.nik: "detail.copyNIK"
+            case FieldKey.simNumber: "detail.copySIMNumber"
+            default: "detail.copyName"
+            }
+        }
+
+        /// The toast's title; it never holds the value.
+        var copiedTitle: LocalizedStringResource {
+            switch key {
+            case FieldKey.nik: "detail.nikCopied"
+            case FieldKey.simNumber: "detail.simNumberCopied"
+            default: "detail.nameCopied"
+            }
+        }
+
+        func revealLabel(numberShown: Bool) -> LocalizedStringResource {
+            switch (key, numberShown) {
+            case (FieldKey.simNumber, false): "detail.showSIMNumber"
+            case (FieldKey.simNumber, true): "detail.hideSIMNumber"
+            case (_, false): "detail.showNIK"
+            case (_, true): "detail.hideNIK"
+            }
+        }
     }
 
     /// Pages in the pager are reduced to this many pixels on their longer side; only the viewer decodes
@@ -171,13 +197,7 @@ final class DocumentDetailModel {
             return
         }
         clipboard.copy(row.isNumber ? DocumentNumber(stored).copied : stored)
-        let title: LocalizedStringResource =
-            switch key {
-            case FieldKey.nik: "detail.nikCopied"
-            case FieldKey.simNumber: "detail.simNumberCopied"
-            default: "detail.nameCopied"
-            }
-        toast = Toast(title: title, detail: "detail.copiedExpires")
+        toast = Toast(title: row.copiedTitle, detail: "detail.copiedExpires")
     }
 
     func delete() async {
