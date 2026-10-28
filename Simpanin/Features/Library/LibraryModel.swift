@@ -30,6 +30,8 @@ final class LibraryModel {
     private(set) var today = CalendarDate.today
     /// The message for a failed save, if any.
     var saveError: RecoveryScreen?
+    /// A short note on the list, like where a deleted document went.
+    var notice: LocalizedStringResource?
     /// Loading failed. The screen shows that instead of an empty list, which would say the
     /// documents are gone.
     private(set) var loadFailed = false
@@ -133,8 +135,12 @@ final class LibraryModel {
         }
     }
 
-    func delete(_ id: DocumentID) async {
-        await save { try await self.store.delete(id) }
+    /// True when it moved to Baru dihapus, so the document screen knows it may close.
+    @discardableResult
+    func delete(_ id: DocumentID) async -> Bool {
+        let moved = await save { try await self.store.delete(id) }
+        if moved { notice = "main.movedToDeleted" }
+        return moved
     }
 
     func restore(_ id: DocumentID) async {
@@ -156,14 +162,19 @@ final class LibraryModel {
         }
     #endif
 
-    private func save(_ change: () async throws -> Void) async {
+    @discardableResult
+    private func save(_ change: () async throws -> Void) async -> Bool {
+        let saved: Bool
         do {
             try await change()
+            saved = true
         } catch {
             // Only the kind of error; never an id, a field or a path.
             Logger.library.error("Save failed: \(ErrorSummary.describe(error), privacy: .public)")
             saveError = RecoveryMapping.screen(forSaveError: error)
+            saved = false
         }
         await reload()
+        return saved
     }
 }

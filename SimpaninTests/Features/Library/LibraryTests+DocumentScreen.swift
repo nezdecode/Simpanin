@@ -58,4 +58,26 @@ extension LibraryTests {
         #expect(hidden.saved.entries.isEmpty)
         #expect(library.bannerDocuments.map(\.id) == [id])
     }
+
+    @Test func deleteSaysWhereItWent() async throws {
+        let library = LibraryModel(store: FakeDocuments(), hidden: FakeHiddenBanner())
+        await library.addSample()
+        let id = try #require(library.documents.first?.id)
+        #expect(await library.delete(id))
+        #expect(library.notice.map { String(localized: $0) } == "Dipindahkan ke Baru dihapus.")
+        #expect(library.deleted.map(\.id) == [id])
+    }
+
+    /// The document screen stays open, and the list says nothing moved.
+    @Test func failedDeleteShowsTheAlertAndNoNote() async throws {
+        let store = FakeDocuments()
+        let library = LibraryModel(store: store, hidden: FakeHiddenBanner())
+        await library.addSample()
+        let id = try #require(library.documents.first?.id)
+        await store.setFailure(.fileUnavailable)
+        #expect(await library.delete(id) == false)
+        #expect(library.saveError == .saveFailed)
+        #expect(library.notice == nil)
+        #expect(library.documents.map(\.id) == [id])
+    }
 }

@@ -551,6 +551,17 @@
         }
       }
     },
+    "main.movedToDeleted" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dipindahkan ke Baru dihapus."
+          }
+        }
+      }
+    },
     "main.scan" : {
       "extractionState" : "manual",
       "localizations" : {
