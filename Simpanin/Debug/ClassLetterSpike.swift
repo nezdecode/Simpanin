@@ -123,7 +123,7 @@
         }
 
         private static func shrunk(_ crop: CGImage) -> CGImage? {
-            let height = 40
+            let height = min(40, crop.height)
             let width = max(1, crop.width * height / max(1, crop.height))
             guard let context = context(width: width, height: height) else { return nil }
             context.interpolationQuality = .high
@@ -174,8 +174,8 @@
             request.usesLanguageCorrection = variant.hints
             if variant.hints { request.customWords = ["A", "B", "C", "D", "I", "UMUM"] }
             let lines = try await request.perform(on: image).compactMap { $0.topCandidates(1).first?.string }
-            // The drawn word isn't part of the card.
-            let card = lines.map { $0.uppercased().replacing("KELAS", with: "") }
+            // The drawn word isn't part of the card. Only that way strips it, so the others read as the parser does.
+            let card = variant.framing == .word ? lines.map { $0.uppercased().replacing("KELAS", with: "") } : lines
             return SIMParser.simClass(in: card[...]).type
         }
     }
