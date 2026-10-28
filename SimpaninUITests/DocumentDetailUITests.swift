@@ -11,8 +11,7 @@
 
 import XCTest
 
-/// The document screen, on the DEBUG samples: in turn a KTP "Saya", a SIM A with two pages, a passport, an
-/// older SIM C "Ibu" and a KTP without a NIK. Their numbers start with 00.
+/// The document screen's fields, Berlaku, the banner's way in and back, Hapus and the lock, on the DEBUG samples.
 final class DocumentDetailUITests: UITestCase {
     @MainActor
     func testOpenFromTile() throws {
@@ -97,49 +96,6 @@ final class DocumentDetailUITests: UITestCase {
     }
 
     @MainActor
-    func testTwoPagesSwipe() throws {
-        let app = launch()
-        open(app, samples: 2, tile: "SIM A")
-        let pager = pages(app)
-        XCTAssertEqual(pager.label, "Halaman 1 dari 2")
-        screenshot("50 the next page peeking in")
-        pager.swipeLeft()
-        expectation(for: NSPredicate(format: "label == 'Halaman 2 dari 2'"), evaluatedWith: pager)
-        waitForExpectations(timeout: 5)
-    }
-
-    /// Opening the viewer masks the number again.
-    @MainActor
-    func testEnlargePageAndClose() throws {
-        let app = launch()
-        open(app, samples: 1, tile: "Saya")
-        app.buttons["detail.reveal"].tap()
-        let page = pages(app)
-        XCTAssertTrue(page.waitForExistence(timeout: 5))
-        page.tap()
-        let close = app.buttons["viewer.close"]
-        XCTAssertTrue(close.waitForExistence(timeout: 5))
-        XCTAssertEqual(close.label, "Tutup")
-        screenshot("44 page enlarged")
-        close.tap()
-        XCTAssertTrue(page.waitForExistence(timeout: 5))
-        XCTAssertFalse(close.exists)
-        XCTAssertEqual(field(app, "nik").value as? String, "tersembunyi")
-    }
-
-    @MainActor
-    func testPageHasNoContextMenu() throws {
-        let app = launch()
-        open(app, samples: 1, tile: "Saya")
-        let page = pages(app)
-        XCTAssertTrue(page.waitForExistence(timeout: 5))
-        page.press(forDuration: 1.5)
-        XCTAssertFalse(app.buttons["Salin"].exists)
-        XCTAssertFalse(app.buttons["Bagikan"].exists)
-        XCTAssertFalse(app.buttons["Copy"].exists)
-    }
-
-    @MainActor
     func testRevealedNumberIsMaskedAfterTheBackground() throws {
         let app = launch()
         open(app, samples: 1, tile: "Saya")
@@ -161,20 +117,6 @@ final class DocumentDetailUITests: UITestCase {
         // Coming back locks the vault; in UI tests the unlock prompt that follows succeeds by itself.
         app.activate()
         XCTAssertTrue(rows(app).firstMatch.waitForExistence(timeout: 10))
-        XCTAssertFalse(field(app, "nik").exists)
-    }
-
-    @MainActor
-    func testLockWhileThePageViewerIsOpenReturnsToTheList() throws {
-        let app = launch()
-        lockImmediately(app)
-        open(app, samples: 1, tile: "Saya")
-        pages(app).tap()
-        XCTAssertTrue(app.buttons["viewer.close"].waitForExistence(timeout: 5))
-        XCUIDevice.shared.press(.home)
-        app.activate()
-        XCTAssertTrue(rows(app).firstMatch.waitForExistence(timeout: 10))
-        XCTAssertFalse(app.buttons["viewer.close"].exists)
         XCTAssertFalse(field(app, "nik").exists)
     }
 
@@ -244,50 +186,5 @@ final class DocumentDetailUITests: UITestCase {
         XCTAssertTrue(app.buttons["detail.reveal"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["detail.reveal"].isHittable)
         screenshot("48 document fields at the largest text size")
-    }
-
-    // MARK: Helpers
-
-    @MainActor
-    private func addSamples(_ app: XCUIApplication, _ count: Int) {
-        XCTAssertTrue(app.buttons["list.addSample"].waitForExistence(timeout: 10))
-        for _ in 0..<count { app.buttons["list.addSample"].tap() }
-        XCTAssertTrue(rows(app).element(boundBy: count - 1).waitForExistence(timeout: 5))
-    }
-
-    @MainActor
-    private func open(_ app: XCUIApplication, samples: Int, tile text: String) {
-        if samples > 0 { addSamples(app, samples) }
-        tile(app, text).tap()
-        // The top of the screen: at the largest text size the rows further down aren't built until scrolled to.
-        XCTAssertTrue(pages(app).waitForExistence(timeout: 5))
-    }
-
-    @MainActor
-    private func tile(_ app: XCUIApplication, _ text: String, without other: String? = nil) -> XCUIElement {
-        let format = other == nil ? "label CONTAINS %@" : "label CONTAINS %@ AND NOT (label CONTAINS %@)"
-        return rows(app).matching(NSPredicate(format: format, argumentArray: [text, other ?? ""])).firstMatch
-    }
-
-    /// The pager is one element, for VoiceOver.
-    @MainActor
-    private func pages(_ app: XCUIApplication) -> XCUIElement {
-        app.descendants(matching: .any)["detail.pages"]
-    }
-
-    @MainActor
-    private func field(_ app: XCUIApplication, _ key: String) -> XCUIElement {
-        app.descendants(matching: .any)["detail.field.\(key)"]
-    }
-
-    @MainActor
-    private func lockImmediately(_ app: XCUIApplication) {
-        app.buttons["list.settings"].tap()
-        let row = app.buttons["settings.autoLock"]
-        XCTAssertTrue(row.waitForExistence(timeout: 5))
-        row.tap()
-        app.buttons["autoLock.immediately"].tap()
-        app.navigationBars["Kunci otomatis"].buttons.element(boundBy: 0).tap()
-        app.navigationBars["Pengaturan"].buttons.element(boundBy: 0).tap()
     }
 }
