@@ -31,7 +31,7 @@ final class LibraryModel {
     /// The message for a failed save, if any.
     var saveError: RecoveryScreen?
     /// A short note on the list, like where a deleted document went.
-    var notice: LocalizedStringResource?
+    var notice: Toast?
     /// Loading failed. The screen shows that instead of an empty list, which would say the
     /// documents are gone.
     private(set) var loadFailed = false
@@ -139,7 +139,7 @@ final class LibraryModel {
     @discardableResult
     func delete(_ id: DocumentID) async -> Bool {
         let moved = await save { try await self.store.delete(id) }
-        if moved { notice = "main.movedToDeleted" }
+        if moved { notice = Toast(title: "main.movedToDeleted") }
         return moved
     }
 

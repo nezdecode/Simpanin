@@ -64,7 +64,7 @@ extension LibraryTests {
         await library.addSample()
         let id = try #require(library.documents.first?.id)
         #expect(await library.delete(id))
-        #expect(library.notice.map { String(localized: $0) } == "Dipindahkan ke Baru dihapus.")
+        #expect(library.notice.map { String(localized: $0.title) } == "Dipindahkan ke Baru dihapus.")
         #expect(library.deleted.map(\.id) == [id])
     }
 

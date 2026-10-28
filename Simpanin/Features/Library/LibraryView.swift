@@ -117,6 +117,7 @@ struct LibraryView: View {
                 .padding(16)
             }
             .background(Color(.systemGroupedBackground))
+            .toast($library.notice)
             .navigationTitle(Text("list.title"))
             .toolbar { toolbar }
             .task { await library.reload() }
