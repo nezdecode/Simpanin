@@ -22,7 +22,7 @@
         let fields: DocumentFields
         let pages: [Data]
 
-        /// In turn: a KTP, a SIM A with two pages, a passport, an older SIM C with a 14-digit number, and a KTP
+        /// In turn: a KTP, a SIM A with three pages, a passport, an older SIM C with a 14-digit number, and a KTP
         /// with no NIK. `expiringSoon` dates each a few days ahead, so UI tests see the expiry banner; a KTP has
         /// no date either way, as Periksa data saves it.
         init(number: Int, expiringSoon: Bool = false) {
@@ -45,7 +45,7 @@
             default: break
             }
             fields = DocumentFields(values)
-            pages = (1...(kind == 1 ? 2 : 1)).map { Self.pageImage(label: "CONTOH \(number) · \($0)") }
+            pages = (1...(kind == 1 ? 3 : 1)).map { Self.pageImage(label: "CONTOH \(number) · \($0)") }
         }
 
         private static func pageImage(label: String) -> Data {

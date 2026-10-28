@@ -11,7 +11,7 @@
 
 import XCTest
 
-/// The DEBUG samples, in turn: a KTP "Saya", a SIM A with two pages, a passport, an older SIM C "Ibu" and a KTP
+/// The DEBUG samples, in turn: a KTP "Saya", a SIM A with three pages, a passport, an older SIM C "Ibu" and a KTP
 /// without a NIK. Their numbers start with 00.
 extension UITestCase {
     @MainActor

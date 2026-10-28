@@ -419,6 +419,28 @@
         }
       }
     },
+    "detail.pageNumber %lld %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld dari %2$lld"
+          }
+        }
+      }
+    },
+    "detail.pages" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Halaman"
+          }
+        }
+      }
+    },
     "detail.showInBanner" : {
       "extractionState" : "manual",
       "localizations" : {

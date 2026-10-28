@@ -13,16 +13,27 @@ import XCTest
 
 /// The document screen's pages and the viewer that enlarges them.
 final class DocumentPagesUITests: UITestCase {
+    /// One page per swipe, the last one too, and the viewer opens and closes on the page shown.
     @MainActor
-    func testTwoPagesSwipe() throws {
+    func testPagesSwipeOneByOne() throws {
         let app = launch()
         open(app, samples: 2, tile: "SIM A")
         let pager = pages(app)
-        XCTAssertEqual(pager.label, "Halaman 1 dari 2")
+        XCTAssertEqual(pager.label, "Halaman")
+        XCTAssertEqual(pager.value as? String, "1 dari 3")
         screenshot("50 the next page peeking in")
-        pager.swipeLeft()
-        expectation(for: NSPredicate(format: "label == 'Halaman 2 dari 2'"), evaluatedWith: pager)
-        waitForExpectations(timeout: 5)
+        for shown in ["2 dari 3", "3 dari 3"] {
+            pager.swipeLeft()
+            expectation(for: NSPredicate(format: "value == %@", shown), evaluatedWith: pager)
+            waitForExpectations(timeout: 5)
+        }
+        screenshot("51 the last page")
+        pager.tap()
+        let close = app.buttons["viewer.close"]
+        XCTAssertTrue(close.waitForExistence(timeout: 5))
+        close.tap()
+        XCTAssertTrue(pager.waitForExistence(timeout: 5))
+        XCTAssertEqual(pager.value as? String, "3 dari 3")
     }
 
     /// Opening the viewer masks the number again.

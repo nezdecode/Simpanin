@@ -50,16 +50,11 @@ struct PagePager: View {
         // A fixed height whatever the text size: the page is the picture, the line under it the text.
         .frame(height: 230)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text("review.pageOf \(selection + 1) \(pages.count)"))
-        .accessibilityValue(pageFailed(selection) ? Text("detail.pageFailed") : Text(verbatim: ""))
+        // The page number is the value, which VoiceOver reads again after each swipe up or down.
+        .accessibilityLabel(Text("detail.pages"))
+        .accessibilityValue(Text(verbatim: accessibilityValue))
         .accessibilityAddTraits(canOpen(selection) ? .isButton : [])
-        .accessibilityAdjustableAction { direction in
-            switch direction {
-            case .increment where selection < pages.count - 1: withAnimation { selection += 1 }
-            case .decrement where selection > 0: withAnimation { selection -= 1 }
-            default: break
-            }
-        }
+        .modifier(PageAdjusting(selection: $selection, count: pages.count))
         .accessibilityAction {
             if canOpen(selection) { onOpen(selection) }
         }
@@ -82,6 +77,12 @@ struct PagePager: View {
         .animation(.default, value: selection)
         // The pager already says it to VoiceOver.
         .accessibilityHidden(true)
+    }
+
+    /// "1 dari 2", and why the page doesn't open when it can't.
+    private var accessibilityValue: String {
+        let number = String(localized: "detail.pageNumber \(selection + 1) \(pages.count)")
+        return pageFailed(selection) ? "\(number), \(String(localized: "detail.pageFailed"))" : number
     }
 
     private func pageWidth(_ length: CGFloat) -> CGFloat {
@@ -133,5 +134,25 @@ struct PagePager: View {
             .overlay(content: content)
             .aspectRatio(1.585, contentMode: .fit)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+/// Swiping up or down changes the page for VoiceOver; one page offers no swipe.
+private struct PageAdjusting: ViewModifier {
+    @Binding var selection: Int
+    let count: Int
+
+    func body(content: Content) -> some View {
+        if count > 1 {
+            content.accessibilityAdjustableAction { direction in
+                switch direction {
+                case .increment where selection < count - 1: withAnimation { selection += 1 }
+                case .decrement where selection > 0: withAnimation { selection -= 1 }
+                default: break
+                }
+            }
+        } else {
+            content
+        }
     }
 }
