@@ -1,0 +1,184 @@
+//
+//  DocumentDetailModel.swift
+//  Simpanin
+//
+//  Created by Inez Amanda on 28/10/26.
+//
+//  This Source Code Form is subject to the terms of the Mozilla Public
+//  License, v. 2.0. If a copy of the MPL was not distributed with this
+//  file, You can obtain one at https://mozilla.org/MPL/2.0/.
+//
+
+import CoreGraphics
+import Foundation
+import ImageIO
+import Observation
+import VaultCore
+import os
+
+/// One saved document, opened. Its fields and reduced pages are decrypted only while the screen is up,
+/// and go with the model when the screen closes or the vault locks.
+@MainActor @Observable
+final class DocumentDetailModel {
+    enum Phase: Equatable {
+        case loading
+        case loaded
+        /// The fields couldn't be opened; Coba lagi tries again.
+        case failed
+        /// The document is no longer there, so the screen goes back to the list.
+        case gone
+    }
+
+    enum PageState {
+        case loading
+        case shown(CGImage)
+        case failed
+    }
+
+    struct Field: Identifiable {
+        let key: String
+        let title: LocalizedStringResource
+        /// Nil when nothing is stored; the row says so with `empty`.
+        let value: String?
+        let empty: LocalizedStringResource
+        let isNumber: Bool
+
+        var id: String { key }
+        /// A copied date rarely pastes into a form, so the birth date has no copy button.
+        var canCopy: Bool { value != nil && key != FieldKey.birthDate }
+    }
+
+    /// Pages in the pager are reduced to this many pixels on their longer side; only the viewer decodes
+    /// one at full size.
+    nonisolated static let reducedPixelSize = 1_200
+
+    let document: Document
+    private(set) var phase = Phase.loading
+    private(set) var pages: [PageState] = []
+    private(set) var numberShown = false
+    var toast: Toast?
+    /// Hapus worked, so the screen closes.
+    private(set) var closed = false
+
+    private let store: any DocumentStoring
+    private let pageReader: any PageReading
+    private let clipboard: any Clipboard
+    private let onDelete: (DocumentID) async -> Bool
+    /// Decrypted while the screen is up; never cached or kept elsewhere.
+    private var fields: DocumentFields?
+
+    init(
+        document: Document, store: any DocumentStoring, pageReader: any PageReading, clipboard: any Clipboard,
+        onDelete: @escaping (DocumentID) async -> Bool
+    ) {
+        self.document = document
+        self.store = store
+        self.pageReader = pageReader
+        self.clipboard = clipboard
+        self.onDelete = onDelete
+    }
+
+    var hasPages: Bool { !document.pageIDs.isEmpty }
+
+    /// The type's own fields, in its order; any other key stored is never shown.
+    var rows: [Field] {
+        DocumentFieldStyle.keys(for: document.type).map { key in
+            let stored = fields?.values[key].flatMap { $0.trimmingCharacters(in: .whitespaces).isEmpty ? nil : $0 }
+            let isNumber = key == FieldKey.nik || key == FieldKey.simNumber
+            let value: String? =
+                if isNumber {
+                    stored.map(DocumentNumber.init).flatMap { number in
+                        number.isEmpty ? nil : (numberShown ? number.shown : number.masked)
+                    }
+                } else if key == FieldKey.birthDate {
+                    stored.map(DocumentFieldStyle.dayFirst)
+                } else {
+                    stored
+                }
+            return Field(
+                key: key, title: DocumentFieldStyle.title(for: key), value: value, empty: Self.empty(key),
+                isNumber: isNumber)
+        }
+    }
+
+    /// The fields first, then each page on its own. Runs once; again only after a failure (Coba lagi).
+    func load() async {
+        guard phase == .loading || phase == .failed else { return }
+        phase = .loading
+        do {
+            fields = try await store.fields(of: document.id)
+        } catch VaultError.locked {
+            // The lock takes this screen away; there's nothing to say.
+            return
+        } catch VaultError.documentNotFound {
+            phase = .gone
+            return
+        } catch {
+            Logger.library.error("Document not opened: \(ErrorSummary.describe(error), privacy: .public)")
+            phase = .failed
+            return
+        }
+        phase = .loaded
+        pages = document.pageIDs.map { _ in .loading }
+        for (index, pageID) in document.pageIDs.enumerated() {
+            do {
+                let data = try await pageReader.pageData(pageID, of: document.id)
+                pages[index] = await Self.reduced(data).map(PageState.shown) ?? .failed
+            } catch VaultError.locked {
+                return
+            } catch {
+                Logger.library.error("Page not opened: \(ErrorSummary.describe(error), privacy: .public)")
+                pages[index] = .failed
+            }
+        }
+    }
+
+    func toggleNumber() { numberShown.toggle() }
+
+    func screenLeft() { numberShown = false }
+
+    func appLeftForeground() { numberShown = false }
+
+    /// The viewer covers the screen, so the number shouldn't be left showing behind it.
+    func viewerOpened() { numberShown = false }
+
+    /// The number as digits only, the name as stored. Copying never shows the number.
+    func copy(_ key: String) {
+        guard let row = rows.first(where: { $0.key == key }), row.canCopy, let stored = fields?.values[key] else {
+            return
+        }
+        clipboard.copy(row.isNumber ? DocumentNumber(stored).copied : stored)
+        let title: LocalizedStringResource =
+            switch key {
+            case FieldKey.nik: "detail.nikCopied"
+            case FieldKey.simNumber: "detail.simNumberCopied"
+            default: "detail.nameCopied"
+            }
+        toast = Toast(title: title, detail: "detail.copiedExpires")
+    }
+
+    func delete() async {
+        if await onDelete(document.id) { closed = true }
+    }
+
+    private static func empty(_ key: String) -> LocalizedStringResource {
+        switch key {
+        case FieldKey.nik: "detail.nikMissing"
+        case FieldKey.simNumber: "detail.simNumberMissing"
+        case FieldKey.name: "detail.nameMissing"
+        default: "review.expiryMissing"
+        }
+    }
+
+    /// ImageIO's thumbnail, off the main actor; never `UIImage(data:)`, which decodes the full bitmap.
+    @concurrent private static func reduced(_ data: Data) async -> CGImage? {
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceShouldCacheImmediately: true,
+            kCGImageSourceThumbnailMaxPixelSize: reducedPixelSize,
+        ]
+        return CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary)
+    }
+}

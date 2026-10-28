@@ -254,6 +254,83 @@
         }
       }
     },
+    "detail.copiedExpires" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hilang dari clipboard dalam 60 detik"
+          }
+        }
+      }
+    },
+    "detail.nameCopied" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nama disalin"
+          }
+        }
+      }
+    },
+    "detail.nameMissing" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nama belum diisi"
+          }
+        }
+      }
+    },
+    "detail.nikCopied" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "NIK disalin"
+          }
+        }
+      }
+    },
+    "detail.nikMissing" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "NIK belum diisi"
+          }
+        }
+      }
+    },
+    "detail.simNumberCopied" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nomor SIM disalin"
+          }
+        }
+      }
+    },
+    "detail.simNumberMissing" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nomor SIM belum diisi"
+          }
+        }
+      }
+    },
     "empty.body" : {
       "extractionState" : "manual",
       "localizations" : {

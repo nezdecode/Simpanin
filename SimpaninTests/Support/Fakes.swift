@@ -68,6 +68,12 @@ final class FixedClock: VaultClock {
     func advance(by seconds: TimeInterval) { date.withLock { $0 += seconds } }
 }
 
+/// Keeps what was copied, instead of the system clipboard.
+final class FakeClipboard: Clipboard {
+    private(set) var copied: [String] = []
+    func copy(_ text: String) { copied.append(text) }
+}
+
 /// The hidden banner list kept in memory, as a test needs it, with a read or a write that can fail.
 final class FakeHiddenBanner: HiddenBannerStoring {
     private let stored = Mutex(HiddenBanner())
@@ -113,6 +119,7 @@ actor FakeDocuments {
 
     func setFailure(_ failure: VaultError?) { self.failure = failure }
     func setUnreadable(_ id: DocumentID) { unreadable.insert(id) }
+    func setReadable(_ id: DocumentID) { unreadable.remove(id) }
     func setUnreadablePage(_ id: PageID) { unreadablePages.insert(id) }
 
     /// Every call from now on fails as a locked vault does.
@@ -216,6 +223,7 @@ actor FakeDocuments {
     func purge(_ id: DocumentID) {
         live.removeAll { $0.id == id }
         bin.removeAll { $0.id == id }
+        fieldsByID[id] = nil
     }
 
     func restore(_ id: DocumentID) async throws {
