@@ -129,6 +129,18 @@ struct DocumentDetailModelTests {
         #expect(shownCount(detail) == 3)
     }
 
+    /// Left while the fields were still opening: no page is read at all.
+    @Test func leavingWhileTheFieldsOpenReadsNoPage() async throws {
+        let detail = try await model(pages: [Self.page(), Self.page()])
+        await store.gateNextFieldsRead()
+        let load = Task { await detail.load() }
+        #expect(await store.waitUntilReadingFields())
+        load.cancel()
+        await store.releaseFieldsRead()
+        await load.value
+        #expect(await store.pageReads.isEmpty)
+    }
+
     @Test func noPagesShowsNoPager() async throws {
         let detail = try await model(pages: [])
         await detail.load()

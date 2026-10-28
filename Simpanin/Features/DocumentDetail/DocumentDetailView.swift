@@ -21,6 +21,8 @@ struct DocumentDetailView: View {
     @State private var model: DocumentDetailModel
     @State private var page = 0
     @State private var viewerShown = false
+    /// Coba lagi bumps it, so SwiftUI owns every load and cancels it when the screen goes.
+    @State private var attempt = 0
     @Namespace private var transition
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
@@ -46,7 +48,7 @@ struct DocumentDetailView: View {
             .navigationTitle(Text(DocumentStyle.name(document.type)))
             .navigationBarTitleDisplayMode(.inline)
             .toast($model.toast)
-            .task { await model.load() }
+            .task(id: attempt) { await model.load() }
             .onDisappear { model.screenLeft() }
             .onChange(of: scenePhase) { _, phase in
                 if phase == .background { model.appLeftForeground() }
@@ -68,7 +70,7 @@ struct DocumentDetailView: View {
         case .loading, .gone:
             ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
         case .failed:
-            LoadFailedView(title: "detail.loadFailed") { Task { await model.load() } }
+            LoadFailedView(title: "detail.loadFailed") { attempt += 1 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         case .loaded:
             loaded
@@ -117,7 +119,7 @@ struct DocumentDetailView: View {
         .listStyle(.insetGrouped)
     }
 
-    /// "Saya · ditambahkan 12 Okt 2026", or without a label only "ditambahkan …".
+    /// "Saya · ditambahkan 12 Okt 2026", or without a label "Ditambahkan …".
     private var added: LocalizedStringResource {
         let date = document.createdAt.formatted(.indonesianDate(timeZone: .current))
         guard let label = DocumentStyle.shownLabel(document.label) else { return "detail.added \(date)" }
