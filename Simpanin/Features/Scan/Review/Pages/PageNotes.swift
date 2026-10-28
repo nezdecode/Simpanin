@@ -60,7 +60,7 @@ nonisolated struct PageNotes: Equatable {
         }
         self.source = source
         self.sourceType = sourceType
-        let fields = ReviewModel.fieldKeys(for: chosen)
+        let fields = DocumentFieldStyle.keys(for: chosen)
         // A type without a parser has no fields and no source to compare with, so each card says what it is.
         guard !fields.isEmpty else {
             notes = reading.pages.map { $0.map { .readAs($0.type) } }
@@ -69,7 +69,7 @@ nonisolated struct PageNotes: Equatable {
         }
         notes = reading.pages.map { $0.flatMap(Self.note) }
         // A class picked by hand keeps the same fields, so it's a correction, not another document.
-        showsSource = source != 0 || fields != ReviewModel.fieldKeys(for: sourceType)
+        showsSource = source != 0 || fields != DocumentFieldStyle.keys(for: sourceType)
     }
 
     private static func note(for page: PageRead) -> Note? {
@@ -134,7 +134,7 @@ nonisolated struct PageNotes: Equatable {
     /// "Semua halaman akan disimpan sebagai satu dokumen KTP." A type without a parser has its own words,
     /// like "paspor"; its key is built as a plain string, as in `several`.
     private var savedAs: String {
-        guard ReviewModel.fieldKeys(for: chosen).isEmpty else {
+        guard DocumentFieldStyle.keys(for: chosen).isEmpty else {
             return String(localized: "pageNotes.savedAs \(Self.name(chosen))")
         }
         return String(localized: String.LocalizationValue("pageNotes.savedAs." + chosen.rawValue))
@@ -177,7 +177,7 @@ nonisolated struct PageNotes: Equatable {
     /// With no source to compare with, the chosen type is what the other documents aren't. The key is built
     /// as a plain string: interpolated, the type would become an argument.
     private var several: String {
-        guard ReviewModel.fieldKeys(for: chosen).isEmpty else {
+        guard DocumentFieldStyle.keys(for: chosen).isEmpty else {
             return String(localized: "pageNotes.several")
         }
         return String(localized: String.LocalizationValue("pageNotes.severalNot." + chosen.rawValue))

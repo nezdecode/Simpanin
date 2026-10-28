@@ -150,7 +150,7 @@ struct PageNotesTests {
     /// Its key is built at run time, so a type added to the picker without its text would show the key.
     @Test func everyTypeWithoutAParserHasItsCollapseText() {
         let pages: [(DocumentType, PageRelation)?] = [(.ktp, .source), (.simA, .otherType), (.simC, .otherType)]
-        for type in TypePickerView.types where ReviewModel.fieldKeys(for: type).isEmpty {
+        for type in TypePickerView.types where DocumentFieldStyle.keys(for: type).isEmpty {
             let sentence = Self.notes(pages, chosen: type).sentences.first ?? ""
             #expect(sentence.hasPrefix("Beberapa halaman terbaca sebagai dokumen lain, bukan "), "\(type.rawValue)")
         }
@@ -252,7 +252,7 @@ struct PageNotesTests {
         let names: [DocumentType: String] = [
             .passport: " paspor", .stnk: " STNK", .kk: " kartu keluarga", .npwp: " NPWP", .bpjs: " BPJS", .other: "",
         ]
-        for type in TypePickerView.types where ReviewModel.fieldKeys(for: type).isEmpty {
+        for type in TypePickerView.types where DocumentFieldStyle.keys(for: type).isEmpty {
             let warning = Self.notes(Self.ktpAndSIM, chosen: type).saveWarning
             let name = try #require(names[type], "\(type.rawValue)")
             #expect(warning?.hasSuffix(". Semua halaman akan disimpan sebagai satu dokumen\(name).") == true)

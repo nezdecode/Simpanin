@@ -78,7 +78,7 @@ nonisolated enum DuplicateCheck {
     }
 
     private static func number(of type: DocumentType, in values: [String: String]) -> String? {
-        let key = ReviewModel.fieldKeys(for: type).first { $0 == FieldKey.nik || $0 == FieldKey.simNumber }
+        let key = DocumentFieldStyle.keys(for: type).first { $0 == FieldKey.nik || $0 == FieldKey.simNumber }
         guard let key, let digits = values[key]?.filter(\.isASCIIDigit), !digits.isEmpty else { return nil }
         return digits
     }

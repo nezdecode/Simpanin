@@ -29,17 +29,17 @@ struct FieldRow: View {
     let onChange: (String) -> Void
     let onSubmit: () -> Void
 
-    private var title: String { String(localized: ReviewView.title(for: key)) }
+    private var title: String { String(localized: DocumentFieldStyle.title(for: key)) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(ReviewView.title(for: key)).font(.footnote).foregroundStyle(.secondary)
+            Text(DocumentFieldStyle.title(for: key)).font(.footnote).foregroundStyle(.secondary)
             Group {
                 if ReviewModel.dateKeys.contains(key) {
-                    DateField(title: ReviewView.title(for: key), value: value, onChange: onChange)
+                    DateField(title: DocumentFieldStyle.title(for: key), value: value, onChange: onChange)
                 } else {
                     TextField(text: Binding(get: { value }, set: { onChange($0) })) {
-                        Text(ReviewView.title(for: key))
+                        Text(DocumentFieldStyle.title(for: key))
                     }
                 }
             }

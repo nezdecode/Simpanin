@@ -69,14 +69,9 @@ struct ValiditySection: View {
         }
     }
 
-    /// An STNK's date is its yearly tax; every other type's is its validity.
-    static func title(for type: DocumentType) -> LocalizedStringResource {
-        type == .stnk ? "review.taxValidUntil" : "review.validUntil"
-    }
-
     private var expiryLabel: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(Self.title(for: type)).foregroundStyle(Color.primary)
+            Text(DocumentFieldStyle.validityTitle(for: type)).foregroundStyle(Color.primary)
             if let note { WarningText(note) }
         }
     }
