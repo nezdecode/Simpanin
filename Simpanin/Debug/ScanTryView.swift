@@ -29,6 +29,8 @@
         @State private var reads = 0
         @State private var newPages: [CGImage]?
         @State private var requestedMethod = RecognitionMethod.text
+        /// The class letter spike's reading of the source page; nil until a SIM has been read.
+        @State private var classLetter: Result<ClassLetterSpike.Reading, any Error>?
 
         /// Where VisionKit could leave page images: tmp, and Library with its Caches.
         private static var watchedFolders: [URL] { [.temporaryDirectory, .libraryDirectory] }
@@ -67,6 +69,7 @@
                             : "The document camera only runs on an iPhone.")
                 }
                 Section("Result") { resultRows }
+                classLetterSection
                 if let reading = scan.reading, reading.pages.count > 1 {
                     Section("Pages") { pageRows(reading) }
                 }
@@ -90,6 +93,7 @@
                         scan.discard()
                         DocumentCameraCache.clear()
                         leftovers = nil
+                        classLetter = nil
                     }
                 }
             }
@@ -118,6 +122,7 @@
             }
             .task(id: reads) {
                 guard reads > 0 else { return }
+                classLetter = nil
                 if let pages = newPages {
                     newPages = nil
                     await scan.scanned(pages)
@@ -125,6 +130,19 @@
                 } else {
                     await scan.read(using: requestedMethod)
                 }
+                guard scan.result?.type.isSIM == true, !Task.isCancelled else { return }
+                let page = scan.reading?.source ?? 0
+                guard scan.pages.indices.contains(page) else { return }
+                let image = scan.pages[page]
+                let reading: Result<ClassLetterSpike.Reading, any Error>
+                do {
+                    reading = .success(try await ClassLetterSpike.read(image))
+                } catch {
+                    reading = .failure(error)
+                }
+                // Dropping the scan doesn't cancel this task, so a late reading must not bring its page back.
+                guard !Task.isCancelled, scan.pages.indices.contains(page), scan.pages[page] === image else { return }
+                classLetter = reading
             }
         }
 
@@ -148,6 +166,41 @@
                             + "no page data."
                     )
                 }
+            }
+        }
+
+        @ViewBuilder private var classLetterSection: some View {
+            switch classLetter {
+            case nil: EmptyView()
+            case .failure: Section("Class letter (spike)") { Text("Recognition failed.") }
+            case .success(.noNumber):
+                Section("Class letter (spike)") { Text("No piece of text was a SIM number on its own.") }
+            case .success(.nothingAbove): Section("Class letter (spike)") { Text("Nothing above the number.") }
+            case .success(.read(let crop, let outcomes)):
+                Section {
+                    Image(decorative: crop, scale: 1).resizable().scaledToFit().frame(maxHeight: 120)
+                    ForEach(ClassLetterSpike.variants.indices, id: \.self) { index in
+                        LabeledContent {
+                            Text(verbatim: Self.text(outcomes[index]))
+                        } label: {
+                            Text(verbatim: ClassLetterSpike.variants[index].name)
+                        }
+                    }
+                } header: {
+                    Text("Class letter (spike)")
+                } footer: {
+                    Text(
+                        "The area above the number, read \(ClassLetterSpike.variants.count) ways. "
+                            + "Only the class each way matched is shown.")
+                }
+            }
+        }
+
+        private static func text(_ outcome: ClassLetterSpike.Outcome) -> String {
+            switch outcome {
+            case .matched(let type): type.rawValue
+            case .noClass: "–"
+            case .failed: "failed"
             }
         }
 
