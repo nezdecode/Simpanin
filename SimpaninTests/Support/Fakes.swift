@@ -100,8 +100,38 @@ actor FakeDocuments {
     private var createGated = false
     private var createGate: CheckedContinuation<Void, Never>?
     private var missingOnce: Set<DocumentID> = []
+    private var fieldsByID: [DocumentID: DocumentFields] = [:]
+    private var unreadable: Set<DocumentID> = []
+    /// Every fields read, in order, so a test sees which documents were decrypted.
+    private(set) var fieldReads: [DocumentID] = []
+    private var readGated = false
+    private var readGate: CheckedContinuation<Void, Never>?
 
     func setFailure(_ failure: VaultError?) { self.failure = failure }
+    func setUnreadable(_ id: DocumentID) { unreadable.insert(id) }
+
+    /// Every call from now on fails as a locked vault does.
+    func lock() {
+        failure = .locked
+        loadFailure = .locked
+        binFailure = .locked
+    }
+
+    /// The next fields read waits until the test releases it, like a check still running.
+    func gateNextFieldsRead() { readGated = true }
+
+    /// False if no gated read started within two seconds, so a test fails instead of hanging.
+    func waitUntilReadingFields() async -> Bool {
+        for _ in 0..<2_000 where readGate == nil {
+            try? await Task.sleep(for: .milliseconds(1))
+        }
+        return readGate != nil
+    }
+
+    func releaseFieldsRead() {
+        readGate?.resume()
+        readGate = nil
+    }
     func setLoadFailure(_ failure: VaultError?) { loadFailure = failure }
     func setBinFailure(_ failure: VaultError?) { binFailure = failure }
     /// The next createDocument waits until the test releases it, like a save still being written.
@@ -134,6 +164,18 @@ actor FakeDocuments {
         return bin.filter { !missingOnce.contains($0.id) }
     }
 
+    func fields(of id: DocumentID) async throws -> DocumentFields {
+        if readGated {
+            readGated = false
+            await withCheckedContinuation { readGate = $0 }
+        }
+        if failure == .locked { throw VaultError.locked }
+        fieldReads.append(id)
+        if unreadable.contains(id) { throw VaultError.authenticationFailed }
+        guard let fields = fieldsByID[id] else { throw VaultError.documentNotFound }
+        return fields
+    }
+
     // swiftlint:disable:next function_parameter_count - mirrors VaultStore.createDocument
     func createDocument(
         type: DocumentType, label: String?, expiry: CalendarDate?, pinned: Bool, fields: DocumentFields,
@@ -147,6 +189,7 @@ actor FakeDocuments {
         let id = DocumentID()
         created.append(fields)
         createdPages.append(pages)
+        fieldsByID[id] = fields
         live.append(
             Document(
                 id: id, type: type, label: label, createdAt: .now, updatedAt: .now, expiry: expiry, pinned: pinned,

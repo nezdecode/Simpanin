@@ -11,11 +11,9 @@
 
 import CoreGraphics
 import Foundation
-import ImageIO
 import OSLog
 import Observation
 import Parsers
-import UniformTypeIdentifiers
 import VaultCore
 
 /// "Periksa data": what a scan read, for the user to check and correct before it's saved. Everything
@@ -51,6 +49,14 @@ final class ReviewModel {
     private(set) var saving = false
     /// An alert from Simpan is up, or about to follow another.
     private var asking = false
+    /// Found by the check on Simpan; Simpan asks nothing until its alert is answered.
+    private(set) var duplicate: DuplicateCheck.Found?
+    /// A save is being written, or its duplicate alert is about to open: nothing may drop or replace the scan.
+    var saveInProgress: Bool { saving || duplicate != nil }
+    /// Simpan in the duplicate alert, kept while the number and type stay the same, also after a failed save.
+    private var acceptedDuplicate: DuplicateCheck.Candidate?
+    /// What the pages alert said when it was answered; while the notes say the same, it isn't asked again.
+    private var answeredPages: PageNotes?
     /// What the scan read, to tell what the user changed.
     private var scanned: [String: String] = [:]
     private var scannedType = DocumentType.other
@@ -99,8 +105,11 @@ final class ReviewModel {
         self.pages = pages
         // Always replaced, so a rescan that failed never keeps the old scan's notes.
         self.reading = reading
-        // An alert that was about to follow Simpan saja belongs to the old pages.
+        // An alert that was about to follow Simpan saja belongs to the old pages, as do the answers.
         asking = false
+        duplicate = nil
+        acceptedDuplicate = nil
+        answeredPages = nil
         type = result?.type ?? .other
         values = (result?.fields.values ?? [:]).reduce(into: [:]) { shown, field in
             shown[field.key] = Self.dateKeys.contains(field.key) ? Self.dayFirst(field.value) : field.value
@@ -170,15 +179,17 @@ final class ReviewModel {
         expiryReasons = []
     }
 
-    /// Seals the pages and the fields into the vault. False when it didn't; `saveError` says why.
+    /// Seals the pages and the fields into the vault. False when it didn't: `saveError` says why, or
+    /// `duplicate` holds what the vault already has.
     /// - Parameter onSaved: runs the moment the vault has the document, before anything else can, so a
     ///   lock right after never reports the saved scan as dropped.
     func save(onSaved: () -> Void = {}) async -> Bool {
         // One save at a time: a second tap while the first is being written would save a duplicate.
         guard !saving else { return false }
         saving = true
-        // Simpan was answered; if this save fails, the next tap asks again.
+        // Simpan was answered; if this save fails, the next tap asks again, except about these pages.
         asking = false
+        answeredPages = pageNotes
         defer { saving = false }
         var fields: [String: String] = [:]
         // A value that can't be stored is never saved; its field shows why.
@@ -192,6 +203,16 @@ final class ReviewModel {
         let type = type
         let trimmedLabel = label.trimmingCharacters(in: .whitespacesAndNewlines)
         let expiry = hasExpiry ? expiry : nil
+        if let candidate = DuplicateCheck.candidate(type: type, values: fields), candidate != acceptedDuplicate {
+            do {
+                duplicate = try await DuplicateCheck.find(candidate, in: store)
+                if duplicate != nil { return false }
+            } catch {
+                // Only a lock comes here; it drops the scan, as a locked save would.
+                saveError = RecoveryMapping.screen(forSaveError: error)
+                return false
+            }
+        }
         let encoded = await Self.encoded(pages, with: encode)
         // A page that can't be prepared is never left out, so nothing is saved.
         guard encoded.count == pages.count else {
@@ -300,7 +321,7 @@ extension ReviewModel {
     /// document are asked about. Nil while an alert from an earlier tap is still being answered, so a quick
     /// second tap never stacks two.
     func saveStep() -> SaveStep? {
-        guard !asking else { return nil }
+        guard !asking, duplicate == nil else { return nil }
         if let key = firstProblem() { return .refuse(key) }
         return ask(nikMissing ? .askNIK : stepAfterNIK)
     }
@@ -315,7 +336,20 @@ extension ReviewModel {
         asking = false
     }
 
-    private var stepAfterNIK: SaveStep { pageNotes.saveWarning == nil ? .save : .askPages }
+    /// Simpan in the duplicate alert.
+    func acceptDuplicate() {
+        acceptedDuplicate = duplicate?.candidate
+        duplicate = nil
+    }
+
+    /// The duplicate alert closed, or couldn't show.
+    func duplicateAnswered() {
+        duplicate = nil
+    }
+
+    private var stepAfterNIK: SaveStep {
+        pageNotes.saveWarning == nil || pageNotes == answeredPages ? .save : .askPages
+    }
 
     private func ask(_ step: SaveStep) -> SaveStep {
         asking = step != .save
@@ -341,49 +375,9 @@ extension ReviewModel {
         return key == FieldKey.birthDate && date > .today ? .birthDateInFuture : nil
     }
 
-    /// Digits as dd-mm-yyyy, for a number pad. A dash only goes before a digit, so backspace can remove it.
-    static func typedDate(_ text: String) -> String {
-        var result = ""
-        let digits = text.filter(\.isASCIIDigit)
-        for (index, digit) in digits.prefix(8).enumerated() {
-            if index == 2 || index == 4 { result.append("-") }
-            result.append(digit)
-        }
-        return result
-    }
-
     /// Off the main actor: a few full-size pages take long enough to freeze the screen.
     @concurrent
     private static func encoded(_ pages: [CGImage], with encode: @Sendable (CGImage) -> Data?) async -> [Data] {
         pages.compactMap(encode)
-    }
-
-    /// Fields holding a date: shown day first, as on the card, and stored as YYYY-MM-DD like every date
-    /// in the vault.
-    static let dateKeys: Set<String> = [FieldKey.birthDate]
-
-    static func dayFirst(_ stored: String) -> String {
-        guard let date = CalendarDate(stored) else { return stored }
-        return String(format: "%02d-%02d-%04d", date.day, date.month, date.year)
-    }
-
-    /// "17-08-1990", also with dots, slashes or spaces between; nil when the date can't exist.
-    static func yearFirst(_ typed: String) -> String? {
-        guard let match = typed.wholeMatch(of: /\s*([0-9]{1,2})[-.\/ ]([0-9]{1,2})[-.\/ ]([0-9]{4})\s*/),
-            let day = Int(match.1), let month = Int(match.2), let year = Int(match.3)
-        else { return nil }
-        return CalendarDate(year: year, month: month, day: day)?.string
-    }
-}
-
-/// Turns a page into the bytes that are sealed in the vault.
-nonisolated enum PageEncoding {
-    /// JPEG, like VisionKit's own pages, at a quality that keeps small print readable.
-    static func jpeg(_ page: CGImage) -> Data? {
-        let data = NSMutableData()
-        guard let destination = CGImageDestinationCreateWithData(data, UTType.jpeg.identifier as CFString, 1, nil)
-        else { return nil }
-        CGImageDestinationAddImage(destination, page, [kCGImageDestinationLossyCompressionQuality: 0.8] as CFDictionary)
-        return CGImageDestinationFinalize(destination) ? data as Data : nil
     }
 }

@@ -129,7 +129,7 @@ The privacy rules in `CONTRIBUTING.md` apply everywhere. In code that means:
 
 Some of these describe features that aren't built yet (the document screen, sharing, copying a number). They're the rules for when they are.
 
-- **Decrypted data lives in memory only while it's on screen.** Only the open document is decrypted. Its fields and pages are let go when its screen closes and when the vault locks, and never kept in a cache, a static or a long-lived model.
+- **Decrypted data lives in memory only while it's on screen.** Only the open document is decrypted. Its fields and pages are let go when its screen closes and when the vault locks, and never kept in a cache, a static or a long-lived model. The one exception is the duplicate check on Simpan: it decrypts the fields of saved documents that could match (the same type, or any SIM when either has no class), never their pages, compares them in memory and doesn't keep them.
 - **Nothing decrypted touches the disk**: no image cache, no `URLCache`. Where a system API needs a file (sharing a PDF, Quick Look), it goes in its own folder in `tmp`, deleted when the share sheet or preview closes and again at the next launch, in case the app was stopped in between. Which viewers make their own copy is still to be checked on a device.
 - **Secrets live in the Keychain only**, never in `UserDefaults`, a file or a log.
 - **A copied number is local-only and expires** after about 60 seconds, so it doesn't reach other devices or stay on the clipboard.

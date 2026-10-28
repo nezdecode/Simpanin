@@ -72,4 +72,91 @@ final class ScanFlowUITests: UITestCase {
             app.staticTexts["Perubahan yang kamu buat akan diganti hasil pindaian baru."].waitForExistence(timeout: 5))
         screenshot("23 rescan after typing")
     }
+
+    /// The same KTP scanned again asks first; Kembali keeps the scan, Simpan keeps both.
+    @MainActor
+    func testSavingTheSameKTPAgainAsks() throws {
+        let app = launch(["-SimpaninUITestScan"])
+        openReview(app)
+        app.buttons["review.save"].tap()
+        XCTAssertTrue(waitForRows(1, in: app))
+        openReview(app)
+        app.buttons["review.save"].tap()
+
+        let alert = app.alerts["Kamu sudah punya KTP dengan NIK ini."]
+        XCTAssertTrue(alert.waitForExistence(timeout: 5))
+        XCTAssertTrue(alert.staticTexts["Yang lama tidak diganti. Kalau disimpan, keduanya ada di daftar."].exists)
+        screenshot("27 the same KTP saved again")
+        alert.buttons["Kembali"].tap()
+        XCTAssertTrue(app.buttons["review.save"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.textFields["review.field.name"].exists)
+        app.buttons["review.save"].tap()
+        XCTAssertTrue(alert.waitForExistence(timeout: 5))
+        alert.buttons["Simpan"].tap()
+        XCTAssertTrue(waitForRows(2, in: app))
+    }
+
+    /// The pages are asked about first, then the duplicate; after Kembali only the duplicate is asked again.
+    @MainActor
+    func testThePagesAndDuplicateAlertsInARow() throws {
+        let app = launch(["-SimpaninUITestScanKTPAndSIM"])
+        let pages = app.alerts["Ada halaman dari dokumen lain"]
+        openReview(app)
+        app.buttons["review.save"].tap()
+        XCTAssertTrue(pages.waitForExistence(timeout: 5))
+        pages.buttons["Simpan"].tap()
+        XCTAssertTrue(waitForRows(1, in: app))
+        openReview(app)
+        app.buttons["review.save"].tap()
+        XCTAssertTrue(pages.waitForExistence(timeout: 5))
+        pages.buttons["Simpan"].tap()
+
+        let duplicate = app.alerts["Kamu sudah punya KTP dengan NIK ini."]
+        XCTAssertTrue(duplicate.waitForExistence(timeout: 5))
+        duplicate.buttons["Kembali"].tap()
+        XCTAssertTrue(app.buttons["review.save"].waitForExistence(timeout: 5))
+        app.buttons["review.save"].tap()
+        XCTAssertTrue(duplicate.waitForExistence(timeout: 5))
+        XCTAssertFalse(pages.exists)
+        duplicate.buttons["Simpan"].tap()
+        XCTAssertTrue(waitForRows(2, in: app))
+    }
+
+    /// The lock takes the duplicate alert with the scan; nothing more is saved.
+    @MainActor
+    func testALockWhileTheWarningIsOpenDropsTheScan() throws {
+        let app = launch(["-SimpaninUITestScan"])
+        openReview(app)
+        app.buttons["review.save"].tap()
+        XCTAssertTrue(waitForRows(1, in: app))
+        app.buttons["list.settings"].tap()
+        let row = app.buttons["settings.autoLock"]
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        row.tap()
+        app.buttons["autoLock.immediately"].tap()
+        app.navigationBars["Kunci otomatis"].buttons.element(boundBy: 0).tap()
+        app.navigationBars["Pengaturan"].buttons.element(boundBy: 0).tap()
+        openReview(app)
+        app.buttons["review.save"].tap()
+        let alert = app.alerts["Kamu sudah punya KTP dengan NIK ini."]
+        XCTAssertTrue(alert.waitForExistence(timeout: 5))
+
+        XCUIDevice.shared.press(.home)
+        // Coming back locks the vault; in UI tests the unlock prompt that follows succeeds by itself.
+        app.activate()
+        let notice = app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH 'Pindaian yang belum disimpan'"))
+        XCTAssertTrue(notice.firstMatch.waitForExistence(timeout: 10))
+        XCTAssertFalse(alert.exists)
+        XCTAssertEqual(rows(app).count, 1)
+    }
+
+    /// Rows can take a moment to appear after a save; checked for up to ten seconds, never forever.
+    @MainActor
+    private func waitForRows(_ count: Int, in app: XCUIApplication) -> Bool {
+        let deadline = Date().addingTimeInterval(10)
+        while rows(app).count != count, Date() < deadline {
+            RunLoop.current.run(until: Date().addingTimeInterval(0.2))
+        }
+        return rows(app).count == count
+    }
 }

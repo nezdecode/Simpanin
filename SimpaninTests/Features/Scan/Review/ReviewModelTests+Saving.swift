@@ -209,11 +209,12 @@ extension ReviewModelTests {
         #expect(review.saveStep() == .askPages)
     }
 
-    @Test func aFailedSaveLetsSimpanAskAgain() async throws {
+    /// The pages were already answered, so Simpan goes straight to saving; it never does nothing.
+    @Test func aFailedSaveLetsSimpanSaveAgain() async throws {
         let review = model(encode: { _ in nil })
         try loadKTPAndSIM(into: review)
         #expect(review.saveStep() == .askPages)
         #expect(await !review.save())
-        #expect(review.saveStep() == .askPages)
+        #expect(review.saveStep() == .save)
     }
 }
