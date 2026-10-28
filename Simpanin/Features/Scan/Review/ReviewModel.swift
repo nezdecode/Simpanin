@@ -105,7 +105,8 @@ final class ReviewModel {
         answeredPages = nil
         type = result?.type ?? .other
         values = (result?.fields.values ?? [:]).reduce(into: [:]) { shown, field in
-            shown[field.key] = Self.dateKeys.contains(field.key) ? Self.dayFirst(field.value) : field.value
+            shown[field.key] =
+                Self.dateKeys.contains(field.key) ? DocumentFieldStyle.dayFirst(field.value) : field.value
         }
         scanned = values
         scannedType = type
