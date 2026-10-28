@@ -29,6 +29,18 @@ struct ColorContrastTests {
         #expect(Self.contrast(mark, row) >= 4.5)
     }
 
+    /// The document screen's Berlaku status line, on its row: 15 pt isn't large text, so 4.5:1 holds.
+    @Test(arguments: [UIUserInterfaceStyle.light, .dark])
+    @MainActor func expiryStatusLinesKeepTheirContrast(_ style: UIUserInterfaceStyle) {
+        let traits = UITraitCollection(userInterfaceStyle: style)
+        let row = UIColor.secondarySystemGroupedBackground.resolvedColor(with: traits)
+        for isExpired in [false, true] {
+            let status = ValidityLines.Status(text: "expiry.today", isExpired: isExpired)
+            let color = UIColor(resource: status.color).resolvedColor(with: traits)
+            #expect(Self.contrast(color, row) >= 4.5, "expired: \(isExpired)")
+        }
+    }
+
     static func contrast(_ first: UIColor, _ second: UIColor) -> Double {
         let (lighter, darker) = (max(luminance(first), luminance(second)), min(luminance(first), luminance(second)))
         return (lighter + 0.05) / (darker + 0.05)

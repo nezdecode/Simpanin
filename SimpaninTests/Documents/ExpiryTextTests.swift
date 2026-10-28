@@ -74,6 +74,112 @@ struct ExpiryTextTests {
         ExpiryText.bannerOrder(candidates, today: today)
     }
 
+    // MARK: Berlaku on the document screen
+
+    struct Lines: Equatable {
+        let title: String
+        let value: String
+        var status: String?
+        var isExpired = false
+    }
+
+    func validity(_ type: DocumentType, _ expiry: CalendarDate?) -> Lines {
+        let validity = ExpiryText.validity(type: type, expiry: expiry, today: today)
+        let value =
+            switch validity.value {
+            case .date(let date): date.displayText
+            case .phrase(let phrase): String(localized: phrase)
+            }
+        return Lines(
+            title: String(localized: validity.title), value: value,
+            status: validity.status.map { String(localized: $0.text) }, isExpired: validity.status?.isExpired ?? false)
+    }
+
+    @Test func berlakuShowsTheFullDateAndAStatusLine() {
+        #expect(
+            validity(.simA, day(45))
+                == Lines(title: "Berlaku sampai", value: "29 Nov 2026", status: "Habis dalam 45 hari"))
+        #expect(
+            validity(.passport, CalendarDate(year: 2033, month: 8, day: 17))
+                == Lines(title: "Berlaku sampai", value: "17 Agu 2033"))
+    }
+
+    /// The tile leaves this year out; the screen always says it.
+    @Test func expiredShowsTheYear() {
+        let expired = CalendarDate(year: 2026, month: 3, day: 3)
+        let lines = Lines(
+            title: "Berlaku sampai", value: "3 Mar 2026", status: "Sudah habis sejak 3 Mar 2026", isExpired: true)
+        #expect(validity(.simA, expired) == lines)
+    }
+
+    @Test func todaySaysHabisHariIni() {
+        let lines = Lines(title: "Berlaku sampai", value: "15 Okt 2026", status: "Habis hari ini")
+        #expect(validity(.simA, today) == lines)
+        #expect(validity(.stnk, today).status == "Pajak habis hari ini")
+        #expect(!validity(.stnk, today).isExpired)
+    }
+
+    @Test(arguments: [-1, 0, 1, 60])
+    func statusLineFromZeroToSixtyDays(_ offset: Int) {
+        #expect(validity(.simC, day(offset)).status != nil)
+        #expect(validity(.simC, day(offset)).isExpired == (offset < 0))
+    }
+
+    @Test func noStatusLineFromSixtyOneDays() {
+        #expect(validity(.simC, day(61)) == Lines(title: "Berlaku sampai", value: "15 Des 2026"))
+    }
+
+    @Test func ktpIsSeumurHidup() {
+        #expect(validity(.ktp, nil) == Lines(title: "Berlaku", value: "Seumur hidup"))
+    }
+
+    @Test(arguments: [DocumentType.kk, .npwp, .bpjs])
+    func kkNPWPBPJSHaveNoExpiry(_ type: DocumentType) {
+        #expect(validity(type, nil) == Lines(title: "Berlaku", value: "Tanpa masa berlaku"))
+    }
+
+    @Test func stnkSaysPajak() {
+        #expect(
+            validity(.stnk, day(45))
+                == Lines(title: "Pajak berlaku sampai", value: "29 Nov 2026", status: "Pajak habis dalam 45 hari"))
+        #expect(
+            validity(.stnk, CalendarDate(year: 2025, month: 3, day: 3))
+                == Lines(
+                    title: "Pajak berlaku sampai", value: "3 Mar 2025", status: "Pajak sudah habis sejak 3 Mar 2025",
+                    isExpired: true))
+    }
+
+    /// As on the tiles: a type that prints an expiry never claims to have none.
+    @Test func emptyExpirySaysBelumDiisi() {
+        for type in DocumentType.simClasses + [.sim, .passport] {
+            #expect(
+                validity(type, nil) == Lines(title: "Berlaku sampai", value: "Masa berlaku belum diisi"),
+                "\(type.rawValue)")
+        }
+        #expect(validity(.stnk, nil) == Lines(title: "Pajak berlaku sampai", value: "Tanggal pajak belum diisi"))
+    }
+
+    @Test(arguments: [DocumentType.other, DocumentType(rawValue: "visa")])
+    func otherAndUnknownTypesFollowTheirTile(_ type: DocumentType) {
+        #expect(validity(type, nil) == Lines(title: "Berlaku", value: "Tanpa masa berlaku"))
+        let soon = Lines(title: "Berlaku sampai", value: "29 Nov 2026", status: "Habis dalam 45 hari")
+        #expect(validity(type, day(45)) == soon)
+        #expect(validity(type, day(61)) == Lines(title: "Berlaku sampai", value: "15 Des 2026"))
+    }
+
+    /// A stored date reads the same on the screen as on the tile, whatever the type, so the two never
+    /// disagree (only the DEBUG sample KTP has one today).
+    @Test(arguments: [DocumentType.ktp, .kk, .simA, .stnk, .other])
+    func aStoredDateFollowsTheTileRule(_ type: DocumentType) {
+        for offset in [0, 45] {
+            #expect(validity(type, day(offset)).status == text(type, day(offset)), "\(type.rawValue) \(offset)")
+        }
+        let far = validity(type, day(61))
+        #expect(far.status == nil)
+        #expect(far.value == day(61).displayText)
+        #expect(text(type, day(61)).hasSuffix(far.value))
+    }
+
     // MARK: The banner's order (indices into the input)
 
     @Test func theNearestToTodayComesFirst() {
