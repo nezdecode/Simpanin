@@ -38,6 +38,18 @@ struct HiddenBannerTests {
         #expect(!hidden.hides(id, expiry: soon, today: today))
     }
 
+    /// "Tampilkan lagi" takes out only its own entry.
+    @Test func showingAgainRemovesTheEntry() {
+        var hidden = HiddenBanner()
+        let id = DocumentID()
+        let other = DocumentID()
+        hidden.hide(id, expiry: soon, today: today)
+        hidden.hide(other, expiry: past, today: today)
+        hidden.show(id)
+        #expect(!hidden.hides(id, expiry: soon, today: today))
+        #expect(hidden.entries.map(\.id) == [other])
+    }
+
     /// Another document, even of the same type and date, isn't hidden with it: a family has two SIM A.
     @Test func aNewDocumentOfTheSameTypeDoesntHideTheOld() {
         var hidden = HiddenBanner()

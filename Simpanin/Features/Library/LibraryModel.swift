@@ -53,6 +53,23 @@ final class LibraryModel {
         today = CalendarDate.day(of: date, in: calendar)
     }
 
+    /// Whether the document screen offers "Tampilkan lagi": a live document within the banner's window
+    /// that the user hid. A deleted one isn't in the banner either way.
+    func offersShowInBanner(_ id: DocumentID) -> Bool {
+        guard let document = documents.first(where: { $0.id == id }), let expiry = document.expiry else {
+            return false
+        }
+        return ExpiryText.days(from: today, to: expiry) <= ExpiryText.soonWindow
+            && hidden.hides(id, expiry: expiry, today: today)
+    }
+
+    /// Saved like a hide: a failed save keeps it in the banner and is tried again at the next reload.
+    func showInBanner(_ id: DocumentID) {
+        hidden.show(id)
+        hiddenUnsaved = true
+        saveHidden()
+    }
+
     func hideFromBanner(_ document: Document) {
         guard let expiry = document.expiry else { return }
         hidden.hide(document.id, expiry: expiry, today: today)
