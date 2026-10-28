@@ -29,6 +29,8 @@
         @State private var reads = 0
         @State private var newPages: [CGImage]?
         @State private var requestedMethod = RecognitionMethod.text
+        /// The class letter spike's reading of the source page; nil until a SIM has been read.
+        @State private var classLetter: Result<ClassLetterSpike.Reading?, any Error>?
 
         /// Where VisionKit could leave page images: tmp, and Library with its Caches.
         private static var watchedFolders: [URL] { [.temporaryDirectory, .libraryDirectory] }
@@ -67,6 +69,7 @@
                             : "The document camera only runs on an iPhone.")
                 }
                 Section("Result") { resultRows }
+                classLetterSection
                 if let reading = scan.reading, reading.pages.count > 1 {
                     Section("Pages") { pageRows(reading) }
                 }
@@ -90,6 +93,7 @@
                         scan.discard()
                         DocumentCameraCache.clear()
                         leftovers = nil
+                        classLetter = nil
                     }
                 }
             }
@@ -118,12 +122,21 @@
             }
             .task(id: reads) {
                 guard reads > 0 else { return }
+                classLetter = nil
                 if let pages = newPages {
                     newPages = nil
                     await scan.scanned(pages)
                     leftovers = snapshot?.changes()
                 } else {
                     await scan.read(using: requestedMethod)
+                }
+                guard scan.result?.type.isSIM == true, !Task.isCancelled else { return }
+                let page = scan.reading?.source ?? 0
+                guard scan.pages.indices.contains(page) else { return }
+                do {
+                    classLetter = .success(try await ClassLetterSpike.read(scan.pages[page]))
+                } catch {
+                    classLetter = .failure(error)
                 }
             }
         }
@@ -147,6 +160,29 @@
                             + "com.apple.metal are the GPU's shader cache, made the first time Vision runs: "
                             + "no page data."
                     )
+                }
+            }
+        }
+
+        @ViewBuilder private var classLetterSection: some View {
+            switch classLetter {
+            case nil: EmptyView()
+            case .failure: Section("Class letter (spike)") { Text("Recognition failed.") }
+            case .success(nil): Section("Class letter (spike)") { Text("No number line, or nothing above it.") }
+            case .success(let reading?):
+                Section {
+                    Image(decorative: reading.crop, scale: 1).resizable().scaledToFit().frame(maxHeight: 120)
+                    ForEach(ClassLetterSpike.variants.indices, id: \.self) { index in
+                        LabeledContent {
+                            Text(verbatim: reading.classes[index]?.rawValue ?? "–")
+                        } label: {
+                            Text(verbatim: ClassLetterSpike.variants[index].name)
+                        }
+                    }
+                } header: {
+                    Text("Class letter (spike)")
+                } footer: {
+                    Text("The area above the number, read five ways. Only the class each way matched is shown.")
                 }
             }
         }
