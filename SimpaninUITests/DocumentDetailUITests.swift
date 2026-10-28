@@ -77,7 +77,7 @@ final class DocumentDetailUITests: UITestCase {
         tile(app, "KTP", without: "Saya").tap()
         let nik = field(app, "nik")
         XCTAssertTrue(nik.waitForExistence(timeout: 5))
-        XCTAssertEqual(nik.value as? String, "NIK belum diisi")
+        XCTAssertEqual(nik.value as? String, "Belum diisi")
         XCTAssertFalse(app.buttons["detail.reveal"].exists)
         XCTAssertFalse(app.buttons["detail.copy.nik"].exists)
     }

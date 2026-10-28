@@ -40,10 +40,11 @@ final class DocumentDetailModel {
         let title: LocalizedStringResource
         /// Nil when nothing is stored; the row says so with `empty`.
         let value: String?
-        let empty: LocalizedStringResource
         let isNumber: Bool
 
         var id: String { key }
+        /// "Belum diisi" under the title, as under Berlaku.
+        var empty: LocalizedStringResource { "review.expiryMissing" }
         /// A copied date rarely pastes into a form, so the birth date has no copy button.
         var canCopy: Bool { value != nil && key != FieldKey.birthDate }
 
@@ -122,7 +123,7 @@ final class DocumentDetailModel {
                     stored
                 }
             return Field(
-                key: key, title: DocumentFieldStyle.title(for: key), value: value, empty: Self.empty(key),
+                key: key, title: DocumentFieldStyle.title(for: key), value: value,
                 isNumber: isNumber)
         }
     }
@@ -202,15 +203,6 @@ final class DocumentDetailModel {
 
     func delete() async {
         if await onDelete(document.id) { closed = true }
-    }
-
-    private static func empty(_ key: String) -> LocalizedStringResource {
-        switch key {
-        case FieldKey.nik: "detail.nikMissing"
-        case FieldKey.simNumber: "detail.simNumberMissing"
-        case FieldKey.name: "detail.nameMissing"
-        default: "review.expiryMissing"
-        }
     }
 
     /// ImageIO's thumbnail, off the main actor; never `UIImage(data:)`, which decodes the full bitmap.

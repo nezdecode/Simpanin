@@ -397,17 +397,6 @@
         }
       }
     },
-    "detail.nameMissing" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nama belum diisi"
-          }
-        }
-      }
-    },
     "detail.nikCopied" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -415,17 +404,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "NIK disalin"
-          }
-        }
-      }
-    },
-    "detail.nikMissing" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "NIK belum diisi"
           }
         }
       }
@@ -481,17 +459,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nomor SIM disalin"
-          }
-        }
-      }
-    },
-    "detail.simNumberMissing" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nomor SIM belum diisi"
           }
         }
       }
