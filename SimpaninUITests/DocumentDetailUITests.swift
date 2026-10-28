@@ -17,7 +17,10 @@ final class DocumentDetailUITests: UITestCase {
     @MainActor
     func testOpenFromTile() throws {
         let app = launch()
-        open(app, samples: 1, tile: "Saya")
+        addSamples(app, 1)
+        // VoiceOver reads a tile as a button.
+        XCTAssertTrue(app.buttons.matching(identifier: "document.row").firstMatch.exists)
+        open(app, samples: 0, tile: "Saya")
         XCTAssertTrue(app.navigationBars["KTP"].exists)
         XCTAssertTrue(
             app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Saya · ditambahkan '")).firstMatch.exists)
@@ -218,6 +221,20 @@ final class DocumentDetailUITests: UITestCase {
         screenshot("46 deleted from the document")
     }
 
+    /// The list's save alert shows over the document, which stays open.
+    @MainActor
+    func testFailedDeleteStaysOnTheDocumentWithTheAlert() throws {
+        let app = launch(["-SimpaninUITestDeleteError"])
+        open(app, samples: 1, tile: "Saya")
+        app.buttons["detail.delete"].tap()
+        let alert = app.alerts.firstMatch
+        XCTAssertTrue(alert.waitForExistence(timeout: 5))
+        screenshot("49 delete failed")
+        alert.buttons.firstMatch.tap()
+        XCTAssertTrue(field(app, "nik").waitForExistence(timeout: 5))
+        XCTAssertFalse(app.descendants(matching: .any)["toast"].exists)
+    }
+
     @MainActor
     func testTheDocumentAtTheLargestTextSize() throws {
         let app = launch(["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"])
@@ -240,7 +257,7 @@ final class DocumentDetailUITests: UITestCase {
 
     @MainActor
     private func open(_ app: XCUIApplication, samples: Int, tile text: String) {
-        addSamples(app, samples)
+        if samples > 0 { addSamples(app, samples) }
         tile(app, text).tap()
         // The top of the screen: at the largest text size the rows further down aren't built until scrolled to.
         XCTAssertTrue(app.buttons["detail.page.1"].waitForExistence(timeout: 5))

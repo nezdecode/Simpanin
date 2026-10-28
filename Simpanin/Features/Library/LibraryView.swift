@@ -160,18 +160,19 @@ struct LibraryView: View {
                     Text(ScreenText.cancel)
                 }
             }
-            .alert(
-                library.saveError.map { Text(RecoveryContent($0).message) } ?? Text(verbatim: ""),
-                isPresented: Binding(isPresent: $library.saveError)
-            ) {
-                Button {
-                    library.saveError = nil
-                } label: {
-                    Text(ScreenText.okay)
-                }
-            } message: {
-                if library.saveError == .storageFullOnSave { Text("saveFull.hint") }
+        }
+        // On the stack, not its root, so a failed Hapus on the document screen shows it too.
+        .alert(
+            library.saveError.map { Text(RecoveryContent($0).message) } ?? Text(verbatim: ""),
+            isPresented: Binding(isPresent: $library.saveError)
+        ) {
+            Button {
+                library.saveError = nil
+            } label: {
+                Text(ScreenText.okay)
             }
+        } message: {
+            if library.saveError == .storageFullOnSave { Text("saveFull.hint") }
         }
     }
 
