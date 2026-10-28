@@ -36,6 +36,7 @@ ENTRY_POINTS = {
     'DocumentCameraCache': r'\bDocumentCameraCache\.clear\(\)',
     'SettingsView': None,
     'LockCoverView': None,
+    'DocumentDetailView': None,
 }
 
 DECLARATION = re.compile(

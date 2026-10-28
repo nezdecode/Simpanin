@@ -65,7 +65,7 @@
         }
 
         /// The store the document list reads. `-SimpaninUITestLoadError <n>` fails its first n loads.
-        static func documentStore(for vault: AppVault) -> any DocumentStoring {
+        static func documentStore(for vault: AppVault) -> any DocumentStoring & PageReading {
             guard let count = value(after: "-SimpaninUITestLoadError").flatMap(Int.init) else { return vault.store }
             return ScriptedDocuments(store: vault.store, failingLoads: count)
         }
