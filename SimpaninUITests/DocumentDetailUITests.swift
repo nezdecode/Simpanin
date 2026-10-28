@@ -41,6 +41,19 @@ final class DocumentDetailUITests: UITestCase {
         XCTAssertTrue(app.descendants(matching: .any)["detail.validity"].label.contains("Habis dalam"))
     }
 
+    /// "dan N dokumen lain perlu dicek" names no document, so it opens none.
+    @MainActor
+    func testTheBannerCountLineOpensNothing() throws {
+        let app = launch(["-SimpaninUITestExpiringSamples"])
+        addSamples(app, 3)
+        XCTAssertTrue(app.staticTexts["dan 1 dokumen lain perlu dicek"].waitForExistence(timeout: 5))
+        // The banner is one element for VoiceOver, so a tap on it lands in its middle, on the link; the count
+        // line is its last line.
+        app.descendants(matching: .any)["banner"].coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.9)).tap()
+        XCTAssertFalse(app.navigationBars["SIM A"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.navigationBars["Dokumen"].exists)
+    }
+
     /// The masked number holds no hidden digit, on screen or for VoiceOver.
     @MainActor
     func testRevealAndHideNumber() throws {

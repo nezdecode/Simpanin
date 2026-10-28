@@ -20,6 +20,10 @@ struct ExpiryBanner: View {
     let onOpen: (VaultCore.Document) -> Void
     let onHide: (VaultCore.Document) -> Void
 
+    /// The count line sits under the text, past the clock.
+    private static let iconSize: CGFloat = 36
+    private static let iconSpacing: CGFloat = 12
+
     var body: some View {
         let attention = ExpiryText.bannerOrder(
             documents.map { ExpiryText.BannerCandidate(type: $0.type, expiry: $0.expiry, createdAt: $0.createdAt) },
@@ -32,8 +36,10 @@ struct ExpiryBanner: View {
                     Button {
                         onOpen(document)
                     } label: {
-                        HStack(spacing: 12) {
-                            IconBadge(systemImage: "clock", tint: Color(.onWarning), background: Color(.warningIcon))
+                        HStack(spacing: Self.iconSpacing) {
+                            IconBadge(
+                                systemImage: "clock", size: Self.iconSize, tint: Color(.onWarning),
+                                background: Color(.warningIcon))
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(DocumentStyle.name(document.type)).font(.headline)
                                 Text(ExpiryText.text(type: document.type, expiry: document.expiry, today: today))
@@ -44,8 +50,12 @@ struct ExpiryBanner: View {
                     }
                     .buttonStyle(.plain)
                     if attention.count > 1 {
-                        // Under the text, past the clock.
-                        Text("banner.more \(attention.count - 1)").font(.subheadline).padding(.leading, 48)
+                        Text("banner.more \(attention.count - 1)").font(.subheadline)
+                            .padding(.leading, Self.iconSize + Self.iconSpacing)
+                            // The link's touch area reaches past its text; this line names no document, so a
+                            // tap on it does nothing.
+                            .contentShape(.rect)
+                            .onTapGesture {}
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
