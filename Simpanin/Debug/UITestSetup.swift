@@ -175,11 +175,14 @@
 
         func delete(_ id: DocumentID) async throws { try await store.delete(id) }
         func restore(_ id: DocumentID) async throws { try await store.restore(id) }
+        func pageData(_ pageID: PageID, of id: DocumentID) async throws -> Data {
+            try await store.pageData(pageID, of: id)
+        }
     }
 
     // In an extension: declared on the actor, a conformance to a nonisolated protocol makes Swift 6.4 mark the
     // actor's init nonisolated, and reject it, when a file using the actor is type-checked first.
-    extension ScriptedDocuments: DocumentStoring {}
+    extension ScriptedDocuments: DocumentStoring, PageReading {}
 
     /// Fails the first opens with a chosen error, then opens the real (throwaway) store.
     actor ScriptedOpening {

@@ -106,9 +106,14 @@ actor FakeDocuments {
     private(set) var fieldReads: [DocumentID] = []
     private var readGated = false
     private var readGate: CheckedContinuation<Void, Never>?
+    private var pagesByID: [PageID: Data] = [:]
+    private var unreadablePages: Set<PageID> = []
+    /// Every page read, in order, so a test sees they're read one at a time.
+    private(set) var pageReads: [PageID] = []
 
     func setFailure(_ failure: VaultError?) { self.failure = failure }
     func setUnreadable(_ id: DocumentID) { unreadable.insert(id) }
+    func setUnreadablePage(_ id: PageID) { unreadablePages.insert(id) }
 
     /// Every call from now on fails as a locked vault does.
     func lock() {
@@ -190,10 +195,12 @@ actor FakeDocuments {
         created.append(fields)
         createdPages.append(pages)
         fieldsByID[id] = fields
+        let pageIDs = pages.map { _ in PageID() }
+        for (pageID, data) in zip(pageIDs, pages) { pagesByID[pageID] = data }
         live.append(
             Document(
                 id: id, type: type, label: label, createdAt: .now, updatedAt: .now, expiry: expiry, pinned: pinned,
-                deletedAt: nil, pageIDs: pages.map { _ in PageID() }))
+                deletedAt: nil, pageIDs: pageIDs))
         return id
     }
 
@@ -220,7 +227,18 @@ actor FakeDocuments {
     }
 }
 
-extension FakeDocuments: DocumentStoring {}  // in an extension, see FakeVault
+extension FakeDocuments {
+    func pageData(_ pageID: PageID, of id: DocumentID) async throws -> Data {
+        if failure == .locked { throw VaultError.locked }
+        pageReads.append(pageID)
+        guard live.contains(where: { $0.id == id && $0.pageIDs.contains(pageID) }), let data = pagesByID[pageID]
+        else { throw VaultError.pageNotFound }
+        if unreadablePages.contains(pageID) { throw VaultError.authenticationFailed }
+        return data
+    }
+}
+
+extension FakeDocuments: DocumentStoring, PageReading {}  // in an extension, see FakeVault
 
 /// Stands in for VaultStore's quarantine calls.
 actor FakeQuarantine {
