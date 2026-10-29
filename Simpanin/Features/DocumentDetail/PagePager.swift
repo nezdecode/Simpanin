@@ -19,13 +19,10 @@ struct PagePager: View {
     @Binding var selection: Int
     let transition: Namespace.ID
     let onOpen: (Int) -> Void
-    /// Whether a finger or a fling is moving the pages, so only a change from elsewhere scrolls them.
-    @State private var scrolling = false
-
-    /// How much of a neighbour shows beside a middle page, so it's plain there's another to swipe to.
-    private static let peek: CGFloat = 18
-    private static let spacing: CGFloat = 8
-    private static let margin: CGFloat = 16
+    @State private var position = ScrollPosition()
+    @State private var width: CGFloat = 0
+    /// The page on screen, so only a page chosen elsewhere scrolls the pages.
+    @State private var shown = 0
 
     var body: some View {
         VStack(spacing: 8) {
@@ -35,35 +32,34 @@ struct PagePager: View {
     }
 
     private var scroller: some View {
-        ScrollViewReader { proxy in
-            pageScroll
-                // A page chosen elsewhere (the viewer, VoiceOver) scrolls there, centred like a swipe ends.
-                .onChange(of: selection) { _, index in
-                    if !scrolling { withAnimation(.snappy) { proxy.scrollTo(index, anchor: .center) } }
-                }
-        }
-    }
-
-    private var pageScroll: some View {
         ScrollView(.horizontal) {
-            LazyHStack(spacing: Self.spacing) {
+            LazyHStack(spacing: PagerLayout.spacing) {
                 ForEach(pages.indices, id: \.self) { index in
                     page(index)
-                        .containerRelativeFrame(.horizontal) { length, _ in pageWidth(length) }
+                        .frame(width: PagerLayout(count: pages.count, width: width).pageWidth)
                         .id(index)
                 }
             }
-            .padding(.horizontal, Self.margin)
+            .padding(.horizontal, PagerLayout.margin)
             .scrollTargetLayout()
         }
-        .scrollTargetBehavior(
-            PageSnapping(count: pages.count, margin: Self.margin, spacing: Self.spacing, pageWidth: pageWidth)
-        )
-        // Read only: setting the position doesn't center a page, so scrolling there is the reader's job.
-        .onScrollTargetVisibilityChange(idType: Int.self, threshold: 0.6) { visible in
-            if let shown = visible.first, shown != selection { selection = shown }
+        .scrollTargetBehavior(PageSnapping(count: pages.count))
+        .scrollPosition($position)
+        .onGeometryChange(for: CGFloat.self) {
+            $0.size.width
+        } action: { newWidth in
+            width = newWidth
+            position.scrollTo(x: PagerLayout(count: pages.count, width: newWidth).offset(for: selection))
         }
-        .onScrollPhaseChange { _, phase in scrolling = phase != .idle }
+        .onScrollTargetVisibilityChange(idType: Int.self, threshold: 0.6) { visible in
+            guard let first = visible.first else { return }
+            shown = first
+            if selection != first { selection = first }
+        }
+        // A page chosen elsewhere (the viewer, VoiceOver) is scrolled to straight away, even under the viewer.
+        .onChange(of: selection) { _, index in
+            if index != shown { position.scrollTo(x: PagerLayout(count: pages.count, width: width).offset(for: index)) }
+        }
         .scrollIndicators(.hidden)
         .scrollDisabled(pages.count < 2)
         // A fixed height whatever the text size: the page is the picture, the line under it the text.
@@ -102,11 +98,6 @@ struct PagePager: View {
     private var accessibilityValue: String {
         let number = String(localized: "detail.pageNumber \(selection + 1) \(pages.count)")
         return pageFailed(selection) ? "\(number), \(String(localized: "detail.pageFailed"))" : number
-    }
-
-    /// A middle page leaves its neighbours `peek` on each side; one page has the screen's margins.
-    private func pageWidth(_ width: CGFloat) -> CGFloat {
-        pages.count > 1 ? width - 2 * (Self.peek + Self.spacing) : width - 2 * Self.margin
     }
 
     private func canOpen(_ index: Int) -> Bool {
@@ -173,22 +164,47 @@ private struct PageAdjusting: ViewModifier {
     }
 }
 
-/// One page per swipe: a middle page centered between its neighbours, the first and last against their margins.
+/// One page per swipe, ending where `PagerLayout` puts it.
 private struct PageSnapping: ScrollTargetBehavior {
     let count: Int
-    let margin: CGFloat
-    let spacing: CGFloat
-    let pageWidth: (CGFloat) -> CGFloat
 
     func updateTarget(_ target: inout ScrollTarget, context: TargetContext) {
-        let container = context.containerSize.width
-        let width = pageWidth(container)
-        let step = width + spacing
-        guard count > 1, step > 0 else { return }
-        func page(at offset: CGFloat) -> Int { Int(((offset - margin - width / 2) / step).rounded()) }
-        let start = page(at: context.originalTarget.rect.midX)
-        let next = min(max(page(at: target.rect.midX), start - 1, 0), start + 1, count - 1)
-        let centered = margin + CGFloat(next) * step + width / 2 - container / 2
-        target.rect.origin.x = min(max(centered, 0), context.contentSize.width - container)
+        let layout = PagerLayout(count: count, width: context.containerSize.width)
+        guard count > 1 else { return }
+        let start = layout.page(at: context.originalTarget.rect.minX)
+        let next = min(max(layout.page(at: target.rect.minX), start - 1), start + 1)
+        target.rect.origin.x = layout.offset(for: next)
+    }
+}
+
+/// Where each page sits, so a swipe's end and a page chosen elsewhere land the same: a middle page centered
+/// with `peek` of each neighbour showing, the first and last against their margins.
+nonisolated struct PagerLayout: Equatable {
+    static let peek: CGFloat = 18
+    static let spacing: CGFloat = 8
+    static let margin: CGFloat = 16
+
+    let count: Int
+    /// The scroll view's width.
+    let width: CGFloat
+
+    var pageWidth: CGFloat {
+        max(0, count > 1 ? width - 2 * (Self.peek + Self.spacing) : width - 2 * Self.margin)
+    }
+
+    private var step: CGFloat { pageWidth + Self.spacing }
+    private var contentWidth: CGFloat { 2 * Self.margin + CGFloat(count) * step - Self.spacing }
+
+    /// The scroll offset that shows a page.
+    func offset(for page: Int) -> CGFloat {
+        let centered = Self.margin + CGFloat(page) * step + pageWidth / 2 - width / 2
+        return min(max(centered, 0), max(contentWidth - width, 0))
+    }
+
+    /// The page nearest the middle of the screen at a scroll offset.
+    func page(at offset: CGFloat) -> Int {
+        guard count > 1, step > 0 else { return 0 }
+        let middle = offset + width / 2
+        return min(max(Int(((middle - Self.margin - pageWidth / 2) / step).rounded()), 0), count - 1)
     }
 }

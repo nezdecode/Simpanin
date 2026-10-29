@@ -48,6 +48,54 @@ final class DocumentPagesUITests: UITestCase {
         waitForExpectations(timeout: 5)
     }
 
+    /// The page the viewer closes on is the one the document screen shows, and the one a tap opens again
+    /// (found in manual testing on a device: the dots said 2 while page 1 showed).
+    @MainActor
+    func testThePageTheViewerClosesOnIsTheOneShown() throws {
+        let app = launch()
+        open(app, samples: 2, tile: "SIM A")
+        let pager = pages(app)
+        let close = app.buttons["viewer.close"]
+        pager.tap()
+        XCTAssertTrue(close.waitForExistence(timeout: 5))
+        for shown in [2, 3] { swipeViewer(app, left: true, to: shown) }
+        close.tap()
+        XCTAssertEqual(pager.value as? String, "3 dari 3")
+        screenshot("52 back from the viewer on the last page")
+        pager.tap()
+        XCTAssertTrue(viewerShows(app, 3))
+        swipeViewer(app, left: false, to: 2)
+        close.tap()
+        XCTAssertEqual(pager.value as? String, "2 dari 3")
+        screenshot("53 back from the viewer on a middle page")
+        pager.tap()
+        XCTAssertTrue(viewerShows(app, 2))
+    }
+
+    @MainActor
+    private func swipeViewer(_ app: XCUIApplication, left: Bool, to page: Int) {
+        if left { app.swipeLeft() } else { app.swipeRight() }
+        XCTAssertTrue(viewerShows(app, page))
+        // The viewer hands its page back once a swipe has settled.
+        RunLoop.current.run(until: Date().addingTimeInterval(1))
+    }
+
+    /// The viewer's page on screen, not one beside it.
+    @MainActor
+    private func viewerShows(_ app: XCUIApplication, _ page: Int) -> Bool {
+        let label = NSPredicate(format: "label == %@", "Halaman \(page) dari 3")
+        let deadline = Date().addingTimeInterval(5)
+        while Date() < deadline {
+            if app.descendants(matching: .any).matching(label).allElementsBoundByIndex.contains(where: {
+                abs($0.frame.minX) < 1 && $0.frame.width >= app.frame.width - 1
+            }) {
+                return true
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.2))
+        }
+        return false
+    }
+
     /// Opening the viewer masks the number again.
     @MainActor
     func testEnlargePageAndClose() throws {
