@@ -27,7 +27,7 @@ final class SettingsUITests: UITestCase {
         screenshot("05 data lama")
     }
 
-    /// Inez's report: Settings showed the old choice after going back and opening it again.
+    /// Found in manual testing: Settings showed the old choice after going back and opening it again.
     @MainActor
     func testKunciOtomatisChoiceIsShownAgain() throws {
         let app = launch()

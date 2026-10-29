@@ -76,7 +76,7 @@ struct ScanPagesTests {
         #expect(ScanPages.read([Self.ktp(), Self.ktp()]).source == 0)
     }
 
-    /// Inez, 20 Oct: a misread number isn't the same card, so it can't take over as the source.
+    /// A misread number isn't the same card, so it can't take over as the source.
     @Test func aMisreadNumberIsntTheSameCardSoTheFirstFrontStays() {
         let misread = Self.ktp("0012341708900007", nikReasons: [.lookalike])
         let reading = ScanPages.read([misread, Self.ktp()])

@@ -110,7 +110,7 @@ custom_rules:
     severity: error
   unchecked_sendable:
     name: Unchecked concurrency
-    message: "@unchecked Sendable and nonisolated(unsafe) need Inez's OK first, and the reason in the PR. An agreed one gets // swiftlint:disable:next unchecked_sendable - <reason>."
+    message: "@unchecked Sendable and nonisolated(unsafe) need the maintainer's OK first, and the reason in the PR. An agreed one gets // swiftlint:disable:next unchecked_sendable - <reason>."
     regex: "(@unchecked\\s+Sendable|nonisolated\\(unsafe\\))"
     excluded_match_kinds: [comment, doccomment, string]
     severity: error
