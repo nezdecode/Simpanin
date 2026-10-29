@@ -218,10 +218,10 @@ struct LibraryTests {
         #expect(hidden.saved.entries.count == 1)
     }
 
-    private var soonDay: CalendarDate { CalendarDate.day(of: .now.addingTimeInterval(5 * 86_400), in: .current) }
+    var soonDay: CalendarDate { CalendarDate.day(of: .now.addingTimeInterval(5 * 86_400), in: .current) }
 
     /// One document expiring in five days, loaded and hidden from the banner.
-    private func hiddenSoonDocument() async throws -> (FakeDocuments, FakeHiddenBanner, LibraryModel) {
+    func hiddenSoonDocument() async throws -> (FakeDocuments, FakeHiddenBanner, LibraryModel) {
         let store = FakeDocuments()
         let hidden = FakeHiddenBanner()
         _ = try await store.createDocument(

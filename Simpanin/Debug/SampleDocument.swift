@@ -13,30 +13,39 @@
     import UIKit
     import VaultCore
 
-    /// A synthetic document for trying the screens without a scanner. The NIK starts with 00,
-    /// a province code no real region has, so it can never be a real person's number.
+    /// A synthetic document for trying the screens without a scanner. Its numbers start with 00,
+    /// a province code no real region has, so they can never be a real person's.
     struct SampleDocument {
         let type: DocumentType
         let label: String?
         let expiry: CalendarDate?
         let fields: DocumentFields
-        let page: Data
+        let pages: [Data]
 
-        /// `expiringSoon` dates each sample a few days ahead, so UI tests see the expiry banner.
+        /// In turn: a KTP, a SIM A with three pages, a passport, an older SIM C with a 14-digit number, and a KTP
+        /// with no NIK. `expiringSoon` dates each a few days ahead, so UI tests see the expiry banner; a KTP has
+        /// no date either way, as Periksa data saves it.
         init(number: Int, expiringSoon: Bool = false) {
-            let types: [DocumentType] = [.ktp, .sim, .passport]
-            type = types[(number - 1) % types.count]
-            let labels = ["Saya", nil, nil, "Ibu"]
-            label = labels[(number - 1) % labels.count]
+            let kind = (number - 1) % 5
+            type = [DocumentType.ktp, .simA, .passport, .simC, .ktp][kind]
+            label = ["Saya", nil, nil, "Ibu", nil][kind]
             expiry =
-                expiringSoon
-                ? CalendarDate.day(of: .now.addingTimeInterval(Double(5 * number) * 86_400), in: .current)
-                : CalendarDate(year: 2030 + number % 5, month: 8, day: 17)
-            fields = DocumentFields([
-                FieldKey.nik: "00" + String(format: "%014d", number),
-                FieldKey.name: "CONTOH \(number)",
-            ])
-            page = Self.pageImage(label: "CONTOH \(number)")
+                if type == .ktp {
+                    nil
+                } else if expiringSoon {
+                    CalendarDate.day(of: .now.addingTimeInterval(Double(5 * number) * 86_400), in: .current)
+                } else {
+                    CalendarDate(year: 2030 + number % 5, month: 8, day: 17)
+                }
+            var values = [FieldKey.name: "CONTOH \(number)", FieldKey.birthDate: "1990-08-17"]
+            switch kind {
+            case 0: values[FieldKey.nik] = "00" + String(format: "%014d", number)
+            case 1: values[FieldKey.simNumber] = "00" + String(format: "%014d", number)
+            case 3: values[FieldKey.simNumber] = "00" + String(format: "%012d", number)
+            default: break
+            }
+            fields = DocumentFields(values)
+            pages = (1...(kind == 1 ? 3 : 1)).map { Self.pageImage(label: "CONTOH \(number) · \($0)") }
         }
 
         private static func pageImage(label: String) -> Data {

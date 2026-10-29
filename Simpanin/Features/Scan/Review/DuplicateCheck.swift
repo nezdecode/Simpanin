@@ -11,7 +11,6 @@
 
 import Foundation
 import OSLog
-import Parsers
 import VaultCore
 
 /// Whether the vault already holds the KTP or SIM about to be saved. A warning only: it never blocks
@@ -78,8 +77,8 @@ nonisolated enum DuplicateCheck {
     }
 
     private static func number(of type: DocumentType, in values: [String: String]) -> String? {
-        let key = ReviewModel.fieldKeys(for: type).first { $0 == FieldKey.nik || $0 == FieldKey.simNumber }
-        guard let key, let digits = values[key]?.filter(\.isASCIIDigit), !digits.isEmpty else { return nil }
-        return digits
+        let key = DocumentFieldStyle.keys(for: type).first { $0 == FieldKey.nik || $0 == FieldKey.simNumber }
+        guard let key, let number = values[key].map(DocumentNumber.init), !number.isEmpty else { return nil }
+        return number.digits
     }
 }

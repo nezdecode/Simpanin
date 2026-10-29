@@ -29,11 +29,6 @@ extension ReviewModel {
     /// in the vault.
     static let dateKeys: Set<String> = [FieldKey.birthDate]
 
-    static func dayFirst(_ stored: String) -> String {
-        guard let date = CalendarDate(stored) else { return stored }
-        return String(format: "%02d-%02d-%04d", date.day, date.month, date.year)
-    }
-
     /// "17-08-1990", also with dots, slashes or spaces between; nil when the date can't exist.
     static func yearFirst(_ typed: String) -> String? {
         guard let match = typed.wholeMatch(of: /\s*([0-9]{1,2})[-.\/ ]([0-9]{1,2})[-.\/ ]([0-9]{4})\s*/),

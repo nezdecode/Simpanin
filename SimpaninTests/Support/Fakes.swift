@@ -68,6 +68,12 @@ final class FixedClock: VaultClock {
     func advance(by seconds: TimeInterval) { date.withLock { $0 += seconds } }
 }
 
+/// Keeps what was copied, instead of the system clipboard.
+final class FakeClipboard: Clipboard {
+    private(set) var copied: [String] = []
+    func copy(_ text: String) { copied.append(text) }
+}
+
 /// The hidden banner list kept in memory, as a test needs it, with a read or a write that can fail.
 final class FakeHiddenBanner: HiddenBannerStoring {
     private let stored = Mutex(HiddenBanner())
@@ -106,9 +112,17 @@ actor FakeDocuments {
     private(set) var fieldReads: [DocumentID] = []
     private var readGated = false
     private var readGate: CheckedContinuation<Void, Never>?
+    private var pagesByID: [PageID: Data] = [:]
+    private var unreadablePages: Set<PageID> = []
+    /// Every page read, in order, so a test sees they're read one at a time.
+    private(set) var pageReads: [PageID] = []
+    private var pageReadGated = false
+    private var pageReadGate: CheckedContinuation<Void, Never>?
 
     func setFailure(_ failure: VaultError?) { self.failure = failure }
     func setUnreadable(_ id: DocumentID) { unreadable.insert(id) }
+    func setReadable(_ id: DocumentID) { unreadable.remove(id) }
+    func setUnreadablePage(_ id: PageID) { unreadablePages.insert(id) }
 
     /// Every call from now on fails as a locked vault does.
     func lock() {
@@ -131,6 +145,22 @@ actor FakeDocuments {
     func releaseFieldsRead() {
         readGate?.resume()
         readGate = nil
+    }
+
+    /// The next page read waits until the test releases it, like a page still decrypting.
+    func gateNextPageRead() { pageReadGated = true }
+
+    /// False if no gated page read started within two seconds, so a test fails instead of hanging.
+    func waitUntilReadingPage() async -> Bool {
+        for _ in 0..<2_000 where pageReadGate == nil {
+            try? await Task.sleep(for: .milliseconds(1))
+        }
+        return pageReadGate != nil
+    }
+
+    func releasePageRead() {
+        pageReadGate?.resume()
+        pageReadGate = nil
     }
     func setLoadFailure(_ failure: VaultError?) { loadFailure = failure }
     func setBinFailure(_ failure: VaultError?) { binFailure = failure }
@@ -190,10 +220,12 @@ actor FakeDocuments {
         created.append(fields)
         createdPages.append(pages)
         fieldsByID[id] = fields
+        let pageIDs = pages.map { _ in PageID() }
+        for (pageID, data) in zip(pageIDs, pages) { pagesByID[pageID] = data }
         live.append(
             Document(
                 id: id, type: type, label: label, createdAt: .now, updatedAt: .now, expiry: expiry, pinned: pinned,
-                deletedAt: nil, pageIDs: pages.map { _ in PageID() }))
+                deletedAt: nil, pageIDs: pageIDs))
         return id
     }
 
@@ -209,6 +241,7 @@ actor FakeDocuments {
     func purge(_ id: DocumentID) {
         live.removeAll { $0.id == id }
         bin.removeAll { $0.id == id }
+        fieldsByID[id] = nil
     }
 
     func restore(_ id: DocumentID) async throws {
@@ -220,7 +253,22 @@ actor FakeDocuments {
     }
 }
 
-extension FakeDocuments: DocumentStoring {}  // in an extension, see FakeVault
+extension FakeDocuments {
+    func pageData(_ pageID: PageID, of id: DocumentID) async throws -> Data {
+        if failure == .locked { throw VaultError.locked }
+        pageReads.append(pageID)
+        if pageReadGated {
+            pageReadGated = false
+            await withCheckedContinuation { pageReadGate = $0 }
+        }
+        guard live.contains(where: { $0.id == id && $0.pageIDs.contains(pageID) }), let data = pagesByID[pageID]
+        else { throw VaultError.pageNotFound }
+        if unreadablePages.contains(pageID) { throw VaultError.authenticationFailed }
+        return data
+    }
+}
+
+extension FakeDocuments: DocumentStoring, PageReading {}  // in an extension, see FakeVault
 
 /// Stands in for VaultStore's quarantine calls.
 actor FakeQuarantine {

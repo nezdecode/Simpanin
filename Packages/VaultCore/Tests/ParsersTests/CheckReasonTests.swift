@@ -24,7 +24,7 @@ struct CheckReasonTests {
             ])
     }
 
-    /// The order Inez set on 19 Oct, tested only on pairs that can meet on one value.
+    /// The order decided on 19 Oct, tested only on pairs that can meet on one value.
     @Test func theFirstCaseWins() {
         let pairs: [(shown: CheckReason, other: CheckReason)] = [
             (.mixedLayout, .disagreesWithBirthDate),  // a SIM's number or birth date

@@ -208,7 +208,7 @@ struct ReviewView: View {
                 if !shown { review.duplicateAnswered() }
             }
             .sheet(isPresented: $expiryPickerShown) {
-                ExpiryCalendar(title: ValiditySection.title(for: review.type)) { review.setExpiry($0) }
+                ExpiryCalendar(title: DocumentFieldStyle.validityTitle(for: review.type)) { review.setExpiry($0) }
             }
         }
     }
@@ -339,15 +339,6 @@ extension ReviewView {
             return
         }
         focusedField = order[index + 1]
-    }
-
-    static func title(for key: String) -> LocalizedStringResource {
-        switch key {
-        case FieldKey.nik: "field.nik"
-        case FieldKey.simNumber: "field.simNumber"
-        case FieldKey.birthDate: "field.birthDate"
-        default: "field.name"
-        }
     }
 
     /// What shows under the type or the expiry: "Periksa lagi", with its reason when one is known.

@@ -20,6 +20,7 @@ struct LibraryView: View {
     @State private var library: LibraryModel
     @State private var scanShown = false
     @State private var passcodeNeededShown = false
+    @State private var path = NavigationPath()
     @Environment(\.dynamicTypeSize) private var typeSize
     @Environment(\.scenePhase) private var scenePhase
     private let dayChanges = NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)
@@ -56,7 +57,7 @@ struct LibraryView: View {
         return DocumentCamera.isSupported
     }
 
-    private static func documentStore(for vault: AppVault) -> any DocumentStoring {
+    private static func documentStore(for vault: AppVault) -> any DocumentStoring & PageReading {
         #if DEBUG
             if UITestSetup.isActive { return UITestSetup.documentStore(for: vault) }
         #endif
@@ -64,7 +65,7 @@ struct LibraryView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     if !library.loadFailed, !library.documents.isEmpty {
@@ -83,22 +84,27 @@ struct LibraryView: View {
                     } else if library.documents.isEmpty {
                         EmptyLibraryView()
                     } else {
-                        ExpiryBanner(documents: library.bannerDocuments, today: today, onHide: library.hideFromBanner)
+                        ExpiryBanner(
+                            documents: library.bannerDocuments, today: today, onOpen: { path.append($0.id) },
+                            onHide: library.hideFromBanner)
                         Text("main.allDocuments").font(.title3.weight(.semibold)).padding(.top, 8)
                         LazyVGrid(columns: columns, spacing: 12) {
                             ForEach(library.documents) { document in
-                                DocumentTile(document: document, today: today, wide: typeSize.isAccessibilitySize)
-                                    .contextMenu {
-                                        Button(role: .destructive) {
-                                            Task { await library.delete(document.id) }
-                                        } label: {
-                                            Label {
-                                                Text("button.delete")
-                                            } icon: {
-                                                Image(systemName: "trash")
-                                            }
+                                NavigationLink(value: document.id) {
+                                    DocumentTile(document: document, today: today, wide: typeSize.isAccessibilitySize)
+                                }
+                                .buttonStyle(.plain)
+                                .contextMenu {
+                                    Button(role: .destructive) {
+                                        Task { await library.delete(document.id) }
+                                    } label: {
+                                        Label {
+                                            Text("button.delete")
+                                        } icon: {
+                                            Image(systemName: "trash")
                                         }
                                     }
+                                }
                             }
                         }
                     }
@@ -117,7 +123,17 @@ struct LibraryView: View {
                 .padding(16)
             }
             .background(Color(.systemGroupedBackground))
+            .toast($library.notice)
             .navigationTitle(Text("list.title"))
+            .navigationDestination(for: DocumentID.self) { id in
+                // Still found in Baru dihapus right after Hapus, while the screen closes.
+                if let document = (library.documents + library.deleted).first(where: { $0.id == id }) {
+                    DocumentDetailView(
+                        document: document, store: Self.documentStore(for: vault), today: today,
+                        hiddenFromBanner: library.offersShowInBanner(id), onShowInBanner: { library.showInBanner(id) },
+                        onDelete: library.delete)
+                }
+            }
             .toolbar { toolbar }
             .task { await library.reload() }
             // A night may have passed while the app was away.
@@ -144,18 +160,19 @@ struct LibraryView: View {
                     Text(ScreenText.cancel)
                 }
             }
-            .alert(
-                library.saveError.map { Text(RecoveryContent($0).message) } ?? Text(verbatim: ""),
-                isPresented: Binding(isPresent: $library.saveError)
-            ) {
-                Button {
-                    library.saveError = nil
-                } label: {
-                    Text(ScreenText.okay)
-                }
-            } message: {
-                if library.saveError == .storageFullOnSave { Text("saveFull.hint") }
+        }
+        // On the stack, not its root, so a failed Hapus on the document screen shows it too.
+        .alert(
+            library.saveError.map { Text(RecoveryContent($0).message) } ?? Text(verbatim: ""),
+            isPresented: Binding(isPresent: $library.saveError)
+        ) {
+            Button {
+                library.saveError = nil
+            } label: {
+                Text(ScreenText.okay)
             }
+        } message: {
+            if library.saveError == .storageFullOnSave { Text("saveFull.hint") }
         }
     }
 

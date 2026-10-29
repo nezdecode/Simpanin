@@ -64,10 +64,13 @@
             try? Data("not a vault".utf8).write(to: folder.appending(path: VaultStore.headerFileName))
         }
 
-        /// The store the document list reads. `-SimpaninUITestLoadError <n>` fails its first n loads.
-        static func documentStore(for vault: AppVault) -> any DocumentStoring {
-            guard let count = value(after: "-SimpaninUITestLoadError").flatMap(Int.init) else { return vault.store }
-            return ScriptedDocuments(store: vault.store, failingLoads: count)
+        /// The store the document list reads. `-SimpaninUITestLoadError <n>` fails its first n loads;
+        /// `-SimpaninUITestDeleteError` fails every Hapus.
+        static func documentStore(for vault: AppVault) -> any DocumentStoring & PageReading {
+            let count = value(after: "-SimpaninUITestLoadError").flatMap(Int.init)
+            let failsDeletes = ProcessInfo.processInfo.arguments.contains("-SimpaninUITestDeleteError")
+            guard count != nil || failsDeletes else { return vault.store }
+            return ScriptedDocuments(store: vault.store, failingLoads: count ?? 0, failsDeletes: failsDeletes)
         }
 
         /// `-SimpaninUITestCaptureAfterScan`: once the synthetic scan is read, act for a few seconds as if
@@ -143,14 +146,16 @@
     }
 
     /// Fails the first loads of the document list, so a test sees the "couldn't load" state and
-    /// then "Coba lagi" working. Everything else goes to the real (throwaway) store.
+    /// then "Coba lagi" working, and can fail every delete. Everything else goes to the real (throwaway) store.
     actor ScriptedDocuments {
         private let store: VaultStore
         private var failingLoads: Int
+        private let failsDeletes: Bool
 
-        init(store: VaultStore, failingLoads: Int) {
+        init(store: VaultStore, failingLoads: Int, failsDeletes: Bool = false) {
             self.store = store
             self.failingLoads = failingLoads
+            self.failsDeletes = failsDeletes
         }
 
         func documents() async throws -> [Document] {
@@ -173,13 +178,19 @@
                 type: type, label: label, expiry: expiry, pinned: pinned, fields: fields, pages: pages)
         }
 
-        func delete(_ id: DocumentID) async throws { try await store.delete(id) }
+        func delete(_ id: DocumentID) async throws {
+            if failsDeletes { throw VaultError.fileUnavailable }
+            try await store.delete(id)
+        }
         func restore(_ id: DocumentID) async throws { try await store.restore(id) }
+        func pageData(_ pageID: PageID, of id: DocumentID) async throws -> Data {
+            try await store.pageData(pageID, of: id)
+        }
     }
 
     // In an extension: declared on the actor, a conformance to a nonisolated protocol makes Swift 6.4 mark the
     // actor's init nonisolated, and reject it, when a file using the actor is type-checked first.
-    extension ScriptedDocuments: DocumentStoring {}
+    extension ScriptedDocuments: DocumentStoring, PageReading {}
 
     /// Fails the first opens with a chosen error, then opens the real (throwaway) store.
     actor ScriptedOpening {

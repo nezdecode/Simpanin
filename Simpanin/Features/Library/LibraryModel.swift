@@ -30,6 +30,8 @@ final class LibraryModel {
     private(set) var today = CalendarDate.today
     /// The message for a failed save, if any.
     var saveError: RecoveryScreen?
+    /// A short note on the list, like where a deleted document went.
+    var notice: Toast?
     /// Loading failed. The screen shows that instead of an empty list, which would say the
     /// documents are gone.
     private(set) var loadFailed = false
@@ -51,6 +53,23 @@ final class LibraryModel {
 
     func refreshDay(at date: Date = .now, in calendar: Calendar = .current) {
         today = CalendarDate.day(of: date, in: calendar)
+    }
+
+    /// Whether the document screen offers "Tampilkan lagi": a live document within the banner's window
+    /// that the user hid. A deleted one isn't in the banner either way.
+    func offersShowInBanner(_ id: DocumentID) -> Bool {
+        guard let document = documents.first(where: { $0.id == id }), let expiry = document.expiry else {
+            return false
+        }
+        return ExpiryText.days(from: today, to: expiry) <= ExpiryText.soonWindow
+            && hidden.hides(id, expiry: expiry, today: today)
+    }
+
+    /// Saved like a hide: a failed save keeps it in the banner and is tried again at the next reload.
+    func showInBanner(_ id: DocumentID) {
+        hidden.show(id)
+        hiddenUnsaved = true
+        saveHidden()
     }
 
     func hideFromBanner(_ document: Document) {
@@ -116,8 +135,12 @@ final class LibraryModel {
         }
     }
 
-    func delete(_ id: DocumentID) async {
-        await save { try await self.store.delete(id) }
+    /// True when it moved to Baru dihapus, so the document screen knows it may close.
+    @discardableResult
+    func delete(_ id: DocumentID) async -> Bool {
+        let moved = await save { try await self.store.delete(id) }
+        if moved { notice = Toast(title: "main.movedToDeleted") }
+        return moved
     }
 
     func restore(_ id: DocumentID) async {
@@ -127,26 +150,31 @@ final class LibraryModel {
     #if DEBUG
         private var samples = 0
 
-        /// "Tambah dokumen contoh": a synthetic document with one generated page.
+        /// "Tambah dokumen contoh": a synthetic document with generated pages.
         func addSample() async {
             samples += 1
             let sample = SampleDocument(number: samples, expiringSoon: UITestSetup.expiringSamples)
             await save {
                 _ = try await self.store.createDocument(
                     type: sample.type, label: sample.label, expiry: sample.expiry, pinned: false, fields: sample.fields,
-                    pages: [sample.page])
+                    pages: sample.pages)
             }
         }
     #endif
 
-    private func save(_ change: () async throws -> Void) async {
+    @discardableResult
+    private func save(_ change: () async throws -> Void) async -> Bool {
+        let saved: Bool
         do {
             try await change()
+            saved = true
         } catch {
             // Only the kind of error; never an id, a field or a path.
             Logger.library.error("Save failed: \(ErrorSummary.describe(error), privacy: .public)")
             saveError = RecoveryMapping.screen(forSaveError: error)
+            saved = false
         }
         await reload()
+        return saved
     }
 }

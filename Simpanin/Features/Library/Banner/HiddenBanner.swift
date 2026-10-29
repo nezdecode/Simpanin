@@ -37,6 +37,11 @@ nonisolated struct HiddenBanner: Codable, Equatable, Sendable {
         entries.append(Entry(id: id, expiry: expiry, whileExpired: ExpiryText.days(from: today, to: expiry) < 0))
     }
 
+    /// "Tampilkan lagi" on the document screen.
+    mutating func show(_ id: DocumentID) {
+        entries.removeAll { $0.id == id }
+    }
+
     /// The entries of `newer`, plus the ones only this list has.
     func merging(_ newer: HiddenBanner) -> HiddenBanner {
         let newerIDs = Set(newer.entries.map(\.id))

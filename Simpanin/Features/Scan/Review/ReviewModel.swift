@@ -74,14 +74,7 @@ final class ReviewModel {
     var pageNotes: PageNotes { PageNotes(reading: reading, pageCount: pages.count, chosen: type) }
 
     /// The fields the chosen type has, in the order the screen shows them.
-    var fieldKeys: [String] { Self.fieldKeys(for: type) }
-
-    /// Only the types a parser reads have fields to check; the others have none yet.
-    nonisolated static func fieldKeys(for type: DocumentType) -> [String] {
-        if type == .ktp { return [FieldKey.nik, FieldKey.name, FieldKey.birthDate] }
-        if type.isSIM { return [FieldKey.simNumber, FieldKey.name, FieldKey.birthDate] }
-        return []
-    }
+    var fieldKeys: [String] { DocumentFieldStyle.keys(for: type) }
 
     /// SIM, Paspor and STNK have a printed expiry to show and edit here; a KTP is valid for life.
     var hasExpiry: Bool { ExpiryText.hasPrintedExpiry(type) }
@@ -112,7 +105,8 @@ final class ReviewModel {
         answeredPages = nil
         type = result?.type ?? .other
         values = (result?.fields.values ?? [:]).reduce(into: [:]) { shown, field in
-            shown[field.key] = Self.dateKeys.contains(field.key) ? Self.dayFirst(field.value) : field.value
+            shown[field.key] =
+                Self.dateKeys.contains(field.key) ? DocumentFieldStyle.dayFirst(field.value) : field.value
         }
         scanned = values
         scannedType = type

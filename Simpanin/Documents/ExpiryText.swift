@@ -9,6 +9,7 @@
 //  file, You can obtain one at https://mozilla.org/MPL/2.0/.
 //
 
+import DeveloperToolsSupport
 import Foundation
 import VaultCore
 
@@ -25,24 +26,46 @@ nonisolated enum ExpiryText {
             // Read from the type and an empty date alone, as the list shows it without decrypting.
             return hasPrintedExpiry(type) ? "expiry.missing" : "expiry.none"
         }
-        let left = days(from: today, to: expiry)
         let tax = type == .stnk
-        switch left {
-        case ..<0:
-            let date = shortDate(expiry, today: today)
-            return tax ? "expiry.taxExpired \(date)" : "expiry.expired \(date)"
-        case 0:
-            return tax ? "expiry.taxToday" : "expiry.today"
-        case 1...soonWindow:
-            return tax ? "expiry.taxSoon \(left)" : "expiry.soon \(left)"
-        default:
-            return tax ? "expiry.tax \(expiry.displayText)" : "expiry.valid \(expiry.displayText)"
-        }
+        let near = status(tax: tax, left: days(from: today, to: expiry), date: shortDate(expiry, today: today))
+        return near ?? (tax ? "expiry.tax \(expiry.displayText)" : "expiry.valid \(expiry.displayText)")
     }
 
     /// Types with a printed expiry; one saved without a date is missing it, not without one.
     static func hasPrintedExpiry(_ type: DocumentType) -> Bool {
         type.isSIM || type == .stnk || type == .passport
+    }
+
+    /// Berlaku as the document screen shows it. A stored date reads as on the tile, whatever the type, so
+    /// the two never disagree.
+    static func validity(type: DocumentType, expiry: CalendarDate?, today: CalendarDate) -> ValidityLines {
+        guard let expiry else {
+            // A type that prints a date keeps its title, which already names the date, so the value is
+            // only "Belum diisi", as in Periksa data. The tiles have no title, so they keep the long texts.
+            if hasPrintedExpiry(type) {
+                return ValidityLines(
+                    title: DocumentFieldStyle.validityTitle(for: type), value: .phrase("review.expiryMissing"),
+                    status: nil)
+            }
+            return ValidityLines(
+                title: "review.validFor", value: .phrase(text(type: type, expiry: nil, today: today)), status: nil)
+        }
+        let left = days(from: today, to: expiry)
+        // Always with the year here: the date above it already has one.
+        let status = status(tax: type == .stnk, left: left, date: expiry.displayText).map {
+            ValidityLines.Status(text: $0, isExpired: left < 0)
+        }
+        return ValidityLines(title: DocumentFieldStyle.validityTitle(for: type), value: .date(expiry), status: status)
+    }
+
+    /// Only for a date that's past, today or within the window.
+    private static func status(tax: Bool, left: Int, date: String) -> LocalizedStringResource? {
+        switch left {
+        case ..<0: tax ? "expiry.taxExpired \(date)" : "expiry.expired \(date)"
+        case 0: tax ? "expiry.taxToday" : "expiry.today"
+        case 1...soonWindow: tax ? "expiry.taxSoon \(left)" : "expiry.soon \(left)"
+        default: nil
+        }
     }
 
     /// A document as the banner sees it.
@@ -88,4 +111,24 @@ nonisolated enum ExpiryText {
     private static func shortDate(_ date: CalendarDate, today: CalendarDate) -> String {
         date.year == today.year ? date.dayAndMonthText : date.displayText
     }
+}
+
+/// Berlaku on the document screen: a title, the full date or a phrase, and a status line only while the
+/// date is near or past.
+nonisolated struct ValidityLines {
+    enum Value {
+        case date(CalendarDate)
+        case phrase(LocalizedStringResource)
+    }
+
+    struct Status {
+        let text: LocalizedStringResource
+        let isExpired: Bool
+
+        @MainActor var color: ColorResource { isExpired ? .error : .onWarning }
+    }
+
+    let title: LocalizedStringResource
+    let value: Value
+    let status: Status?
 }
