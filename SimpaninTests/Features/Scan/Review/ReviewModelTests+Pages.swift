@@ -49,4 +49,35 @@ extension ReviewModelTests {
         #expect(review.pageNotes.notes == [nil, nil])
         #expect(review.pageNotes.sentences == ["Isian dibaca dari halaman 2."])
     }
+
+    /// The strip shows the thumbnails it was given, one per page, never the scan itself.
+    @Test func loadKeepsAThumbnailPerPage() throws {
+        let review = model()
+        let pages = [try page(width: 8), try page(width: 8)]
+        let thumbnails = [try page(), try page()]
+        review.load(Self.ktp, pages: pages, thumbnails: thumbnails)
+        #expect(review.thumbnails.count == 2)
+        #expect(zip(review.thumbnails, thumbnails).allSatisfy { $0 === $1 })
+        #expect(zip(review.pages, pages).allSatisfy { $0 === $1 })
+    }
+
+    @Test func aRescanReplacesTheThumbnails() throws {
+        let review = model()
+        review.load(Self.ktp, pages: [try page(), try page()], thumbnails: [try page(), try page()])
+        let again = try page()
+        review.load(Self.ktp, pages: [try page(width: 8)], thumbnails: [again])
+        #expect(review.thumbnails.count == 1)
+        #expect(review.thumbnails.first.flatMap { $0 } === again)
+    }
+
+    /// A thumbnail that can't be made leaves a placeholder; the scan's pages are kept and saved in full.
+    @Test func aFailedThumbnailIsAPlaceholderAndThePagesStay() async throws {
+        let review = model()
+        let pages = [try page(), try page()]
+        let thumbnails = await PageStrip.thumbnails(of: pages, reduce: { _, _ in nil })
+        #expect(thumbnails.count == 2)
+        #expect(thumbnails.allSatisfy { $0 == nil })
+        review.load(Self.ktp, pages: pages, thumbnails: thumbnails)
+        #expect(zip(review.pages, pages).allSatisfy { $0 === $1 })
+    }
 }

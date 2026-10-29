@@ -94,11 +94,15 @@ struct ScanFlowView: View {
         .task(id: reads) {
             guard let pages = newPages else { return }
             newPages = nil
+            // Made while the text is read, so they're ready when it is.
+            async let thumbnails = PageStrip.thumbnails(of: pages)
             await scan.scanned(pages)
+            let made = await thumbnails
             guard !Task.isCancelled else { return }
             // Text Vision couldn't read is still a scan: the user picks the type and can save the pages.
             let read = scan.state == .read
-            review.load(read ? scan.result : nil, pages: pages, reading: read ? scan.reading : nil)
+            review.load(
+                read ? scan.result : nil, pages: pages, thumbnails: made, reading: read ? scan.reading : nil)
             scan.discard()
             onRead()
         }

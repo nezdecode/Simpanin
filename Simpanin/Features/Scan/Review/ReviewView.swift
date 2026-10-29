@@ -46,7 +46,7 @@ struct ReviewView: View {
                     .foregroundStyle(.secondary)
                 }
                 Section {
-                    PageStrip(pages: review.pages, notes: review.pageNotes)
+                    PageStrip(thumbnails: review.thumbnails, notes: review.pageNotes)
                 } footer: {
                     pagesFooter
                 }
