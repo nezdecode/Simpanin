@@ -19,6 +19,10 @@ import UIKit
 /// still moving, and the zoom back lands on the page shown. Not when it has gone: by then the user may be
 /// swiping the pages under it, and a late hand-back would undo that.
 struct PageViewer: View {
+    /// Pages are handed to the viewer at most this many pixels on their longer side: sharp enough to read
+    /// a NIK when zoomed in.
+    nonisolated static let maxPixelSize = 3_000
+
     let count: Int
     @Binding var current: Int
     let thumbnail: (Int) -> CGImage?
@@ -80,7 +84,7 @@ struct PageViewer: View {
                     .overlay(alignment: .bottom) {
                         // Only the small copy is left, which won't zoom; say so rather than seem to work.
                         if images[index] == nil, failed.contains(index) {
-                            Text("detail.pageFailed")
+                            Text("viewer.pageFailed")
                                 .font(.subheadline)
                                 .foregroundStyle(.white)
                                 .padding(.horizontal, 14)
@@ -90,15 +94,15 @@ struct PageViewer: View {
                         }
                     }
             } else if failed.contains(index) {
-                Text("detail.pageFailed").foregroundStyle(.white).multilineTextAlignment(.center).padding()
+                Text("viewer.pageFailed").foregroundStyle(.white).multilineTextAlignment(.center).padding()
             } else {
                 ProgressView().tint(.white)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text("review.pageOf \(index + 1) \(count)"))
-        .accessibilityValue(failed.contains(index) ? Text("detail.pageFailed") : Text(verbatim: ""))
+        .accessibilityLabel(Text("viewer.pageOf \(index + 1) \(count)"))
+        .accessibilityValue(failed.contains(index) ? Text("viewer.pageFailed") : Text(verbatim: ""))
     }
 
     private func close() {

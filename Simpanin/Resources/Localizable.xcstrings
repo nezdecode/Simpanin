@@ -2860,6 +2860,28 @@
           }
         }
       }
+    },
+    "viewer.pageFailed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Halaman ini tidak bisa dibuka."
+          }
+        }
+      }
+    },
+    "viewer.pageOf %lld %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Halaman %1$lld dari %2$lld"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

@@ -78,8 +78,6 @@ final class DocumentDetailModel {
     /// Pages in the pager are reduced to this many pixels on their longer side; only the viewer decodes
     /// one at full size.
     nonisolated static let reducedPixelSize = 1_200
-    /// The viewer's pages are decoded to at most this many pixels: sharp enough to read a NIK when zoomed in.
-    nonisolated static let viewerPixelSize = 3_000
 
     let document: Document
     private(set) var phase = Phase.loading
@@ -185,7 +183,7 @@ final class DocumentDetailModel {
         guard document.pageIDs.indices.contains(index) else { return nil }
         do {
             let data = try await pageReader.pageData(document.pageIDs[index], of: document.id)
-            return await Self.reduced(data, to: Self.viewerPixelSize)
+            return await Self.reduced(data, to: PageViewer.maxPixelSize)
         } catch VaultError.locked {
             // The lock takes the viewer away; nothing to log.
             return nil
