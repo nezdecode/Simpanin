@@ -20,9 +20,10 @@ struct PagePager: View {
     let transition: Namespace.ID
     let onOpen: (Int) -> Void
 
-    /// How much of the next page shows, so it's plain there's another to swipe to.
+    /// How much of a neighbour shows beside a middle page, so it's plain there's another to swipe to.
     private static let peek: CGFloat = 18
     private static let spacing: CGFloat = 8
+    private static let margin: CGFloat = 16
 
     var body: some View {
         VStack(spacing: 8) {
@@ -40,11 +41,13 @@ struct PagePager: View {
                         .id(index)
                 }
             }
+            .padding(.horizontal, Self.margin)
             .scrollTargetLayout()
         }
-        .contentMargins(.horizontal, 16, for: .scrollContent)
-        .scrollTargetBehavior(.viewAligned)
-        .scrollPosition(id: position)
+        .scrollTargetBehavior(
+            PageSnapping(count: pages.count, margin: Self.margin, spacing: Self.spacing, pageWidth: pageWidth)
+        )
+        .scrollPosition(id: position, anchor: .center)
         .scrollIndicators(.hidden)
         .scrollDisabled(pages.count < 2)
         // A fixed height whatever the text size: the page is the picture, the line under it the text.
@@ -85,8 +88,9 @@ struct PagePager: View {
         return pageFailed(selection) ? "\(number), \(String(localized: "detail.pageFailed"))" : number
     }
 
-    private func pageWidth(_ length: CGFloat) -> CGFloat {
-        pages.count > 1 ? length - Self.peek - Self.spacing : length
+    /// A middle page leaves its neighbours `peek` on each side; one page has the screen's margins.
+    private func pageWidth(_ width: CGFloat) -> CGFloat {
+        pages.count > 1 ? width - 2 * (Self.peek + Self.spacing) : width - 2 * Self.margin
     }
 
     private var position: Binding<Int?> {
@@ -154,5 +158,25 @@ private struct PageAdjusting: ViewModifier {
         } else {
             content
         }
+    }
+}
+
+/// One page per swipe: a middle page centered between its neighbours, the first and last against their margins.
+private struct PageSnapping: ScrollTargetBehavior {
+    let count: Int
+    let margin: CGFloat
+    let spacing: CGFloat
+    let pageWidth: (CGFloat) -> CGFloat
+
+    func updateTarget(_ target: inout ScrollTarget, context: TargetContext) {
+        let container = context.containerSize.width
+        let width = pageWidth(container)
+        let step = width + spacing
+        guard count > 1, step > 0 else { return }
+        func page(at offset: CGFloat) -> Int { Int(((offset - margin - width / 2) / step).rounded()) }
+        let start = page(at: context.originalTarget.rect.midX)
+        let next = min(max(page(at: target.rect.midX), start - 1, 0), start + 1, count - 1)
+        let centered = margin + CGFloat(next) * step + width / 2 - container / 2
+        target.rect.origin.x = min(max(centered, 0), context.contentSize.width - container)
     }
 }
