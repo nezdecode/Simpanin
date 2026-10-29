@@ -19,6 +19,8 @@ struct PagePager: View {
     @Binding var selection: Int
     let transition: Namespace.ID
     let onOpen: (Int) -> Void
+    /// Whether a finger or a fling is moving the pages, so only a change from elsewhere scrolls them.
+    @State private var scrolling = false
 
     /// How much of a neighbour shows beside a middle page, so it's plain there's another to swipe to.
     private static let peek: CGFloat = 18
@@ -33,6 +35,16 @@ struct PagePager: View {
     }
 
     private var scroller: some View {
+        ScrollViewReader { proxy in
+            pageScroll
+                // A page chosen elsewhere (the viewer, VoiceOver) scrolls there, centred like a swipe ends.
+                .onChange(of: selection) { _, index in
+                    if !scrolling { withAnimation(.snappy) { proxy.scrollTo(index, anchor: .center) } }
+                }
+        }
+    }
+
+    private var pageScroll: some View {
         ScrollView(.horizontal) {
             LazyHStack(spacing: Self.spacing) {
                 ForEach(pages.indices, id: \.self) { index in
@@ -47,7 +59,11 @@ struct PagePager: View {
         .scrollTargetBehavior(
             PageSnapping(count: pages.count, margin: Self.margin, spacing: Self.spacing, pageWidth: pageWidth)
         )
-        .scrollPosition(id: position, anchor: .center)
+        // Read only: setting the position doesn't center a page, so scrolling there is the reader's job.
+        .onScrollTargetVisibilityChange(idType: Int.self, threshold: 0.6) { visible in
+            if let shown = visible.first, shown != selection { selection = shown }
+        }
+        .onScrollPhaseChange { _, phase in scrolling = phase != .idle }
         .scrollIndicators(.hidden)
         .scrollDisabled(pages.count < 2)
         // A fixed height whatever the text size: the page is the picture, the line under it the text.
@@ -91,10 +107,6 @@ struct PagePager: View {
     /// A middle page leaves its neighbours `peek` on each side; one page has the screen's margins.
     private func pageWidth(_ width: CGFloat) -> CGFloat {
         pages.count > 1 ? width - 2 * (Self.peek + Self.spacing) : width - 2 * Self.margin
-    }
-
-    private var position: Binding<Int?> {
-        Binding(get: { selection }, set: { if let index = $0 { selection = index } })
     }
 
     private func canOpen(_ index: Int) -> Bool {

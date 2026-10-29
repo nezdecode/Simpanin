@@ -15,13 +15,14 @@ import UIKit
 /// Pages full screen: swipe to the next, pinch or double-tap to zoom. Knows no document, so Periksa data can
 /// use it too. The page shown and its two neighbours are kept decoded, the others let go; until one is ready
 /// its thumbnail stands in. `current` should be the viewer's own, handed to the screen under it in
-/// `onClose`, so nothing there changes while a swipe is still moving.
+/// `onSettle` once a swipe has come to rest and when the viewer closes, so nothing there changes while a
+/// swipe is still moving, and the zoom back lands on the page shown.
 struct PageViewer: View {
     let count: Int
     @Binding var current: Int
     let thumbnail: (Int) -> CGImage?
     let image: (Int) async -> CGImage?
-    let onClose: () -> Void
+    let onSettle: () -> Void
     @State private var images: [Int: CGImage] = [:]
     @State private var failed: Set<Int> = []
     @Environment(\.dismiss) private var dismiss
@@ -39,10 +40,15 @@ struct PageViewer: View {
         .overlay(alignment: .topTrailing) { closeButton }
         .accessibilityAction(.escape) { close() }
         .task(id: current) { await loadAround(current) }
+        .task(id: current) {
+            // Past halfway the page changes, and the swipe still has to finish.
+            guard (try? await Task.sleep(for: .milliseconds(500))) != nil else { return }
+            onSettle()
+        }
         // Only the page on screen stays.
         .onReceive(memoryWarnings) { _ in images = images.filter { $0.key == current } }
         // Closed by a swipe down too, which doesn't go through the button.
-        .onDisappear(perform: onClose)
+        .onDisappear(perform: onSettle)
     }
 
     private var closeButton: some View {
@@ -81,7 +87,7 @@ struct PageViewer: View {
 
     private func close() {
         // Before the dismissal, so the zoom goes back to the page it closes on.
-        onClose()
+        onSettle()
         dismiss()
     }
 

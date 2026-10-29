@@ -64,7 +64,7 @@ struct DocumentDetailView: View {
             .fullScreenCover(isPresented: $viewerShown) {
                 PageViewer(
                     count: document.pageIDs.count, current: $viewerPage, thumbnail: model.thumbnail,
-                    image: model.fullPage, onClose: { page = viewerPage }
+                    image: model.fullPage, onSettle: { page = viewerPage }
                 )
                 .navigationTransition(.zoom(sourceID: page, in: transition))
             }
