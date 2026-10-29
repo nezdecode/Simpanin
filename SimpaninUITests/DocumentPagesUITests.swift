@@ -72,6 +72,23 @@ final class DocumentPagesUITests: UITestCase {
         XCTAssertTrue(viewerShows(app, 2))
     }
 
+    /// Swiping the viewer away from a page and back to it before closing shows that page again.
+    @MainActor
+    func testGoingToAPageAndBackInTheViewerShowsTheFirst() throws {
+        let app = launch()
+        open(app, samples: 2, tile: "SIM A")
+        let pager = pages(app)
+        pager.tap()
+        XCTAssertTrue(app.buttons["viewer.close"].waitForExistence(timeout: 5))
+        swipeViewer(app, left: true, to: 2)
+        swipeViewer(app, left: false, to: 1)
+        app.buttons["viewer.close"].tap()
+        XCTAssertEqual(pager.value as? String, "1 dari 3")
+        screenshot("54 back on the first page after going to the second")
+        pager.tap()
+        XCTAssertTrue(viewerShows(app, 1))
+    }
+
     @MainActor
     private func swipeViewer(_ app: XCUIApplication, left: Bool, to page: Int) {
         if left { app.swipeLeft() } else { app.swipeRight() }
