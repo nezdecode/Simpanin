@@ -21,6 +21,8 @@ struct DocumentDetailView: View {
     @State private var model: DocumentDetailModel
     @State private var page = 0
     @State private var viewerShown = false
+    /// The viewer's own page, handed back to `page` when it closes, so this screen stays still during a swipe.
+    @State private var viewerPage = 0
     /// Coba lagi bumps it, so SwiftUI owns every load and cancels it when the screen goes.
     @State private var attempt = 0
     @Namespace private var transition
@@ -60,8 +62,11 @@ struct DocumentDetailView: View {
                 if phase == .gone { dismiss() }
             }
             .fullScreenCover(isPresented: $viewerShown) {
-                PageViewer(count: document.pageIDs.count, selection: $page, image: model.fullPage)
-                    .navigationTransition(.zoom(sourceID: page, in: transition))
+                PageViewer(
+                    count: document.pageIDs.count, current: $viewerPage, thumbnail: model.thumbnail,
+                    image: model.fullPage, onClose: { page = viewerPage }
+                )
+                .navigationTransition(.zoom(sourceID: page, in: transition))
             }
     }
 
@@ -85,6 +90,7 @@ struct DocumentDetailView: View {
                     if model.hasPages {
                         PagePager(pages: model.pages, selection: $page, transition: transition) { index in
                             page = index
+                            viewerPage = index
                             model.viewerOpened()
                             viewerShown = true
                         }

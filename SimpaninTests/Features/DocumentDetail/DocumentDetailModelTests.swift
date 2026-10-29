@@ -90,12 +90,13 @@ struct DocumentDetailModelTests {
         #expect(max(image.width, image.height) == DocumentDetailModel.reducedPixelSize)
     }
 
-    /// The viewer reads its page again, so the model never keeps a full-size one.
-    @Test func theViewerReadsItsPageAgainAtFullSize() async throws {
-        let detail = try await model(pages: [Self.page(width: 3_000, height: 2_000)])
+    /// The viewer reads its page again, so the model never keeps a large one, and decodes it straight to its
+    /// cap, never as a full bitmap first.
+    @Test func theViewerReadsItsPageAgainCappedInSize() async throws {
+        let detail = try await model(pages: [Self.page(width: 4_000, height: 3_000)])
         await detail.load()
         let image = try #require(await detail.fullPage(0))
-        #expect(image.width == 3_000)
+        #expect(max(image.width, image.height) == DocumentDetailModel.viewerPixelSize)
         #expect(await store.pageReads.count == 2)
         #expect(await detail.fullPage(1) == nil)
     }

@@ -78,6 +78,8 @@ final class DocumentDetailModel {
     /// Pages in the pager are reduced to this many pixels on their longer side; only the viewer decodes
     /// one at full size.
     nonisolated static let reducedPixelSize = 1_200
+    /// The viewer's pages are decoded to at most this many pixels: sharp enough to read a NIK when zoomed in.
+    nonisolated static let viewerPixelSize = 3_000
 
     let document: Document
     private(set) var phase = Phase.loading
@@ -145,7 +147,7 @@ final class DocumentDetailModel {
                 let data = try await pageReader.pageData(pageID, of: document.id)
                 // Not kept after the screen has gone; a return reads it again.
                 guard !Task.isCancelled else { return }
-                pages[index] = await Self.reduced(data).map(PageState.shown) ?? .failed
+                pages[index] = await Self.reduced(data, to: Self.reducedPixelSize).map(PageState.shown) ?? .failed
             } catch VaultError.locked {
                 return
             } catch {
@@ -172,11 +174,18 @@ final class DocumentDetailModel {
         return false
     }
 
-    /// A page at full size, for the viewer only, read again each time; the model doesn't keep it.
+    /// The pager's reduced page, which stands in while the viewer decodes a larger one.
+    func thumbnail(_ index: Int) -> CGImage? {
+        guard pages.indices.contains(index), case .shown(let image) = pages[index] else { return nil }
+        return image
+    }
+
+    /// A page for the viewer only, read again each time and capped in size; the model doesn't keep it.
     func fullPage(_ index: Int) async -> CGImage? {
         guard document.pageIDs.indices.contains(index) else { return nil }
         do {
-            return await Self.decoded(try await pageReader.pageData(document.pageIDs[index], of: document.id))
+            let data = try await pageReader.pageData(document.pageIDs[index], of: document.id)
+            return await Self.reduced(data, to: Self.viewerPixelSize)
         } catch {
             Logger.library.error("Page not opened: \(ErrorSummary.describe(error), privacy: .public)")
             return nil
@@ -205,21 +214,16 @@ final class DocumentDetailModel {
         if await onDelete(document.id) { closed = true }
     }
 
-    /// ImageIO's thumbnail, off the main actor; never `UIImage(data:)`, which decodes the full bitmap.
-    @concurrent private static func reduced(_ data: Data) async -> CGImage? {
+    /// ImageIO's thumbnail, decoded straight to that size off the main actor; never `UIImage(data:)`, which
+    /// decodes the full bitmap.
+    @concurrent private static func reduced(_ data: Data, to pixelSize: Int) async -> CGImage? {
         guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
         let options: [CFString: Any] = [
             kCGImageSourceCreateThumbnailFromImageAlways: true,
             kCGImageSourceCreateThumbnailWithTransform: true,
             kCGImageSourceShouldCacheImmediately: true,
-            kCGImageSourceThumbnailMaxPixelSize: reducedPixelSize,
+            kCGImageSourceThumbnailMaxPixelSize: pixelSize,
         ]
         return CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary)
-    }
-
-    @concurrent private static func decoded(_ data: Data) async -> CGImage? {
-        guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
-        let options: [CFString: Any] = [kCGImageSourceShouldCacheImmediately: true]
-        return CGImageSourceCreateImageAtIndex(source, 0, options as CFDictionary)
     }
 }

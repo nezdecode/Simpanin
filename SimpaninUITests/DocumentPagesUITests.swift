@@ -34,6 +34,18 @@ final class DocumentPagesUITests: UITestCase {
         close.tap()
         XCTAssertTrue(pager.waitForExistence(timeout: 5))
         XCTAssertEqual(pager.value as? String, "3 dari 3")
+
+        // The viewer keeps its own page while open and hands it back when it closes.
+        pager.tap()
+        XCTAssertTrue(close.waitForExistence(timeout: 5))
+        app.swipeRight()
+        let viewerOnTwo = NSPredicate(format: "label == 'Halaman 2 dari 3'")
+        expectation(
+            for: NSPredicate(format: "count > 0"), evaluatedWith: app.descendants(matching: .any).matching(viewerOnTwo))
+        waitForExpectations(timeout: 5)
+        close.tap()
+        expectation(for: NSPredicate(format: "value == '2 dari 3'"), evaluatedWith: pager)
+        waitForExpectations(timeout: 5)
     }
 
     /// Opening the viewer masks the number again.

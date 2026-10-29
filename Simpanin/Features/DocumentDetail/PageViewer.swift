@@ -13,57 +13,62 @@ import SwiftUI
 import UIKit
 
 /// Pages full screen: swipe to the next, pinch or double-tap to zoom. Knows no document, so Periksa data can
-/// use it too. Each page is read when it's shown and let go when it's swiped away or the viewer closes.
+/// use it too. The page shown and its two neighbours are kept decoded, the others let go; until one is ready
+/// its thumbnail stands in. `current` should be the viewer's own, handed to the screen under it in
+/// `onClose`, so nothing there changes while a swipe is still moving.
 struct PageViewer: View {
     let count: Int
-    @Binding var selection: Int
+    @Binding var current: Int
+    let thumbnail: (Int) -> CGImage?
     let image: (Int) async -> CGImage?
+    let onClose: () -> Void
+    @State private var images: [Int: CGImage] = [:]
+    @State private var failed: Set<Int> = []
     @Environment(\.dismiss) private var dismiss
+    private let memoryWarnings = NotificationCenter.default.publisher(
+        for: UIApplication.didReceiveMemoryWarningNotification)
 
     var body: some View {
-        TabView(selection: $selection) {
+        TabView(selection: $current) {
             ForEach(0..<count, id: \.self) { index in
-                ViewerPage(index: index, count: count, image: image).tag(index)
+                page(index).tag(index)
             }
         }
         .tabViewStyle(.page(indexDisplayMode: count > 1 ? .always : .never))
         .background(.black)
-        .overlay(alignment: .topTrailing) {
-            Button {
-                dismiss()
-            } label: {
-                Label {
-                    Text("button.close")
-                } icon: {
-                    Image(systemName: "xmark")
-                }
-                .labelStyle(.iconOnly)
-                .font(.title3.weight(.semibold))
-                .frame(minWidth: 44, minHeight: 44)
-                .contentShape(.rect)
-            }
-            .buttonStyle(.bordered)
-            .buttonBorderShape(.circle)
-            .tint(.white)
-            .padding(16)
-            .accessibilityIdentifier("viewer.close")
-        }
-        .accessibilityAction(.escape) { dismiss() }
+        .overlay(alignment: .topTrailing) { closeButton }
+        .accessibilityAction(.escape) { close() }
+        .task(id: current) { await loadAround(current) }
+        // Only the page on screen stays.
+        .onReceive(memoryWarnings) { _ in images = images.filter { $0.key == current } }
+        // Closed by a swipe down too, which doesn't go through the button.
+        .onDisappear(perform: onClose)
     }
-}
 
-private struct ViewerPage: View {
-    let index: Int
-    let count: Int
-    let image: (Int) async -> CGImage?
-    @State private var loaded: CGImage?
-    @State private var failed = false
+    private var closeButton: some View {
+        Button(action: close) {
+            Label {
+                Text("button.close")
+            } icon: {
+                Image(systemName: "xmark")
+            }
+            .labelStyle(.iconOnly)
+            .font(.title3.weight(.semibold))
+            .frame(minWidth: 44, minHeight: 44)
+            .contentShape(.rect)
+        }
+        .buttonStyle(.bordered)
+        .buttonBorderShape(.circle)
+        .tint(.white)
+        .padding(16)
+        .accessibilityIdentifier("viewer.close")
+    }
 
-    var body: some View {
+    private func page(_ index: Int) -> some View {
         Group {
-            if let loaded {
-                ZoomableImage(image: loaded)
-            } else if failed {
+            if let shown = images[index] ?? thumbnail(index) {
+                ZoomableImage(image: shown)
+            } else if failed.contains(index) {
                 Text("detail.pageFailed").foregroundStyle(.white).multilineTextAlignment(.center).padding()
             } else {
                 ProgressView().tint(.white)
@@ -72,38 +77,38 @@ private struct ViewerPage: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text("review.pageOf \(index + 1) \(count)"))
-        .task {
-            let read = await image(index)
-            // Swiped past while it was read: kept, it would stay in memory for a page no longer shown.
+    }
+
+    private func close() {
+        // Before the dismissal, so the zoom goes back to the page it closes on.
+        onClose()
+        dismiss()
+    }
+
+    /// The shown page first, then the next and the one before; any further away is let go.
+    private func loadAround(_ index: Int) async {
+        let window = max(0, index - 1)...min(count - 1, index + 1)
+        images = images.filter { window.contains($0.key) }
+        for page in [index, index + 1, index - 1] where window.contains(page) && images[page] == nil {
+            let read = await image(page)
+            // Swiped on meanwhile: the next window decides what to keep.
             guard !Task.isCancelled else { return }
-            loaded = read
-            failed = read == nil
-        }
-        // Swiped away or closed: the full-size page goes.
-        .onDisappear {
-            loaded = nil
-            failed = false
+            if let read { images[page] = read } else { failed.insert(page) }
         }
     }
 }
 
-/// A page in a scroll view that zooms. A plain image view: no menu, drag or Live Text.
+/// A page in a scroll view that zooms, no further than the image's own pixels allow, so it never turns soft.
+/// A plain image view: no menu, drag or Live Text.
 private struct ZoomableImage: UIViewRepresentable {
     let image: CGImage
 
-    func makeUIView(context: Context) -> UIScrollView {
-        let scroll = UIScrollView()
-        scroll.minimumZoomScale = 1
-        scroll.maximumZoomScale = 5
+    func makeUIView(context: Context) -> ZoomingScrollView {
+        let scroll = ZoomingScrollView()
         scroll.showsHorizontalScrollIndicator = false
         scroll.showsVerticalScrollIndicator = false
         scroll.delegate = context.coordinator
-        let view = UIImageView(image: UIImage(cgImage: image))
-        view.contentMode = .scaleAspectFit
-        view.frame = scroll.bounds
-        view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-        scroll.addSubview(view)
-        context.coordinator.imageView = view
+        scroll.imageView.image = UIImage(cgImage: image)
         let doubleTap = UITapGestureRecognizer(
             target: context.coordinator, action: #selector(Coordinator.doubleTapped(_:)))
         doubleTap.numberOfTapsRequired = 2
@@ -111,32 +116,56 @@ private struct ZoomableImage: UIViewRepresentable {
         return scroll
     }
 
-    func updateUIView(_ scroll: UIScrollView, context: Context) {
-        if context.coordinator.imageView?.image?.cgImage !== image {
-            context.coordinator.imageView?.image = UIImage(cgImage: image)
-        }
+    /// The thumbnail is replaced by the decoded page in place, at the same size on screen.
+    func updateUIView(_ scroll: ZoomingScrollView, context: Context) {
+        guard scroll.imageView.image?.cgImage !== image else { return }
+        scroll.imageView.image = UIImage(cgImage: image)
+        scroll.setNeedsLayout()
     }
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
     final class Coordinator: NSObject, UIScrollViewDelegate {
-        weak var imageView: UIImageView?
-
-        func viewForZooming(in scrollView: UIScrollView) -> UIView? { imageView }
+        func viewForZooming(in scrollView: UIScrollView) -> UIView? {
+            (scrollView as? ZoomingScrollView)?.imageView
+        }
 
         @objc func doubleTapped(_ gesture: UITapGestureRecognizer) {
-            guard let scroll = gesture.view as? UIScrollView else { return }
+            guard let scroll = gesture.view as? ZoomingScrollView else { return }
             if scroll.zoomScale > scroll.minimumZoomScale {
                 scroll.setZoomScale(scroll.minimumZoomScale, animated: true)
             } else {
-                let point = gesture.location(in: imageView)
-                let size = CGSize(width: scroll.bounds.width / 3, height: scroll.bounds.height / 3)
-                scroll.zoom(
-                    to: CGRect(
-                        x: point.x - size.width / 2, y: point.y - size.height / 2, width: size.width,
-                        height: size.height),
-                    animated: true)
+                let point = gesture.location(in: scroll.imageView)
+                let scale = scroll.maximumZoomScale
+                let size = CGSize(width: scroll.bounds.width / scale, height: scroll.bounds.height / scale)
+                let target = CGRect(
+                    x: point.x - size.width / 2, y: point.y - size.height / 2, width: size.width, height: size.height)
+                scroll.zoom(to: target, animated: true)
             }
         }
+    }
+}
+
+private final class ZoomingScrollView: UIScrollView {
+    let imageView = UIImageView()
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        imageView.contentMode = .scaleAspectFit
+        imageView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        addSubview(imageView)
+        minimumZoomScale = 1
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        if zoomScale == minimumZoomScale { imageView.frame = bounds }
+        // One image pixel per screen pixel at most; a thumbnail can't zoom much until the page is ready.
+        guard let pixels = imageView.image?.cgImage, bounds.width > 0, bounds.height > 0 else { return }
+        let fitted = min(bounds.width / CGFloat(pixels.width), bounds.height / CGFloat(pixels.height))
+        maximumZoomScale = max(1, 1 / (fitted * traitCollection.displayScale))
     }
 }
