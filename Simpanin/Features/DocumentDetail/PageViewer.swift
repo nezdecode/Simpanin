@@ -15,8 +15,9 @@ import UIKit
 /// Pages full screen: swipe to the next, pinch or double-tap to zoom. Knows no document, so Periksa data can
 /// use it too. The page shown and its two neighbours are kept decoded, the others let go; until one is ready
 /// its thumbnail stands in. `current` should be the viewer's own, handed to the screen under it in
-/// `onSettle` once a swipe has come to rest and when the viewer closes, so nothing there changes while a
-/// swipe is still moving, and the zoom back lands on the page shown.
+/// `onSettle` once a swipe has come to rest and when ✕ closes it, so nothing there changes while a swipe is
+/// still moving, and the zoom back lands on the page shown. Not when it has gone: by then the user may be
+/// swiping the pages under it, and a late hand-back would undo that.
 struct PageViewer: View {
     let count: Int
     @Binding var current: Int
@@ -47,8 +48,6 @@ struct PageViewer: View {
         }
         // Only the page on screen stays.
         .onReceive(memoryWarnings) { _ in images = images.filter { $0.key == current } }
-        // Closed by a swipe down too, which doesn't go through the button.
-        .onDisappear(perform: onSettle)
     }
 
     private var closeButton: some View {
