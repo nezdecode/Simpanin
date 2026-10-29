@@ -43,6 +43,19 @@ struct PagerLayoutTests {
         #expect(one.offset(for: 0) == 0)
     }
 
+    /// One page per swipe, however hard the fling.
+    @Test func aSwipeMovesOnePageAtMost() {
+        let first = three.offset(for: 0)
+        #expect(three.target(from: first, proposed: three.offset(for: 2) + 300) == three.offset(for: 1))
+        #expect(three.target(from: three.offset(for: 2), proposed: -500) == three.offset(for: 1))
+    }
+
+    @Test func aShortDragStaysAndAHalfWayOneMovesOn() {
+        let middle = three.offset(for: 1)
+        #expect(three.target(from: middle, proposed: middle + 60) == middle)
+        #expect(three.target(from: middle, proposed: middle + 250) == three.offset(for: 2))
+    }
+
     @Test func theNearestPageToAnOffsetIsFound() {
         #expect(three.page(at: three.offset(for: 1)) == 1)
         #expect(three.page(at: three.offset(for: 1) + 100) == 1)

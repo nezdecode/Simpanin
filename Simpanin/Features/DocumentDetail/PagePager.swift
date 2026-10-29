@@ -169,11 +169,9 @@ private struct PageSnapping: ScrollTargetBehavior {
     let count: Int
 
     func updateTarget(_ target: inout ScrollTarget, context: TargetContext) {
-        let layout = PagerLayout(count: count, width: context.containerSize.width)
         guard count > 1 else { return }
-        let start = layout.page(at: context.originalTarget.rect.minX)
-        let next = min(max(layout.page(at: target.rect.minX), start - 1), start + 1)
-        target.rect.origin.x = layout.offset(for: next)
+        target.rect.origin.x = PagerLayout(count: count, width: context.containerSize.width)
+            .target(from: context.originalTarget.rect.minX, proposed: target.rect.minX)
     }
 }
 
@@ -199,6 +197,12 @@ nonisolated struct PagerLayout: Equatable {
     func offset(for page: Int) -> CGFloat {
         let centered = Self.margin + CGFloat(page) * step + pageWidth / 2 - width / 2
         return min(max(centered, 0), max(contentWidth - width, 0))
+    }
+
+    /// Where a swipe that began at `start` ends: the page nearest where it would stop, one page away at most.
+    func target(from start: CGFloat, proposed: CGFloat) -> CGFloat {
+        let first = page(at: start)
+        return offset(for: min(max(page(at: proposed), first - 1), first + 1))
     }
 
     /// The page nearest the middle of the screen at a scroll offset.
