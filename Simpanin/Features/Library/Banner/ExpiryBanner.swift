@@ -12,17 +12,13 @@
 import SwiftUI
 import VaultCore
 
-/// The document nearest its expiry, or past it, and how many others need a look. A tap opens it; "Jangan
-/// tampilkan di sini" takes it out, from the … menu, a long press or VoiceOver.
+/// The document nearest its expiry, or past it, and how many others need a look. A tap anywhere but ⋯ opens
+/// it; "Jangan tampilkan di sini" takes it out, from the … menu, a long press or VoiceOver.
 struct ExpiryBanner: View {
     let documents: [VaultCore.Document]
     let today: CalendarDate
     let onOpen: (VaultCore.Document) -> Void
     let onHide: (VaultCore.Document) -> Void
-
-    /// The count line sits under the text, past the clock.
-    private static let iconSize: CGFloat = 36
-    private static let iconSpacing: CGFloat = 12
 
     var body: some View {
         let attention = ExpiryText.bannerOrder(
@@ -31,33 +27,24 @@ struct ExpiryBanner: View {
         if let first = attention.first {
             let document = documents[first]
             HStack(alignment: .top, spacing: 12) {
-                VStack(alignment: .leading, spacing: 2) {
-                    // Only the lines naming the document open it; "dan N dokumen lain" names none.
-                    Button {
-                        onOpen(document)
-                    } label: {
-                        HStack(spacing: Self.iconSpacing) {
-                            IconBadge(
-                                systemImage: "clock", size: Self.iconSize, tint: Color(.onWarning),
-                                background: Color(.warningIcon))
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(DocumentStyle.name(document.type)).font(.headline)
-                                Text(ExpiryText.text(type: document.type, expiry: document.expiry, today: today))
+                // Everything but the ⋯ button opens the document it names; "dan N dokumen lain" stays plain text.
+                Button {
+                    onOpen(document)
+                } label: {
+                    HStack(spacing: 12) {
+                        IconBadge(systemImage: "clock", tint: Color(.onWarning), background: Color(.warningIcon))
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(DocumentStyle.name(document.type)).font(.headline)
+                            Text(ExpiryText.text(type: document.type, expiry: document.expiry, today: today))
+                            if attention.count > 1 {
+                                Text("banner.more \(attention.count - 1)").font(.subheadline)
                             }
                         }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .contentShape(.rect)
                     }
-                    .buttonStyle(.plain)
-                    if attention.count > 1 {
-                        Text("banner.more \(attention.count - 1)").font(.subheadline)
-                            .padding(.leading, Self.iconSize + Self.iconSpacing)
-                            // The link's touch area reaches past its text; this line names no document, so a
-                            // tap on it does nothing.
-                            .contentShape(.rect)
-                            .onTapGesture {}
-                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(.rect)
                 }
+                .buttonStyle(.plain)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .accessibilityElement(children: .combine)
                 .accessibilityAction(named: Text("banner.hide")) { onHide(document) }
