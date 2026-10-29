@@ -51,7 +51,7 @@ struct ReviewModelTests {
 
     @Test func aKTPScanFillsTheForm() throws {
         let review = model()
-        review.load(Self.ktp, pages: [try page(), try page()])
+        review.loadScan(Self.ktp, pages: [try page(), try page()])
         #expect(review.type == .ktp)
         #expect(review.pages.count == 2)
         #expect(review.fieldKeys == [FieldKey.nik, FieldKey.name, FieldKey.birthDate])
@@ -62,7 +62,7 @@ struct ReviewModelTests {
 
     @Test func aSIMShowsItsNumberAndExpiry() throws {
         let review = model()
-        review.load(Self.sim, pages: [try page()])
+        review.loadScan(Self.sim, pages: [try page()])
         #expect(review.fieldKeys == [FieldKey.simNumber, FieldKey.name, FieldKey.birthDate])
         #expect(review.hasExpiry)
         #expect(review.expiry == CalendarDate(year: 2027, month: 1, day: 4))
@@ -72,7 +72,7 @@ struct ReviewModelTests {
     /// Text the parsers don't know: the user picks the type.
     @Test func anUnknownScanAsksForTheType() throws {
         let review = model()
-        review.load(nil, pages: [try page()])
+        review.loadScan(nil, pages: [try page()])
         #expect(review.type == .other)
         #expect(review.typeNote != nil)
         #expect(review.fieldKeys.isEmpty)
@@ -81,7 +81,7 @@ struct ReviewModelTests {
     /// The user checked it, so the mark goes.
     @Test func editingAFieldClearsItsMark() throws {
         let review = model()
-        review.load(Self.ktp, pages: [try page()])
+        review.loadScan(Self.ktp, pages: [try page()])
         review.setValue("BUDI CONTOH", for: FieldKey.name)
         #expect(review.values[FieldKey.name] == "BUDI CONTOH")
         #expect(review.marked.isEmpty)
@@ -91,7 +91,7 @@ struct ReviewModelTests {
     @Test func aMissingExpiryIsShownAsMissing() async throws {
         let store = FakeDocuments()
         let review = model(store)
-        review.load(Self.ktp, pages: [try page()])
+        review.loadScan(Self.ktp, pages: [try page()])
         #expect(!review.expiryMissing)
         review.type = .simC
         #expect(review.expiryMissing)
@@ -110,7 +110,7 @@ struct ReviewModelTests {
 
     @Test func settingTheExpiryClearsItsMark() throws {
         let review = model()
-        review.load(Self.sim, pages: [try page()])
+        review.loadScan(Self.sim, pages: [try page()])
         review.setExpiry(CalendarDate(year: 2028, month: 1, day: 4))
         #expect(review.expiry == CalendarDate(year: 2028, month: 1, day: 4))
         #expect(review.expiryNote == nil)
@@ -121,14 +121,14 @@ struct ReviewModelTests {
         let review = model()
         let expired = ParsedDocument(
             type: .simC, fields: DocumentFields([:]), expiry: CalendarDate(year: 2001, month: 1, day: 4))
-        review.load(expired, pages: [try page()])
+        review.loadScan(expired, pages: [try page()])
         #expect(review.expiryNote == nil)
         #expect(!review.expiryMissing)
     }
 
     @Test func typedChangesAreNoticed() throws {
         let review = model()
-        review.load(Self.ktp, pages: [try page()])
+        review.loadScan(Self.ktp, pages: [try page()])
         #expect(!review.hasUserChanges)
         review.setValue("BUDI CONTOH", for: FieldKey.name)
         #expect(review.hasUserChanges)
@@ -137,7 +137,7 @@ struct ReviewModelTests {
     /// A type the user picked is their decision, no longer the parser's guess.
     @Test func pickingATypeClearsItsMark() throws {
         let review = model()
-        review.load(nil, pages: [try page()])
+        review.loadScan(nil, pages: [try page()])
         #expect(review.typeNote != nil)
         review.type = .ktp
         #expect(review.typeNote == nil)
@@ -146,7 +146,7 @@ struct ReviewModelTests {
     /// A type, a SIM class or a date picked by hand is the user's choice too, and a rescan would undo it.
     @Test func choicesAreChangesToo() throws {
         let review = model()
-        review.load(Self.sim, pages: [try page()])
+        review.loadScan(Self.sim, pages: [try page()])
         review.type = .simA
         #expect(review.hasUserChanges)
         review.type = .simC
@@ -158,10 +158,10 @@ struct ReviewModelTests {
     /// A rescan may be a different card: every field comes from it, none from before.
     @Test func aRescanReplacesEveryField() throws {
         let review = model()
-        review.load(Self.ktp, pages: [try page()])
+        review.loadScan(Self.ktp, pages: [try page()])
         review.setValue("TYPED", for: FieldKey.name)
         review.label = "Ibu"
-        review.load(Self.sim, pages: [try page()])
+        review.loadScan(Self.sim, pages: [try page()])
         #expect(review.type == .simC)
         #expect(review.values[FieldKey.name] == "BUDI CONTOH")
         #expect(review.values[FieldKey.nik] == nil)
@@ -180,7 +180,7 @@ struct ReviewModelTests {
     @Test func savingSealsTheChosenTypesFieldsAndPages() async throws {
         let store = FakeDocuments()
         let review = model(store)
-        review.load(Self.ktp, pages: [try page(), try page()])
+        review.loadScan(Self.ktp, pages: [try page(), try page()])
         review.label = "  Ibu  "
         #expect(await review.save())
         let saved = try #require(try await store.documents().first)
@@ -195,7 +195,7 @@ struct ReviewModelTests {
     @Test func switchingTheTypeSavesOnlyItsFields() async throws {
         let store = FakeDocuments()
         let review = model(store)
-        review.load(Self.ktp, pages: [try page()])
+        review.loadScan(Self.ktp, pages: [try page()])
         review.type = .other
         review.label = ""
         #expect(await review.save())
@@ -206,14 +206,14 @@ struct ReviewModelTests {
     /// Dates show as on the card, day first, and are stored as YYYY-MM-DD like every date in the vault.
     @Test func aBirthDateShowsDayFirst() throws {
         let review = model()
-        review.load(Self.ktp, pages: [try page()])
+        review.loadScan(Self.ktp, pages: [try page()])
         #expect(review.values[FieldKey.birthDate] == "17-08-1990")
     }
 
     @Test func aTypedBirthDateIsStoredYearFirst() async throws {
         let store = FakeDocuments()
         let review = model(store)
-        review.load(Self.ktp, pages: [try page()])
+        review.loadScan(Self.ktp, pages: [try page()])
         review.setValue("01-12-1985", for: FieldKey.birthDate)
         #expect(await review.save())
         #expect(await store.created.first?.values[FieldKey.birthDate] == "1985-12-01")
@@ -223,7 +223,7 @@ struct ReviewModelTests {
     @Test func anImpossibleBirthDateIsntSaved() async throws {
         let store = FakeDocuments()
         let review = model(store)
-        review.load(Self.ktp, pages: [try page()])
+        review.loadScan(Self.ktp, pages: [try page()])
         review.setValue("31-02-1990", for: FieldKey.birthDate)
         #expect(await !review.save())
         #expect(review.note(for: FieldKey.birthDate) == .refusal(.notADate))
@@ -236,7 +236,7 @@ struct ReviewModelTests {
         let store = FakeDocuments()
         await store.gateNextCreate()
         let review = model(store)
-        review.load(Self.ktp, pages: [try page()])
+        review.loadScan(Self.ktp, pages: [try page()])
         let first = Task { await review.save() }
         try #require(await store.waitUntilCreating())
         #expect(await !review.save())
@@ -249,14 +249,14 @@ struct ReviewModelTests {
     /// right after never reports a saved scan as dropped.
     @Test func savedIsReportedOnlyWhenTheVaultHasIt() async throws {
         let review = model()
-        review.load(Self.ktp, pages: [try page()])
+        review.loadScan(Self.ktp, pages: [try page()])
         var reported = 0
         #expect(await review.save(onSaved: { reported += 1 }))
         #expect(reported == 1)
         let failing = FakeDocuments()
         await failing.setFailure(.storageFull)
         let other = model(failing)
-        other.load(Self.ktp, pages: [try page()])
+        other.loadScan(Self.ktp, pages: [try page()])
         #expect(await !other.save(onSaved: { reported += 1 }))
         #expect(reported == 1)
     }
@@ -265,7 +265,7 @@ struct ReviewModelTests {
         let store = FakeDocuments()
         await store.setFailure(.storageFull)
         let review = model(store)
-        review.load(Self.ktp, pages: [try page()])
+        review.loadScan(Self.ktp, pages: [try page()])
         #expect(await !review.save())
         #expect(review.saveError == .storageFullOnSave)
     }
@@ -274,7 +274,7 @@ struct ReviewModelTests {
     @Test func aPageThatCantBeEncodedSavesNothing() async throws {
         let store = FakeDocuments()
         let review = model(store, encode: { _ in nil })
-        review.load(Self.ktp, pages: [try page()])
+        review.loadScan(Self.ktp, pages: [try page()])
         #expect(await !review.save())
         #expect(review.saveError == .saveFailed)
         #expect(await store.created.isEmpty)
@@ -283,5 +283,12 @@ struct ReviewModelTests {
     @Test func aRealPageEncodesAsJPEG() throws {
         let data = try #require(PageEncoding.jpeg(try page()))
         #expect(data.prefix(2) == Data([0xFF, 0xD8]))
+    }
+}
+
+extension ReviewModel {
+    /// Loads a scan the way the scan flow does, so what a scan hands over is set up in one place.
+    func loadScan(_ result: ParsedDocument?, pages: [CGImage], reading: ScanReading? = nil) {
+        load(result, pages: pages, reading: reading)
     }
 }

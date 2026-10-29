@@ -21,7 +21,7 @@ extension ReviewModelTests {
         source: 0, pages: [PageRead(type: .ktp, relation: .source), PageRead(type: .simA, relation: .otherType)])
 
     func loadKTPAndSIM(into review: ReviewModel) throws {
-        review.load(Self.ktp, pages: [try page(), try page()], reading: Self.ktpAndSIMReading)
+        review.loadScan(Self.ktp, pages: [try page(), try page()], reading: Self.ktpAndSIMReading)
     }
 
     @Test func theNotesFollowTheReadingAndTheChosenType() throws {
@@ -36,7 +36,7 @@ extension ReviewModelTests {
     @Test func aFailedRescanHasNoPageNotes() throws {
         let review = model()
         try loadKTPAndSIM(into: review)
-        review.load(nil, pages: [try page(), try page()], reading: nil)
+        review.loadScan(nil, pages: [try page(), try page()], reading: nil)
         #expect(review.pageNotes.notes == [nil, nil])
         #expect(review.pageNotes.sentences.isEmpty)
     }
@@ -45,7 +45,7 @@ extension ReviewModelTests {
         let review = model()
         try loadKTPAndSIM(into: review)
         let again = ScanReading(source: 1, pages: [nil, PageRead(type: .ktp, relation: .source)])
-        review.load(Self.ktp, pages: [try page(), try page()], reading: again)
+        review.loadScan(Self.ktp, pages: [try page(), try page()], reading: again)
         #expect(review.pageNotes.notes == [nil, nil])
         #expect(review.pageNotes.sentences == ["Isian dibaca dari halaman 2."])
     }

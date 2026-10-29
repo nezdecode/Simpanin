@@ -23,7 +23,7 @@ extension ReviewModelTests {
     @Test func aFutureBirthDateIsRefusedWithAReason() async throws {
         let store = FakeDocuments()
         let review = model(store)
-        review.load(Self.ktp, pages: [try page()])
+        review.loadScan(Self.ktp, pages: [try page()])
         review.setValue("17-08-2999", for: FieldKey.birthDate)
         // Shown as soon as the date is complete, not only when Simpan is tapped.
         #expect(review.problems[FieldKey.birthDate] == .birthDateInFuture)
@@ -37,7 +37,7 @@ extension ReviewModelTests {
     /// Half-typed dates aren't judged; a complete one that can't exist says so at once.
     @Test func onlyACompleteDateIsChecked() throws {
         let review = model()
-        review.load(Self.ktp, pages: [try page()])
+        review.loadScan(Self.ktp, pages: [try page()])
         review.setValue("31-02-19", for: FieldKey.birthDate)
         #expect(review.problems.isEmpty)
         review.setValue("31-02-1990", for: FieldKey.birthDate)
@@ -54,7 +54,7 @@ extension ReviewModelTests {
             type: .ktp,
             fields: DocumentFields([FieldKey.nik: "0012341708900001", FieldKey.birthDate: "1890-08-17"]),
             expiry: nil, reasons: [FieldKey.birthDate: [.impossibleDate]])
-        review.load(old, pages: [try page()])
+        review.loadScan(old, pages: [try page()])
         review.setValue("0012341708900001", for: FieldKey.nik)
         #expect(review.marked[FieldKey.birthDate] == [.impossibleDate])
     }
@@ -71,7 +71,7 @@ extension ReviewModelTests {
     /// An edit that makes the birth date and the NIK disagree marks both: either could be the wrong one.
     @Test func aNIKAndBirthDateThatDisagreeAreMarked() throws {
         let review = model()
-        review.load(Self.ktp, pages: [try page()])
+        review.loadScan(Self.ktp, pages: [try page()])
         review.setValue("18-08-1990", for: FieldKey.birthDate)
         #expect(Set(review.marked.keys).isSuperset(of: [FieldKey.nik, FieldKey.birthDate]))
         review.setValue("17-08-1990", for: FieldKey.birthDate)
@@ -83,7 +83,7 @@ extension ReviewModelTests {
     /// A NIK that isn't 16 digits is judged when the field is left, not while it's being typed.
     @Test func aNIKOfTheWrongLengthIsJudgedWhenTheFieldIsLeft() throws {
         let review = model()
-        review.load(Self.ktp, pages: [try page()])
+        review.loadScan(Self.ktp, pages: [try page()])
         review.setValue("00123417089000", for: FieldKey.nik)
         #expect(review.problems.isEmpty)
         review.fieldLeft(FieldKey.nik)
@@ -98,14 +98,14 @@ extension ReviewModelTests {
         let review = model()
         let short = ParsedDocument(
             type: .ktp, fields: DocumentFields([FieldKey.nik: "001234170890000"]), expiry: nil)
-        review.load(short, pages: [try page()])
+        review.loadScan(short, pages: [try page()])
         #expect(review.problems[FieldKey.nik] == .nikLength)
     }
 
     @Test func simpanRefusesAWrongNIK() async throws {
         let store = FakeDocuments()
         let review = model(store)
-        review.load(Self.ktp, pages: [try page()])
+        review.loadScan(Self.ktp, pages: [try page()])
         review.setValue("001234170890000", for: FieldKey.nik)
         #expect(await !review.save())
         #expect(review.problems[FieldKey.nik] == .nikLength)
@@ -115,7 +115,7 @@ extension ReviewModelTests {
     /// Simpan goes to the first wrong field in screen order; the others show their reasons where they are.
     @Test func theFirstProblemIsTheFirstFieldOnScreen() throws {
         let review = model()
-        review.load(Self.ktp, pages: [try page()])
+        review.loadScan(Self.ktp, pages: [try page()])
         #expect(review.firstProblem() == nil)
         review.setValue("17-08-2999", for: FieldKey.birthDate)
         review.setValue("00123", for: FieldKey.nik)
@@ -127,20 +127,20 @@ extension ReviewModelTests {
     @Test func anEmptyNIKIsAskedAboutNotRefused() async throws {
         let store = FakeDocuments()
         let review = model(store)
-        review.load(Self.ktp, pages: [try page()])
+        review.loadScan(Self.ktp, pages: [try page()])
         #expect(!review.nikMissing)
         review.setValue("", for: FieldKey.nik)
         #expect(review.nikMissing)
         #expect(review.firstProblem() == nil)
         #expect(await review.save())
-        review.load(Self.sim, pages: [try page()])
+        review.loadScan(Self.sim, pages: [try page()])
         #expect(!review.nikMissing)
     }
 
     /// A field gets its own value written back when it takes focus; that isn't an edit, so the reason stays.
     @Test func writingTheSameValueKeepsTheReason() throws {
         let review = model()
-        review.load(Self.ktp, pages: [try page()])
+        review.loadScan(Self.ktp, pages: [try page()])
         review.setValue("00123", for: FieldKey.nik)
         review.fieldLeft(FieldKey.nik)
         review.setValue("00123", for: FieldKey.nik)
@@ -153,7 +153,7 @@ extension ReviewModelTests {
         let noNIK = ParsedDocument(
             type: .ktp, fields: DocumentFields([FieldKey.name: "BUDI CONTOH"]), expiry: nil,
             reasons: [FieldKey.nik: [.notFound]])
-        review.load(noNIK, pages: [try page()])
+        review.loadScan(noNIK, pages: [try page()])
         review.setValue("", for: FieldKey.nik)
         #expect(review.marked[FieldKey.nik] == [.notFound])
         #expect(!review.hasUserChanges)
