@@ -26,6 +26,8 @@ struct PageViewer: View {
     let onSettle: () -> Void
     @State private var images: [Int: CGImage] = [:]
     @State private var failed: Set<Int> = []
+    /// After a memory warning only the page shown is kept, for as long as the viewer is open.
+    @State private var lowMemory = false
     @Environment(\.dismiss) private var dismiss
     private let memoryWarnings = NotificationCenter.default.publisher(
         for: UIApplication.didReceiveMemoryWarningNotification)
@@ -46,8 +48,10 @@ struct PageViewer: View {
             guard (try? await Task.sleep(for: .milliseconds(500))) != nil else { return }
             onSettle()
         }
-        // Only the page on screen stays.
-        .onReceive(memoryWarnings) { _ in images = images.filter { $0.key == current } }
+        .onReceive(memoryWarnings) { _ in
+            lowMemory = true
+            images = images.filter { $0.key == current }
+        }
     }
 
     private var closeButton: some View {
@@ -73,6 +77,18 @@ struct PageViewer: View {
         Group {
             if let shown = images[index] ?? thumbnail(index) {
                 ZoomableImage(image: shown)
+                    .overlay(alignment: .bottom) {
+                        // Only the small copy is left, which won't zoom; say so rather than seem to work.
+                        if images[index] == nil, failed.contains(index) {
+                            Text("detail.pageFailed")
+                                .font(.subheadline)
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 8)
+                                .background(.black.opacity(0.7), in: .capsule)
+                                .padding(.bottom, 56)
+                        }
+                    }
             } else if failed.contains(index) {
                 Text("detail.pageFailed").foregroundStyle(.white).multilineTextAlignment(.center).padding()
             } else {
@@ -82,6 +98,7 @@ struct PageViewer: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text("review.pageOf \(index + 1) \(count)"))
+        .accessibilityValue(failed.contains(index) ? Text("detail.pageFailed") : Text(verbatim: ""))
     }
 
     private func close() {
@@ -92,14 +109,22 @@ struct PageViewer: View {
 
     /// The shown page first, then the next and the one before; any further away is let go.
     private func loadAround(_ index: Int) async {
-        let window = max(0, index - 1)...min(count - 1, index + 1)
-        images = images.filter { window.contains($0.key) }
-        for page in [index, index + 1, index - 1] where window.contains(page) && images[page] == nil {
+        images = images.filter { keeps($0.key) }
+        for page in [index, index + 1, index - 1] where keeps(page) && images[page] == nil {
             let read = await image(page)
-            // Swiped on meanwhile: the next window decides what to keep.
+            // A swipe may have moved on meanwhile: a page still next to the one shown is kept all the same.
+            if let read {
+                if keeps(page) { images[page] = read }
+            } else {
+                failed.insert(page)
+            }
             guard !Task.isCancelled else { return }
-            if let read { images[page] = read } else { failed.insert(page) }
         }
+    }
+
+    /// The page shown and its neighbours, or after a memory warning the page shown only.
+    private func keeps(_ page: Int) -> Bool {
+        lowMemory ? page == current : abs(page - current) <= 1 && (0..<count).contains(page)
     }
 }
 

@@ -186,6 +186,9 @@ final class DocumentDetailModel {
         do {
             let data = try await pageReader.pageData(document.pageIDs[index], of: document.id)
             return await Self.reduced(data, to: Self.viewerPixelSize)
+        } catch VaultError.locked {
+            // The lock takes the viewer away; nothing to log.
+            return nil
         } catch {
             Logger.library.error("Page not opened: \(ErrorSummary.describe(error), privacy: .public)")
             return nil
