@@ -36,6 +36,10 @@ extension ReviewModelTests {
 
     func keys(_ review: ReviewModel) -> [String] { review.checkedFields.map(\.key) }
 
+    func value(_ review: ReviewModel, _ key: String) -> String?? {
+        review.checkedFields.first { $0.key == key }.map(\.value)
+    }
+
     /// Nothing marked: the number still shows, as it's what's most often checked against the card.
     @Test func numberIsAlwaysFirst() throws {
         let review = model()
@@ -78,7 +82,7 @@ extension ReviewModelTests {
         let review = model()
         review.loadScan(Self.confirmedKTP, pages: [try page()])
         review.setValue("", for: FieldKey.nik)
-        #expect(review.checkedFields.first == .init(key: FieldKey.nik, value: nil))
+        #expect(value(review, FieldKey.nik) == .some(nil))
     }
 
     /// After a correction, what Simpan would save is what's compared with the card.
@@ -87,22 +91,41 @@ extension ReviewModelTests {
         review.loadScan(Self.ktp, pages: [try page()])
         review.setValue("BUDI CONTOH", for: FieldKey.name)
         review.setValue("0012341708900002", for: FieldKey.nik)
-        #expect(review.checkedFields == [.init(key: FieldKey.nik, value: "0012341708900002")])
+        #expect(keys(review) == [FieldKey.nik])
+        #expect(value(review, FieldKey.nik) == "0012341708900002")
     }
 
     @Test func simNumberShowsDashes() throws {
         let review = model()
         review.loadScan(Self.sim, pages: [try page()])
         review.setValue("00001234567890", for: FieldKey.simNumber)
-        #expect(review.checkedFields.first == .init(key: FieldKey.simNumber, value: "0000-1234-567890"))
+        #expect(value(review, FieldKey.simNumber) == "0000-1234-567890")
+        #expect(review.checkedFields.first?.isNumber == true)
     }
 
-    /// As printed on the card: 16 digits together, whatever was typed between them.
+    /// As printed on the card: 16 digits together, not grouped as on the document screen.
     @Test func nikIsUngrouped() throws {
         let review = model()
         review.loadScan(Self.confirmedKTP, pages: [try page()])
+        #expect(value(review, FieldKey.nik) == "0012341708900001")
+        #expect(review.checkedFields.first?.isNumber == true)
+    }
+
+    /// Simpan refuses it, so the bar mustn't tidy it into something that matches the card.
+    @Test func aRefusedNIKShowsAsTyped() throws {
+        let review = model()
+        review.loadScan(Self.confirmedKTP, pages: [try page()])
         review.setValue("0012 3417 0890 0001", for: FieldKey.nik)
-        #expect(review.checkedFields.first == .init(key: FieldKey.nik, value: "0012341708900001"))
+        #expect(value(review, FieldKey.nik) == "0012 3417 0890 0001")
+        review.setValue("abc", for: FieldKey.nik)
+        #expect(value(review, FieldKey.nik) == "abc")
+    }
+
+    @Test func aSIMNumberWithOtherCharactersShowsAsTyped() throws {
+        let review = model()
+        review.loadScan(Self.sim, pages: [try page()])
+        review.setValue("0000-1234-56789O", for: FieldKey.simNumber)
+        #expect(value(review, FieldKey.simNumber) == "0000-1234-56789O")
     }
 
     @Test func typeWithoutANumberAndNoMarksHasNoBar() throws {

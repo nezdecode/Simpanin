@@ -11,6 +11,7 @@
 
 import CoreGraphics
 import Foundation
+import Parsers
 import VaultCore
 
 /// What the page viewer shows over Periksa data.
@@ -23,8 +24,11 @@ extension ReviewModel {
     /// A field under the enlarged page: what the form holds now, written as the card prints it.
     struct CheckedField: Equatable {
         let key: String
+        let title: LocalizedStringResource
         /// Nil when empty; the bar says "Belum diisi".
         let value: String?
+        /// Read digit by digit, in a fixed-width font.
+        let isNumber: Bool
     }
 
     /// What's shown under the enlarged page, to compare with the card: the number always, first, then every
@@ -33,13 +37,18 @@ extension ReviewModel {
         let others = fieldKeys.filter { $0 != numberKey && note(for: $0) != nil }
         return ([numberKey].compactMap { $0 } + others).map { key in
             let text = values[key]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            guard !text.isEmpty else { return CheckedField(key: key, value: nil) }
-            // The NIK's 16 digits are printed together, a SIM number with dashes.
-            let number = DocumentNumber(text)
-            if key == FieldKey.nik { return CheckedField(key: key, value: number.digits) }
-            if key == FieldKey.simNumber { return CheckedField(key: key, value: number.shown) }
-            return CheckedField(key: key, value: text)
+            return CheckedField(
+                key: key, title: DocumentFieldStyle.title(for: key),
+                value: text.isEmpty ? nil : Self.printed(text, key),
+                isNumber: key == numberKey)
         }
+    }
+
+    /// A SIM number of digits and dashes is printed with dashes. Anything else shows as typed, the NIK too: it's
+    /// only valid as 16 digits together, as printed, and a refused one mustn't look right next to the card.
+    private static func printed(_ text: String, _ key: String) -> String {
+        guard key == FieldKey.simNumber, text.allSatisfy({ $0.isASCIIDigit || $0 == "-" }) else { return text }
+        return DocumentNumber(text).shown
     }
 
     /// A page for the viewer, redrawn each time no larger than the viewer takes; the model doesn't keep it.

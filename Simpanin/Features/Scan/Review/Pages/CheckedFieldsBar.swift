@@ -10,7 +10,6 @@
 //
 
 import SwiftUI
-import VaultCore
 
 /// Under an enlarged page: the fields to compare with the card, so 16 digits needn't be remembered across the
 /// viewer. Plain text, never selectable, so nothing here reaches the clipboard.
@@ -38,18 +37,17 @@ struct CheckedFieldsBar: View {
     }
 
     private func row(_ field: ReviewModel.CheckedField) -> some View {
-        let isNumber = field.key == FieldKey.nik || field.key == FieldKey.simNumber
-        return VStack(alignment: .leading, spacing: 2) {
-            Text(DocumentFieldStyle.title(for: field.key)).font(.footnote).foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 2) {
+            Text(field.title).font(.footnote).foregroundStyle(.secondary)
             Group {
                 if let value = field.value {
                     // Digit by digit for VoiceOver, as they're compared one by one; a name reads as a name.
-                    Text(verbatim: value).speechSpellsOutCharacters(isNumber)
+                    Text(verbatim: value).speechSpellsOutCharacters(field.isNumber)
                 } else {
                     Text("review.expiryMissing").foregroundStyle(.secondary)
                 }
             }
-            .font(isNumber ? .body.monospaced() : .body)
+            .font(field.isNumber ? .body.monospaced() : .body)
         }
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("viewer.checkedField.\(field.key)")
