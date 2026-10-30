@@ -29,19 +29,28 @@ extension ReviewModel {
         let value: String?
         /// Read digit by digit, in a fixed-width font.
         let isNumber: Bool
+
+        /// Berlaku sampai isn't a field, so it has a key of its own here.
+        static let expiryKey = "expiry"
     }
 
     /// What's shown under the enlarged page, to compare with the card: the number always, first, then every
-    /// other field that's marked or refused, in the form's order. The label isn't on the card.
+    /// other field that's marked or refused, in the form's order, and last Berlaku sampai when it's marked.
+    /// The label isn't on the card.
     var checkedFields: [CheckedField] {
         let others = fieldKeys.filter { $0 != numberKey && note(for: $0) != nil }
-        return ([numberKey].compactMap { $0 } + others).map { key in
+        let fields = ([numberKey].compactMap { $0 } + others).map { key in
             let text = values[key]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             return CheckedField(
                 key: key, title: DocumentFieldStyle.title(for: key),
                 value: text.isEmpty ? nil : Self.printed(text, key),
                 isNumber: key == numberKey)
         }
+        guard expiryNote != nil else { return fields }
+        let validity = CheckedField(
+            key: CheckedField.expiryKey, title: DocumentFieldStyle.validityTitle(for: type),
+            value: expiry.map(DocumentFieldStyle.dayFirst), isNumber: false)
+        return fields + [validity]
     }
 
     /// A SIM number of digits and dashes is printed with dashes. Anything else shows as typed, the NIK too: it's

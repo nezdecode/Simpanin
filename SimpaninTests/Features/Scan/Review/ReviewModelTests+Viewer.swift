@@ -10,6 +10,7 @@
 //
 
 import CoreGraphics
+import Foundation
 import Parsers
 import Testing
 import VaultCore
@@ -140,5 +141,47 @@ extension ReviewModelTests {
         review.loadScan(nil, pages: [try page()])
         #expect(review.type == .other)
         #expect(review.checkedFields.isEmpty)
+    }
+
+    /// Comparing the read date with the printed one needs the card too.
+    @Test func markedExpiryIsShownLast() throws {
+        let review = model()
+        let marked = ParsedDocument(
+            type: .simC,
+            fields: DocumentFields([FieldKey.simNumber: "0000-0000-000001", FieldKey.name: "BUDI C0NTOH"]),
+            expiry: CalendarDate(year: 2027, month: 1, day: 4), reasons: [FieldKey.name: [.oddCharacters]],
+            expiryReasons: [.implausibleExpiry])
+        review.loadScan(marked, pages: [try page()])
+        #expect(keys(review) == [FieldKey.simNumber, FieldKey.name, ReviewModel.CheckedField.expiryKey])
+    }
+
+    /// A SIM with no date read is marked; the bar says so rather than leave it out.
+    @Test func emptyMarkedExpiryReadsBelumDiisi() throws {
+        let review = model()
+        review.loadScan(nil, pages: [try page()])
+        review.type = .simC
+        #expect(value(review, ReviewModel.CheckedField.expiryKey) == .some(nil))
+    }
+
+    @Test func unmarkedExpiryIsNotShown() throws {
+        let review = model()
+        let read = ParsedDocument(
+            type: .simC, fields: DocumentFields([FieldKey.simNumber: "0000-0000-000001"]),
+            expiry: CalendarDate(year: 2027, month: 1, day: 4))
+        review.loadScan(read, pages: [try page()])
+        #expect(keys(review) == [FieldKey.simNumber])
+    }
+
+    /// dd-mm-yyyy, as the card prints it, under the title the form gives it.
+    @Test func expiryShowsAsPrinted() throws {
+        let review = model()
+        review.loadScan(Self.sim, pages: [try page()])
+        let expiry = try #require(review.checkedFields.last)
+        #expect(expiry.value == "04-01-2027")
+        #expect(expiry.title == "review.validUntil")
+        #expect(!expiry.isNumber)
+        // A date read for a SIM is noted on an STNK too, under its "Pajak" title.
+        review.type = .stnk
+        #expect(review.checkedFields.last?.title == "review.taxValidUntil")
     }
 }
