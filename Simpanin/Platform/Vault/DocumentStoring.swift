@@ -25,6 +25,7 @@ nonisolated protocol DocumentStoring: Sendable {
     ) async throws -> DocumentID
     func delete(_ id: DocumentID) async throws
     func restore(_ id: DocumentID) async throws
+    func deletePermanently(_ id: DocumentID) async throws
 }
 
 extension VaultStore: DocumentStoring {}

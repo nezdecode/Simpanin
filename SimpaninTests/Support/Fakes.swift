@@ -251,6 +251,12 @@ actor FakeDocuments {
         document.deletedAt = nil
         live.append(document)
     }
+
+    /// Purges even a live document, as VaultStore does.
+    func deletePermanently(_ id: DocumentID) async throws {
+        if let failure { throw failure }
+        purge(id)
+    }
 }
 
 extension FakeDocuments {
@@ -261,7 +267,8 @@ extension FakeDocuments {
             pageReadGated = false
             await withCheckedContinuation { pageReadGate = $0 }
         }
-        guard live.contains(where: { $0.id == id && $0.pageIDs.contains(pageID) }), let data = pagesByID[pageID]
+        // Baru dihapus's pages too, as VaultStore reads them.
+        guard (live + bin).contains(where: { $0.id == id && $0.pageIDs.contains(pageID) }), let data = pagesByID[pageID]
         else { throw VaultError.pageNotFound }
         if unreadablePages.contains(pageID) { throw VaultError.authenticationFailed }
         return data

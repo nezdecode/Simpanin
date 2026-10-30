@@ -206,6 +206,7 @@
             try await store.delete(id)
         }
         func restore(_ id: DocumentID) async throws { try await store.restore(id) }
+        func deletePermanently(_ id: DocumentID) async throws { try await store.deletePermanently(id) }
         func pageData(_ pageID: PageID, of id: DocumentID) async throws -> Data {
             try await store.pageData(pageID, of: id)
         }

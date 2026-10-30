@@ -66,7 +66,9 @@ final class LibraryModel {
     }
 
     /// Saved like a hide: a failed save keeps it in the banner and is tried again at the next reload.
-    func showInBanner(_ id: DocumentID) {
+    func showInBanner(_ id: DocumentID) { removeHidden(id) }
+
+    private func removeHidden(_ id: DocumentID) {
         hidden.show(id)
         hiddenUnsaved = true
         saveHidden()
@@ -143,8 +145,19 @@ final class LibraryModel {
         return moved
     }
 
-    func restore(_ id: DocumentID) async {
+    /// True when it's back in the list, so the deleted document's screen knows it may close.
+    @discardableResult
+    func restore(_ id: DocumentID) async -> Bool {
         await save { try await self.store.restore(id) }
+    }
+
+    /// Only from Baru dihapus: VaultStore would purge a live document too. Its banner entry goes at once,
+    /// not after the two reloads that drop an entry whose document has gone.
+    func deletePermanently(_ id: DocumentID) async -> Bool {
+        guard deleted.contains(where: { $0.id == id }) else { return false }
+        guard await save({ try await self.store.deletePermanently(id) }) else { return false }
+        removeHidden(id)
+        return true
     }
 
     #if DEBUG
