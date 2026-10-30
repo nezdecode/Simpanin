@@ -68,14 +68,16 @@
 
         /// The store the document list reads. `-SimpaninUITestLoadError <n>` fails its first n loads;
         /// `-SimpaninUITestDeleteError` fails every Hapus; `-SimpaninUITestBinError` every Pulihkan and
-        /// Hapus permanen.
+        /// Hapus permanen; `-SimpaninUITestSlowRestore` makes each Pulihkan take five seconds.
         static func documentStore(for vault: AppVault) -> any DocumentStoring & PageReading {
             let count = value(after: "-SimpaninUITestLoadError").flatMap(Int.init)
             let failsDeletes = ProcessInfo.processInfo.arguments.contains("-SimpaninUITestDeleteError")
             let failsBin = ProcessInfo.processInfo.arguments.contains("-SimpaninUITestBinError")
-            guard count != nil || failsDeletes || failsBin else { return vault.store }
+            let slowRestore = ProcessInfo.processInfo.arguments.contains("-SimpaninUITestSlowRestore")
+            guard count != nil || failsDeletes || failsBin || slowRestore else { return vault.store }
             return ScriptedDocuments(
-                store: vault.store, failingLoads: count ?? 0, failsDeletes: failsDeletes, failsBin: failsBin)
+                store: vault.store, failingLoads: count ?? 0, failsDeletes: failsDeletes, failsBin: failsBin,
+                slowRestore: slowRestore)
         }
 
         /// `-SimpaninUITestCaptureAfterScan`: once the synthetic scan is read, act for a few seconds as if
@@ -178,12 +180,17 @@
         private var failingLoads: Int
         private let failsDeletes: Bool
         private let failsBin: Bool
+        private let slowRestore: Bool
 
-        init(store: VaultStore, failingLoads: Int, failsDeletes: Bool = false, failsBin: Bool = false) {
+        init(
+            store: VaultStore, failingLoads: Int, failsDeletes: Bool = false, failsBin: Bool = false,
+            slowRestore: Bool = false
+        ) {
             self.store = store
             self.failingLoads = failingLoads
             self.failsDeletes = failsDeletes
             self.failsBin = failsBin
+            self.slowRestore = slowRestore
         }
 
         func documents() async throws -> [Document] {
@@ -212,6 +219,7 @@
         }
         func restore(_ id: DocumentID) async throws {
             if failsBin { throw VaultError.fileUnavailable }
+            if slowRestore { try await Task.sleep(for: .seconds(5)) }
             try await store.restore(id)
         }
         func deletePermanently(_ id: DocumentID) async throws {

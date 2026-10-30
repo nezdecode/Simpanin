@@ -177,6 +177,9 @@ struct LibraryView: View {
         DocumentDetailView(
             document: document, store: Self.documentStore(for: vault), today: today,
             hiddenFromBanner: library.offersShowInBanner(document.id),
+            isListed: {
+                (document.deletedAt == nil ? library.documents : library.deleted).contains { $0.id == document.id }
+            },
             onShowInBanner: { library.showInBanner(document.id) }, onDelete: library.delete,
             onRestore: library.restore, onDeletePermanently: library.deletePermanently)
     }

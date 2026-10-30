@@ -147,6 +147,20 @@ final class DeletedDetailUITests: UITestCase {
         XCTAssertTrue(app.buttons["detail.restore"].waitForExistence(timeout: 5))
     }
 
+    /// Opened while its restore from the row is still saving, the document closes once it's live again, so it
+    /// never shows a live document as deleted.
+    @MainActor
+    func testARestoreFromTheRowClosesTheOpenDocument() throws {
+        let app = deletedSample(["-SimpaninUITestSlowRestore"])
+        rows(app).firstMatch.press(forDuration: 1.2)
+        app.buttons["Pulihkan"].tap()
+        openDeleted(app)
+        XCTAssertTrue(app.staticTexts["Tidak ada dokumen yang baru dihapus"].waitForExistence(timeout: 15))
+        XCTAssertFalse(app.navigationBars["KTP"].exists)
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        XCTAssertTrue(tile(app, "Saya").waitForExistence(timeout: 5))
+    }
+
     @MainActor
     func testLongPressRestores() throws {
         let app = deletedSample()

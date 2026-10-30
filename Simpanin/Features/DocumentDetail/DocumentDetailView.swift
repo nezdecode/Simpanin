@@ -19,6 +19,10 @@ struct DocumentDetailView: View {
     /// The user hid it from the expiry banner, so the screen offers "Tampilkan lagi".
     let hiddenFromBanner: Bool
     let onShowInBanner: () -> Void
+    /// Whether the document is still in the list it was opened from. Read in `body`, so the screen hears when
+    /// a restore from Baru dihapus's row lands after the row was tapped, and closes instead of showing a live
+    /// document as deleted. The screen under it doesn't hear changes while this one covers it.
+    let isListed: () -> Bool
     @State private var model: DocumentDetailModel
     @State private var page = 0
     @State private var viewerShown = false
@@ -33,13 +37,14 @@ struct DocumentDetailView: View {
 
     init(
         document: VaultCore.Document, store: any DocumentStoring & PageReading, today: CalendarDate,
-        hiddenFromBanner: Bool,
+        hiddenFromBanner: Bool, isListed: @escaping () -> Bool,
         onShowInBanner: @escaping () -> Void, onDelete: @escaping (DocumentID) async -> Bool,
         onRestore: @escaping (DocumentID) async -> Bool, onDeletePermanently: @escaping (DocumentID) async -> Bool
     ) {
         self.today = today
         self.hiddenFromBanner = hiddenFromBanner
         self.onShowInBanner = onShowInBanner
+        self.isListed = isListed
         _model = State(
             initialValue: DocumentDetailModel(
                 document: document, store: store, pageReader: store, clipboard: SystemClipboard(),
@@ -63,6 +68,9 @@ struct DocumentDetailView: View {
             }
             .onChange(of: model.phase) { _, phase in
                 if phase == .gone { dismiss() }
+            }
+            .onChange(of: isListed()) { _, listed in
+                if !listed { dismiss() }
             }
             .alert(Text("detail.deletePermanentlyTitle"), isPresented: $purgeAsked) {
                 Button(role: .destructive) {
