@@ -101,24 +101,39 @@
             isActive && ProcessInfo.processInfo.arguments.contains("-SimpaninUITestScanKTPAndSIM")
         }
 
-        /// Blank pages; the recognizer below tells them apart by their width alone, so a rescan reads the same.
+        /// A card's width in pixels; the SIM's page is one wider, which is how the recognizer below tells them
+        /// apart, so a rescan reads the same.
+        private static let cardWidth = 1_712
+
+        /// Cards with a photo box and lines, no text, so the viewer and the strip show something in screenshots.
         static var syntheticPages: [CGImage] {
-            (scansKTPAndSIM ? [8, 9] : [8]).compactMap(blankPage)
+            (scansKTPAndSIM ? [cardWidth, cardWidth + 1] : [cardWidth]).compactMap(cardPage)
         }
 
-        private static func blankPage(width: Int) -> CGImage? {
-            CGContext(
-                data: nil, width: width, height: 8, bitsPerComponent: 8, bytesPerRow: 4 * width,
-                space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-            )?.makeImage()
+        private static func cardPage(width: Int) -> CGImage? {
+            let height = 1_080
+            guard
+                let context = CGContext(
+                    data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
+                    space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)
+            else { return nil }
+            context.setFillColor(red: 0.62, green: 0.78, blue: 0.9, alpha: 1)
+            context.fill(CGRect(x: 0, y: 0, width: width, height: height))
+            context.setFillColor(red: 0.85, green: 0.85, blue: 0.85, alpha: 1)
+            context.fill(CGRect(x: width - 460, y: 200, width: 360, height: 460))
+            context.setFillColor(red: 0.2, green: 0.25, blue: 0.3, alpha: 1)
+            for line in 0..<6 {
+                context.fill(CGRect(x: 100, y: 860 - line * 120, width: line == 0 ? 900 : 700, height: 40))
+            }
+            return context.makeImage()
         }
 
-        /// A synthetic KTP whose name is marked, so the review screen shows Periksa lagi, and on a page 9 wide
+        /// A synthetic KTP whose name is marked, so the review screen shows Periksa lagi, and on the wider page
         /// a synthetic SIM A with the same NIK as its number.
         struct SyntheticRecognizer: TextRecognizer {
             func lines(in page: CGImage) async throws -> [String] {
                 if UITestSetup.readsSlowly { try await Task.sleep(for: .seconds(8)) }
-                return page.width == 9 ? Self.sim : Self.ktp
+                return page.width == cardWidth + 1 ? Self.sim : Self.ktp
             }
 
             private static let ktp = [
