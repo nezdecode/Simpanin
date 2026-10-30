@@ -62,15 +62,28 @@ extension LibraryTests {
         #expect(library.hidden.entries.isEmpty)
     }
 
-    /// VaultStore purges a live document too, so the list refuses one.
+    /// The list refuses a live document without asking the store, so a stale screen shows no alert.
     @Test func deletePermanentlyRefusesALiveDocument() async throws {
         let store = FakeDocuments()
         let library = LibraryModel(store: store, hidden: FakeHiddenBanner())
         await library.addSample()
         let id = try #require(library.documents.first?.id)
         #expect(await library.deletePermanently(id) == false)
+        #expect(library.saveError == nil)
         #expect(library.documents.map(\.id) == [id])
         #expect(try await store.documents().map(\.id) == [id])
+    }
+
+    /// A restore landed after the last reload: the store refuses, the document stays live and keeps its hide.
+    @Test func aStaleListCantPurgeARestoredDocument() async throws {
+        let (store, hidden, library) = try await hiddenSoonDocument()
+        let id = try #require(library.documents.first?.id)
+        await library.delete(id)
+        try await store.restore(id)
+        #expect(await library.deletePermanently(id) == false)
+        #expect(library.saveError == .saveFailed)
+        #expect(library.documents.map(\.id) == [id])
+        #expect(hidden.saved.entries.map(\.id) == [id])
     }
 
     @Test func failedDeletePermanentlyShowsTheAlertAndKeepsIt() async throws {

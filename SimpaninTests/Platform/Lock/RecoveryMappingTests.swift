@@ -124,6 +124,7 @@ struct RecoveryMappingTests {
         // The lock cover already explains a save cut short by locking.
         #expect(RecoveryMapping.screen(forSaveError: VaultError.locked) == nil)
         #expect(RecoveryMapping.screen(forSaveError: VaultError.documentDeleted) == .saveFailed)
+        #expect(RecoveryMapping.screen(forSaveError: VaultError.documentNotDeleted) == .saveFailed)
         #expect(RecoveryMapping.screen(forSaveError: CocoaError(.fileWriteUnknown)) == .saveFailed)
     }
 
