@@ -96,6 +96,7 @@ struct FlushTests {
             type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields,
             pages: [Synthetic.page("p1"), Synthetic.page("p2")])
         let pages = try await store.document(id).pageIDs
+        try await store.delete(id)
         let generationBefore = try await vault.readIndex(at: vault.indexURL).generation
         try await store.deletePermanently(id)
 
@@ -115,6 +116,7 @@ struct FlushTests {
         let id = try await store.createDocument(
             type: .npwp, expiry: nil, pinned: false,
             fields: DocumentFields(["number": "00.000.000.0-000.000"]), pages: [])
+        try await store.delete(id)
         try await store.deletePermanently(id)
         #expect(flusher.recorded.isEmpty)
     }

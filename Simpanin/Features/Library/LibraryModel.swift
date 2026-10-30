@@ -151,8 +151,9 @@ final class LibraryModel {
         await save { try await self.store.restore(id) }
     }
 
-    /// Only from Baru dihapus: VaultStore would purge a live document too. Its banner entry goes at once,
-    /// not after the two reloads that drop an entry whose document has gone.
+    /// Only from Baru dihapus; VaultStore refuses a live document too, in case a restore landed since the
+    /// last reload. Its banner entry goes at once, not after the two reloads that drop an entry whose
+    /// document has gone.
     func deletePermanently(_ id: DocumentID) async -> Bool {
         guard deleted.contains(where: { $0.id == id }) else { return false }
         guard await save({ try await self.store.deletePermanently(id) }) else { return false }

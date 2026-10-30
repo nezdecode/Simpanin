@@ -64,7 +64,7 @@ struct CrashTests {
         case .restore:
             try await store.restore(base.sim)
         case .deletePermanently:
-            try await store.deletePermanently(base.ktp)
+            try await store.deletePermanently(base.sim)
         }
     }
 
@@ -258,6 +258,7 @@ struct CrashTests {
             type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields, pages: [Synthetic.page("front")])
         let sealedKey = try #require(try await vault.readIndex(at: vault.indexURL).documents.first).sealedKey
 
+        try await store.delete(id)
         protector.arm(true)
         try await store.deletePermanently(id)
         await #expect(throws: VaultError.documentNotFound) { try await store.document(id) }

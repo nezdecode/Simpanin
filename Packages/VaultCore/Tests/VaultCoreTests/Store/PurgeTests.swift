@@ -114,6 +114,16 @@ struct PurgeTests {
         try await expectNoTrace(setup, setup.store)
     }
 
+    /// Checked inside the actor, so a restore that lands first can't let a live document be purged.
+    @Test func deletePermanentlyRefusesALiveDocument() async throws {
+        let setup = try await makeSetup()
+        let generation = try await setup.vault.readIndex(at: setup.vault.indexURL).generation
+        await #expect(throws: VaultError.documentNotDeleted) { try await setup.store.deletePermanently(setup.kept) }
+        #expect(try await setup.store.documents().map(\.id) == [setup.kept])
+        #expect(try await setup.store.fields(of: setup.kept) == Synthetic.simFields)
+        #expect(try await setup.vault.readIndex(at: setup.vault.indexURL).generation == generation)
+    }
+
     @Test func purgedDocumentDoesNotComeBackThroughRecovery() async throws {
         let setup = try await makeSetup()
         try await setup.store.deletePermanently(setup.purged)

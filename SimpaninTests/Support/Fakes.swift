@@ -252,9 +252,10 @@ actor FakeDocuments {
         live.append(document)
     }
 
-    /// Purges even a live document, as VaultStore does.
+    /// Refuses a live document, as VaultStore does.
     func deletePermanently(_ id: DocumentID) async throws {
         if let failure { throw failure }
+        guard bin.contains(where: { $0.id == id }) else { throw VaultError.documentNotDeleted }
         purge(id)
     }
 }
