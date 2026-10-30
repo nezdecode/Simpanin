@@ -1,5 +1,5 @@
 //
-//  RecentlyDeletedTests.swift
+//  PurgeCountdownTests.swift
 //  SimpaninTests
 //
 //  Created by Inez Amanda on 14/10/26.
@@ -14,8 +14,8 @@ import Testing
 
 @testable import Simpanin
 
-@Suite("Baru dihapus")
-struct RecentlyDeletedTests {
+@Suite("Purge countdown")
+struct PurgeCountdownTests {
     // MARK: Baru dihapus counts down to the purge
 
     @Test func daysUntilPurge() {
