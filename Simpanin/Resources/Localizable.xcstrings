@@ -260,7 +260,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dihapus permanen dalam %lld hari. Pulihkan dulu untuk melihat atau menyalin nomornya."
+            "value" : "Dihapus permanen dalam %lld hari. Pulihkan dulu untuk menyalin nomornya."
           }
         }
       }
@@ -271,7 +271,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dihapus permanen hari ini. Pulihkan dulu untuk melihat atau menyalin nomornya."
+            "value" : "Dihapus permanen hari ini. Pulihkan dulu untuk menyalin nomornya."
           }
         }
       }

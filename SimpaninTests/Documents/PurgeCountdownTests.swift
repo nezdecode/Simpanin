@@ -33,9 +33,9 @@ struct PurgeCountdownTests {
     @Test func noticeCountsDownToThePurge() {
         #expect(
             String(localized: PurgeCountdown.notice(daysLeft: 29))
-                == "Dihapus permanen dalam 29 hari. Pulihkan dulu untuk melihat atau menyalin nomornya.")
+                == "Dihapus permanen dalam 29 hari. Pulihkan dulu untuk menyalin nomornya.")
         #expect(
             String(localized: PurgeCountdown.notice(daysLeft: 0))
-                == "Dihapus permanen hari ini. Pulihkan dulu untuk melihat atau menyalin nomornya.")
+                == "Dihapus permanen hari ini. Pulihkan dulu untuk menyalin nomornya.")
     }
 }

@@ -61,7 +61,7 @@ final class DeletedDetailUITests: UITestCase {
             app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Saya · dihapus '")).firstMatch.exists)
         XCTAssertEqual(
             app.staticTexts["detail.purgeNotice"].label,
-            "Dihapus permanen dalam 30 hari. Pulihkan dulu untuk melihat atau menyalin nomornya.")
+            "Dihapus permanen dalam 30 hari. Pulihkan dulu untuk menyalin nomornya.")
         XCTAssertEqual(field(app, "nik").value as? String, "tersembunyi")
         XCTAssertFalse(app.buttons["detail.reveal"].exists)
         // A tap on the number does nothing either.
