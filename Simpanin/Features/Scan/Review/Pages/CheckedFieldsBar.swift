@@ -32,7 +32,6 @@ struct CheckedFieldsBar: View {
         .background(.regularMaterial)
         // The viewer is black in light and dark alike, so the bar is too.
         .environment(\.colorScheme, .dark)
-        .dynamicTypeSize(...DynamicTypeSize.accessibility2)
         .accessibilityIdentifier("viewer.checkedFields")
     }
 
@@ -58,7 +57,8 @@ extension View {
     /// The bar under the enlarged page, left out when there's nothing to compare.
     func checkedFieldsBar(_ fields: [ReviewModel.CheckedField]) -> some View {
         safeAreaInset(edge: .bottom, spacing: 0) {
-            if !fields.isEmpty { CheckedFieldsBar(fields: fields) }
+            // Capped here, outside the bar, so its height limit stops growing with the text too.
+            if !fields.isEmpty { CheckedFieldsBar(fields: fields).dynamicTypeSize(...DynamicTypeSize.accessibility2) }
         }
     }
 }
