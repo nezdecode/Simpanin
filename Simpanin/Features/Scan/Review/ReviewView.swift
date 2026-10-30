@@ -151,6 +151,7 @@ struct ReviewView: View {
                     count: review.pages.count, current: $viewerPage, thumbnail: review.thumbnail,
                     image: review.viewerPage, onSettle: {}
                 )
+                .checkedFieldsBar(review.checkedFields)
                 // Also what lets a swipe down close it.
                 .navigationTransition(.zoom(sourceID: viewerPage, in: transition))
             }

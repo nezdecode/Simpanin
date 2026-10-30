@@ -141,6 +141,68 @@ final class ReviewViewerUITests: UITestCase {
         waitForExpectations(timeout: 15)
     }
 
+    /// The synthetic KTP's name is marked: the bar shows the NIK as printed, and the name.
+    @MainActor
+    func testTheViewerShowsTheFieldBeingChecked() throws {
+        let app = launch(["-SimpaninUITestScan"])
+        openReview(app)
+        thumbnail(app, 1).tap()
+        let bar = app.descendants(matching: .any)["viewer.checkedFields"]
+        XCTAssertTrue(bar.waitForExistence(timeout: 5))
+        let nik = app.descendants(matching: .any)["viewer.checkedField.nik"]
+        XCTAssertTrue(nik.label.contains("NIK"))
+        XCTAssertTrue(nik.label.contains("0012341708900001"))
+        XCTAssertTrue(app.descendants(matching: .any)["viewer.checkedField.name"].label.contains("BUDI C0NTOH"))
+        XCTAssertFalse(app.descendants(matching: .any)["viewer.checkedField.birthDate"].exists)
+        screenshot("57 the field being checked under the page")
+    }
+
+    /// What Simpan would save is what's compared, after a correction too; a corrected name isn't marked any more.
+    @MainActor
+    func testTheBarShowsACorrectedValue() throws {
+        let app = launch(["-SimpaninUITestScan"])
+        openReview(app)
+        replace(app.textFields["review.field.nik"], with: "0012341708900002")
+        replace(app.textFields["review.field.name"], with: "BUDI CONTOH")
+        app.navigationBars.buttons["review.done"].tap()
+        thumbnail(app, 1).tap()
+        let nik = app.descendants(matching: .any)["viewer.checkedField.nik"]
+        XCTAssertTrue(nik.waitForExistence(timeout: 5))
+        XCTAssertTrue(nik.label.contains("0012341708900002"))
+        XCTAssertFalse(app.descendants(matching: .any)["viewer.checkedField.name"].exists)
+    }
+
+    @MainActor
+    func testTheBarHasNoMenu() throws {
+        let app = launch(["-SimpaninUITestScan"])
+        openReview(app)
+        thumbnail(app, 1).tap()
+        let nik = app.descendants(matching: .any)["viewer.checkedField.nik"]
+        XCTAssertTrue(nik.waitForExistence(timeout: 5))
+        nik.press(forDuration: 1.5)
+        XCTAssertFalse(app.buttons["Salin"].exists)
+        XCTAssertFalse(app.buttons["Copy"].exists)
+        XCTAssertFalse(app.menuItems.firstMatch.exists)
+    }
+
+    /// The bar grows to a cap and scrolls past it, so the page keeps its room.
+    @MainActor
+    func testTheViewerAtTheLargestTextSize() throws {
+        let app = launch([
+            "-SimpaninUITestScan", "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL",
+        ])
+        XCTAssertTrue(app.navigationBars["Dokumen"].waitForExistence(timeout: 10))
+        app.buttons["list.scan"].tap()
+        // The top of the form: at this size the lower rows aren't built until scrolled to.
+        let page = thumbnail(app, 1)
+        XCTAssertTrue(page.waitForExistence(timeout: 10))
+        page.tap()
+        let bar = app.descendants(matching: .any)["viewer.checkedFields"]
+        XCTAssertTrue(bar.waitForExistence(timeout: 5))
+        XCTAssertLessThan(bar.frame.height, app.frame.height / 2)
+        screenshot("58 the field bar at the largest text size")
+    }
+
     @MainActor
     private func thumbnail(_ app: XCUIApplication, _ number: Int) -> XCUIElement {
         app.buttons["review.page.\(number)"]
