@@ -46,7 +46,8 @@ extension ReviewModel {
                 value: text.isEmpty ? nil : Self.printed(text, key),
                 isNumber: key == numberKey)
         }
-        guard expiryNote != nil else { return fields }
+        // A date read for a SIM is still noted on a KTP, but it isn't shown or saved there.
+        guard hasExpiry, expiryNote != nil else { return fields }
         let validity = CheckedField(
             key: CheckedField.expiryKey, title: DocumentFieldStyle.validityTitle(for: type),
             value: expiry.map(DocumentFieldStyle.dayFirst), isNumber: false)
@@ -56,8 +57,11 @@ extension ReviewModel {
     /// A SIM number of digits and dashes is printed with dashes. Anything else shows as typed, the NIK too: it's
     /// only valid as 16 digits together, as printed, and a refused one mustn't look right next to the card.
     private static func printed(_ text: String, _ key: String) -> String {
-        guard key == FieldKey.simNumber, text.allSatisfy({ $0.isASCIIDigit || $0 == "-" }) else { return text }
-        return DocumentNumber(text).shown
+        let number = DocumentNumber(text)
+        guard key == FieldKey.simNumber, !number.isEmpty, text.allSatisfy({ $0.isASCIIDigit || $0 == "-" }) else {
+            return text
+        }
+        return number.shown
     }
 
     /// A page for the viewer, redrawn each time no larger than the viewer takes; the model doesn't keep it.

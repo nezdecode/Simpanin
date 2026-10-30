@@ -184,4 +184,22 @@ extension ReviewModelTests {
         review.type = .stnk
         #expect(review.checkedFields.last?.title == "review.taxValidUntil")
     }
+
+    /// A KTP is valid for life and Simpan drops the date, so the bar mustn't show one under its card.
+    @Test func aTypeWithoutAnExpiryShowsNoExpiry() throws {
+        let review = model()
+        review.loadScan(Self.sim, pages: [try page()])
+        review.type = .ktp
+        #expect(!keys(review).contains(ReviewModel.CheckedField.expiryKey))
+        review.type = .other
+        #expect(review.checkedFields.isEmpty)
+    }
+
+    /// Only dashes leave no number, so it shows as typed rather than as an empty row.
+    @Test func aSIMNumberOfDashesShowsAsTyped() throws {
+        let review = model()
+        review.loadScan(Self.sim, pages: [try page()])
+        review.setValue("---", for: FieldKey.simNumber)
+        #expect(value(review, FieldKey.simNumber) == "---")
+    }
 }
