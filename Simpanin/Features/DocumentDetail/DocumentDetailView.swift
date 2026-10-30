@@ -12,7 +12,8 @@
 import SwiftUI
 import VaultCore
 
-/// One saved document: its pages, its fields with the number masked, Berlaku and Hapus.
+/// One saved document: its pages, its fields with the number masked, Berlaku and Hapus. From Baru dihapus
+/// it's read-only, with Pulihkan and Hapus permanen.
 struct DocumentDetailView: View {
     let today: CalendarDate
     /// The user hid it from the expiry banner, so the screen offers "Tampilkan lagi".
@@ -25,6 +26,7 @@ struct DocumentDetailView: View {
     @State private var viewerPage = 0
     /// Coba lagi bumps it, so SwiftUI owns every load and cancels it when the screen goes.
     @State private var attempt = 0
+    @State private var purgeAsked = false
     @Namespace private var transition
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
@@ -32,7 +34,8 @@ struct DocumentDetailView: View {
     init(
         document: VaultCore.Document, store: any DocumentStoring & PageReading, today: CalendarDate,
         hiddenFromBanner: Bool,
-        onShowInBanner: @escaping () -> Void, onDelete: @escaping (DocumentID) async -> Bool
+        onShowInBanner: @escaping () -> Void, onDelete: @escaping (DocumentID) async -> Bool,
+        onRestore: @escaping (DocumentID) async -> Bool, onDeletePermanently: @escaping (DocumentID) async -> Bool
     ) {
         self.today = today
         self.hiddenFromBanner = hiddenFromBanner
@@ -40,7 +43,7 @@ struct DocumentDetailView: View {
         _model = State(
             initialValue: DocumentDetailModel(
                 document: document, store: store, pageReader: store, clipboard: SystemClipboard(),
-                onDelete: onDelete))
+                onDelete: onDelete, onRestore: onRestore, onDeletePermanently: onDeletePermanently))
     }
 
     private var document: VaultCore.Document { model.document }
@@ -60,6 +63,19 @@ struct DocumentDetailView: View {
             }
             .onChange(of: model.phase) { _, phase in
                 if phase == .gone { dismiss() }
+            }
+            .alert(Text("detail.deletePermanentlyTitle"), isPresented: $purgeAsked) {
+                Button(role: .destructive) {
+                    Task { await model.deletePermanently() }
+                } label: {
+                    Text("button.deletePermanently")
+                }
+                Button(role: .cancel) {
+                } label: {
+                    Text(ScreenText.cancel)
+                }
+            } message: {
+                Text("detail.deletePermanentlyMessage")
             }
             .fullScreenCover(isPresented: $viewerShown) {
                 PageViewer(
@@ -86,7 +102,14 @@ struct DocumentDetailView: View {
         List {
             Section {
                 VStack(alignment: .leading, spacing: 16) {
-                    Text(added).font(.subheadline).foregroundStyle(.secondary).padding(.horizontal, 20)
+                    Text(dated).font(.subheadline).foregroundStyle(.secondary).padding(.horizontal, 20)
+                    if let deletedAt = document.deletedAt {
+                        Text(PurgeCountdown.notice(daysLeft: PurgeCountdown.daysLeft(deletedAt: deletedAt, now: .now)))
+                            .font(.subheadline)
+                            .noticeCard()
+                            .padding(.horizontal, 20)
+                            .accessibilityIdentifier("detail.purgeNotice")
+                    }
                     if model.hasPages {
                         PagePager(pages: model.pages, selection: $page, transition: transition) { index in
                             page = index
@@ -111,24 +134,57 @@ struct DocumentDetailView: View {
             Section {
                 validity
             } footer: {
-                if hiddenFromBanner { bannerLine }
+                if hiddenFromBanner, !model.isDeleted { bannerLine }
             }
-            Section {
-                Button(role: .destructive) {
-                    Task { await model.delete() }
-                } label: {
-                    Text("button.delete")
+            if model.isDeleted {
+                deletedActions
+            } else {
+                Section {
+                    Button(role: .destructive) {
+                        Task { await model.delete() }
+                    } label: {
+                        Text("button.delete")
+                    }
+                    .accessibilityIdentifier("detail.delete")
                 }
-                .accessibilityIdentifier("detail.delete")
             }
         }
         .listStyle(.insetGrouped)
     }
 
-    /// "Saya · ditambahkan 12 Okt 2026", or without a label "Ditambahkan …".
-    private var added: LocalizedStringResource {
+    @ViewBuilder private var deletedActions: some View {
+        Section {
+            Button {
+                Task { await model.restore() }
+            } label: {
+                Text("button.restore")
+            }
+            .buttonStyle(.prominent)
+            .accessibilityIdentifier("detail.restore")
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(Color.clear)
+        }
+        Section {
+            Button(role: .destructive) {
+                purgeAsked = true
+            } label: {
+                Text("button.deletePermanently")
+            }
+            .accessibilityIdentifier("detail.deletePermanently")
+        }
+    }
+
+    /// "Saya · ditambahkan 12 Okt 2026", or without a label "Ditambahkan …"; from Baru dihapus, when it was
+    /// deleted instead.
+    private var dated: LocalizedStringResource {
+        let label = DocumentStyle.shownLabel(document.label)
+        if let deletedAt = document.deletedAt {
+            let date = deletedAt.formatted(.indonesianDate(timeZone: .current))
+            guard let label else { return "detail.deleted \(date)" }
+            return "detail.labelDeleted \(label) \(date)"
+        }
         let date = document.createdAt.formatted(.indonesianDate(timeZone: .current))
-        guard let label = DocumentStyle.shownLabel(document.label) else { return "detail.added \(date)" }
+        guard let label else { return "detail.added \(date)" }
         return "detail.labelAdded \(label) \(date)"
     }
 

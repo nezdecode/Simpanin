@@ -110,7 +110,7 @@ struct LibraryView: View {
                     }
                     if !library.loadFailed {
                         NavigationLink {
-                            RecentlyDeletedView(library: library)
+                            RecentlyDeletedView(library: library, documentScreen: documentScreen)
                         } label: {
                             GroupedRow(
                                 title: "list.recentlyDeleted", value: "\(library.deleted.count)", systemImage: "trash")
@@ -128,10 +128,7 @@ struct LibraryView: View {
             .navigationDestination(for: DocumentID.self) { id in
                 // Still found in Baru dihapus right after Hapus, while the screen closes.
                 if let document = (library.documents + library.deleted).first(where: { $0.id == id }) {
-                    DocumentDetailView(
-                        document: document, store: Self.documentStore(for: vault), today: today,
-                        hiddenFromBanner: library.offersShowInBanner(id), onShowInBanner: { library.showInBanner(id) },
-                        onDelete: library.delete)
+                    documentScreen(document)
                 }
             }
             .toolbar { toolbar }
@@ -176,6 +173,14 @@ struct LibraryView: View {
         }
     }
 
+    private func documentScreen(_ document: VaultCore.Document) -> DocumentDetailView {
+        DocumentDetailView(
+            document: document, store: Self.documentStore(for: vault), today: today,
+            hiddenFromBanner: library.offersShowInBanner(document.id),
+            onShowInBanner: { library.showInBanner(document.id) }, onDelete: library.delete,
+            onRestore: library.restore, onDeletePermanently: library.deletePermanently)
+    }
+
     /// Two columns, or one at the accessibility text sizes, where two would not fit.
     private var columns: [GridItem] {
         Array(repeating: GridItem(.flexible(), spacing: 12), count: typeSize.isAccessibilitySize ? 1 : 2)
@@ -196,7 +201,7 @@ struct LibraryView: View {
         }
         ToolbarItem(placement: .topBarTrailing) {
             NavigationLink {
-                SettingsView(vault: vault, lock: lock, library: library)
+                SettingsView(vault: vault, lock: lock, library: library, documentScreen: documentScreen)
             } label: {
                 Label {
                     Text("settings.title")

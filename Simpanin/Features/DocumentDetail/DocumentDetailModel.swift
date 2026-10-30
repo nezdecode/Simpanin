@@ -41,12 +41,15 @@ final class DocumentDetailModel {
         /// Nil when nothing is stored; the row says so with `empty`.
         let value: String?
         let isNumber: Bool
+        /// A deleted document's field: no eye and no copy until it's restored.
+        let readOnly: Bool
 
         var id: String { key }
         /// "Belum diisi" under the title, as under Berlaku.
         var empty: LocalizedStringResource { "review.expiryMissing" }
         /// A copied date rarely pastes into a form, so the birth date has no copy button.
-        var canCopy: Bool { value != nil && key != FieldKey.birthDate }
+        var canCopy: Bool { !readOnly && value != nil && key != FieldKey.birthDate }
+        var canReveal: Bool { !readOnly && isNumber && value != nil }
 
         var copyLabel: LocalizedStringResource {
             switch key {
@@ -91,21 +94,29 @@ final class DocumentDetailModel {
     private let pageReader: any PageReading
     private let clipboard: any Clipboard
     private let onDelete: (DocumentID) async -> Bool
+    private let onRestore: (DocumentID) async -> Bool
+    private let onDeletePermanently: (DocumentID) async -> Bool
     /// Decrypted while the screen is up; never cached or kept elsewhere.
     private var fields: DocumentFields?
 
     init(
         document: Document, store: any DocumentStoring, pageReader: any PageReading, clipboard: any Clipboard,
-        onDelete: @escaping (DocumentID) async -> Bool
+        onDelete: @escaping (DocumentID) async -> Bool, onRestore: @escaping (DocumentID) async -> Bool,
+        onDeletePermanently: @escaping (DocumentID) async -> Bool
     ) {
         self.document = document
         self.store = store
         self.pageReader = pageReader
         self.clipboard = clipboard
         self.onDelete = onDelete
+        self.onRestore = onRestore
+        self.onDeletePermanently = onDeletePermanently
     }
 
     var hasPages: Bool { !document.pageIDs.isEmpty }
+
+    /// In Baru dihapus: shown read-only, with Pulihkan and Hapus permanen.
+    var isDeleted: Bool { document.deletedAt != nil }
 
     /// The type's own fields, in its order; any other key stored is never shown.
     var rows: [Field] {
@@ -124,7 +135,7 @@ final class DocumentDetailModel {
                 }
             return Field(
                 key: key, title: DocumentFieldStyle.title(for: key), value: value,
-                isNumber: isNumber)
+                isNumber: isNumber, readOnly: isDeleted)
         }
     }
 
@@ -193,7 +204,11 @@ final class DocumentDetailModel {
         }
     }
 
-    func toggleNumber() { numberShown.toggle() }
+    /// A deleted document's number stays masked until it's restored.
+    func toggleNumber() {
+        guard !isDeleted else { return }
+        numberShown.toggle()
+    }
 
     func screenLeft() { numberShown = false }
 
@@ -213,6 +228,14 @@ final class DocumentDetailModel {
 
     func delete() async {
         if await onDelete(document.id) { closed = true }
+    }
+
+    func restore() async {
+        if await onRestore(document.id) { closed = true }
+    }
+
+    func deletePermanently() async {
+        if await onDeletePermanently(document.id) { closed = true }
     }
 
     /// ImageIO's thumbnail, decoded straight to that size off the main actor; never `UIImage(data:)`, which

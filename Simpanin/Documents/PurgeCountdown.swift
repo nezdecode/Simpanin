@@ -22,4 +22,9 @@ nonisolated enum PurgeCountdown {
     static func text(daysLeft: Int) -> LocalizedStringResource {
         daysLeft == 0 ? "deleted.purgeToday" : "deleted.purgeIn \(daysLeft)"
     }
+
+    /// The deleted document's notice, from the same count as its row.
+    static func notice(daysLeft: Int) -> LocalizedStringResource {
+        daysLeft == 0 ? "deleted.noticeToday" : "deleted.noticeIn \(daysLeft)"
+    }
 }

@@ -27,7 +27,7 @@ struct DocumentFieldRow: View {
             typeSize.isAccessibilitySize
             ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4)) : AnyLayout(HStackLayout(spacing: 4))
         layout {
-            if field.isNumber, field.value != nil {
+            if field.canReveal {
                 // VoiceOver has the eye button for this, so the text stays one plain element.
                 content.contentShape(.rect).onTapGesture(perform: onToggleNumber)
             } else {
@@ -35,7 +35,7 @@ struct DocumentFieldRow: View {
             }
             if !typeSize.isAccessibilitySize { Spacer(minLength: 0) }
             HStack(spacing: 4) {
-                if field.isNumber, field.value != nil {
+                if field.canReveal {
                     iconButton(
                         numberShown ? "eye.slash" : "eye", label: field.revealLabel(numberShown: numberShown),
                         action: onToggleNumber

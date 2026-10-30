@@ -44,7 +44,8 @@ struct DocumentDetailModelTests {
             type: type, label: nil, expiry: nil, pinned: false, fields: fields, pages: pages ?? [Self.page()])
         let document = try #require(await store.documents().first { $0.id == id })
         return DocumentDetailModel(
-            document: document, store: store, pageReader: store, clipboard: clipboard, onDelete: onDelete)
+            document: document, store: store, pageReader: store, clipboard: clipboard, onDelete: onDelete,
+            onRestore: { _ in true }, onDeletePermanently: { _ in true })
     }
 
     func loaded(_ type: DocumentType = .ktp, fields: DocumentFields = ktpFields) async throws -> DocumentDetailModel {
