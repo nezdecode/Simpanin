@@ -47,4 +47,12 @@ struct PageThumbnailTests {
         #expect(made == 0)
         #expect(reduced == 0)
     }
+
+    /// Whatever the redraw hands back, nothing larger than a thumbnail reaches the strip.
+    @Test func aPageThatComesBackFullSizeIsAPlaceholder() throws {
+        let pages = [try page(width: 2_400, height: 1_800)]
+        let thumbnails = PageThumbnail.thumbnails(of: pages) { page, _ in page }
+        #expect(thumbnails.count == 1)
+        #expect(thumbnails.first?.image == nil)
+    }
 }

@@ -26,13 +26,16 @@ nonisolated struct PageThumbnail: Sendable {
     }
 
     /// One per page, in order; none once the scan is cancelled, as by the lock, so its pages can go at once.
+    /// On the caller's actor: the app goes through `made(of:)`.
     static func thumbnails(
         of pages: [CGImage], reduce: (CGImage, Int) -> CGImage? = reducedPage
     ) -> [PageThumbnail] {
         var thumbnails: [PageThumbnail] = []
         for page in pages {
             guard !Task.isCancelled else { return [] }
-            thumbnails.append(PageThumbnail(image: reduce(page, pixelSize)))
+            // Checked whatever `reduce` is, so a full-size page can never reach the strip.
+            let image = reduce(page, pixelSize).flatMap { max($0.width, $0.height) <= pixelSize ? $0 : nil }
+            thumbnails.append(PageThumbnail(image: image))
         }
         let missing = thumbnails.filter { $0.image == nil }.count
         if missing > 0 { Logger.scan.error("\(missing) of \(pages.count) thumbnails couldn't be made") }
