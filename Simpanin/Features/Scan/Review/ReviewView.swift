@@ -45,11 +45,7 @@ struct ReviewView: View {
                     }
                     .foregroundStyle(.secondary)
                 }
-                Section {
-                    PageStrip(thumbnails: review.thumbnails, notes: review.pageNotes)
-                } footer: {
-                    pagesFooter
-                }
+                ReviewPagesSection(thumbnails: review.thumbnails, notes: review.pageNotes)
                 if reading {
                     Section {
                         HStack(spacing: 12) {
@@ -209,17 +205,6 @@ struct ReviewView: View {
             }
             .sheet(isPresented: $expiryPickerShown) {
                 ExpiryCalendar(title: DocumentFieldStyle.validityTitle(for: review.type)) { review.setExpiry($0) }
-            }
-        }
-    }
-
-    /// "N halaman", then which page the fields came from and what other pages were read as, one text each.
-    /// A page with a badge is said in amber like a mark, so it's seen when the screen is skimmed.
-    private var pagesFooter: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("review.pages \(review.pages.count)")
-            ForEach(review.pageNotes.lines, id: \.text) { line in
-                if line.isMarked { WarningText(verbatim: line.text) } else { Text(verbatim: line.text) }
             }
         }
     }
