@@ -52,5 +52,10 @@ struct RecentlyDeletedView: View {
         }
         .navigationTitle(Text("list.recentlyDeleted"))
         .navigationDestination(item: $opened, destination: documentScreen)
+        // A restore from the row can land after the row was tapped; the screen would then show a live document
+        // as deleted.
+        .onChange(of: library.deleted) { _, deleted in
+            if let id = opened?.id, !deleted.contains(where: { $0.id == id }) { opened = nil }
+        }
     }
 }
