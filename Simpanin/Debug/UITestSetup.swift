@@ -20,6 +20,7 @@
     /// `-SimpaninUITestBrokenOldVault` puts a folder VaultCore can't read into Data lama.
     /// `-SimpaninUITestScan` makes "+" skip the camera, which the simulator lacks, and read a synthetic KTP;
     /// `-SimpaninUITestScanKTPAndSIM` does the same with two pages, a synthetic KTP and SIM A.
+    /// `-SimpaninUITestSlowRead` makes each synthetic page take two seconds to read.
     nonisolated enum UITestSetup {
         static var isActive: Bool { ProcessInfo.processInfo.arguments.contains("-SimpaninUITest") }
 
@@ -86,6 +87,11 @@
 
         static var scansSynthetically: Bool { scansKTP || scansKTPAndSIM }
 
+        /// So a test can act on Periksa data while a rescan is still being read.
+        static var readsSlowly: Bool {
+            isActive && ProcessInfo.processInfo.arguments.contains("-SimpaninUITestSlowRead")
+        }
+
         private static var scansKTP: Bool {
             isActive && ProcessInfo.processInfo.arguments.contains("-SimpaninUITestScan")
         }
@@ -110,7 +116,8 @@
         /// a synthetic SIM A with the same NIK as its number.
         struct SyntheticRecognizer: TextRecognizer {
             func lines(in page: CGImage) async throws -> [String] {
-                page.width == 9 ? Self.sim : Self.ktp
+                if UITestSetup.readsSlowly { try await Task.sleep(for: .seconds(2)) }
+                return page.width == 9 ? Self.sim : Self.ktp
             }
 
             private static let ktp = [

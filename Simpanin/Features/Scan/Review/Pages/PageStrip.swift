@@ -13,7 +13,8 @@ import OSLog
 import SwiftUI
 
 /// Every page of a scan as a small thumbnail, numbered; the page count and the notes are in the section's
-/// footer. A page read as another document gets a badge, and VoiceOver reads its note with its number.
+/// footer. A page read as another document gets a badge, and VoiceOver reads its note with its number. A tap
+/// opens the page full screen.
 struct PageStrip: View {
     /// Thumbnails are made this many pixels on their longer side: sharp at 112 pt, small in memory.
     nonisolated static let thumbnailPixelSize = 600
@@ -21,11 +22,25 @@ struct PageStrip: View {
     /// From `thumbnails(of:)`, never the scan itself; nil where one couldn't be made.
     let thumbnails: [CGImage?]
     let notes: PageNotes
+    let onOpen: (Int) -> Void
+    @Environment(\.isEnabled) private var isEnabled
+
     var body: some View {
         ScrollView(.horizontal) {
             HStack(spacing: 8) {
                 ForEach(thumbnails.indices, id: \.self) { index in
-                    thumbnail(thumbnails[index], index: index)
+                    Button {
+                        onOpen(index)
+                    } label: {
+                        thumbnail(thumbnails[index], index: index)
+                    }
+                    // Plain, so a Form row with several buttons fires only the one tapped, and the page isn't tinted.
+                    .buttonStyle(.plain)
+                    .opacity(isEnabled ? 1 : 0.4)
+                    // Read as its number, never as an image, so VoiceOver can't offer to describe the card aloud.
+                    .accessibilityLabel(Text(verbatim: notes.accessibilityLabel(page: index)))
+                    .accessibilityHint(Text("review.pageOpenHint"))
+                    .accessibilityIdentifier("review.page.\(index + 1)")
                 }
             }
         }
@@ -80,9 +95,6 @@ struct PageStrip: View {
                 .padding(4)
             }
         }
-        // Read as its number, never as an image, so VoiceOver can't offer to describe the card aloud.
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text(verbatim: notes.accessibilityLabel(page: index)))
-        .accessibilityIdentifier("review.page.\(number)")
     }
 }

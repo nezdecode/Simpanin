@@ -49,6 +49,22 @@ class UITestCase: XCTestCase {
         screenshot(name)
     }
 
+    /// The page viewer's page on screen, not one beside it.
+    @MainActor
+    func viewerShows(_ app: XCUIApplication, _ page: Int, of count: Int) -> Bool {
+        let label = NSPredicate(format: "label == %@", "Halaman \(page) dari \(count)")
+        let deadline = Date().addingTimeInterval(5)
+        while Date() < deadline {
+            if app.descendants(matching: .any).matching(label).allElementsBoundByIndex.contains(where: {
+                abs($0.frame.minX) < 1 && $0.frame.width >= app.frame.width - 1
+            }) {
+                return true
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.2))
+        }
+        return false
+    }
+
     @MainActor
     func rows(_ app: XCUIApplication) -> XCUIElementQuery {
         app.descendants(matching: .any).matching(identifier: "document.row")

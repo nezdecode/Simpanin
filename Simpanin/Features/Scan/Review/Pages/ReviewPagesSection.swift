@@ -11,14 +11,19 @@
 
 import SwiftUI
 
-/// Periksa data's pages: the strip, and under it the page count and the notes.
+/// Periksa data's pages: the strip, and under it the page count and the notes. A tap on a page asks for it
+/// to be enlarged, so a marked field can be checked against the card.
 struct ReviewPagesSection: View {
     let thumbnails: [CGImage?]
     let notes: PageNotes
+    /// A rescan's pages are being read; the ones shown are about to be replaced, so they don't open.
+    let reading: Bool
+    let onOpen: (Int) -> Void
 
     var body: some View {
         Section {
-            PageStrip(thumbnails: thumbnails, notes: notes)
+            PageStrip(thumbnails: thumbnails, notes: notes, onOpen: onOpen)
+                .disabled(reading)
         } footer: {
             footer
         }

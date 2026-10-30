@@ -29,6 +29,8 @@ struct ReviewView: View {
     /// What the duplicate alert names, kept while it closes: answering it clears the model's duplicate.
     @State private var duplicateName = DocumentType.ktp
     @State private var discardConfirmShown = false
+    @State private var viewerShown = false
+    @State private var viewerPage = 0
     /// Counts refused taps on Simpan, for the error haptic.
     @State private var refusals = 0
     @FocusState private var focusedField: String?
@@ -45,7 +47,12 @@ struct ReviewView: View {
                     }
                     .foregroundStyle(.secondary)
                 }
-                ReviewPagesSection(thumbnails: review.thumbnails, notes: review.pageNotes)
+                ReviewPagesSection(thumbnails: review.thumbnails, notes: review.pageNotes, reading: reading) { index in
+                    // The keyboard closes, so it isn't back over the form when the viewer closes.
+                    focusedField = nil
+                    viewerPage = index
+                    viewerShown = true
+                }
                 if reading {
                     Section {
                         HStack(spacing: 12) {
@@ -133,6 +140,13 @@ struct ReviewView: View {
             }
             .sheet(isPresented: $typePickerShown) {
                 TypePickerView(selection: $review.type)
+            }
+            // On the screen, not the pages section: in a Form, a Section's modifiers go to its rows.
+            .fullScreenCover(isPresented: $viewerShown) {
+                // Nothing under the viewer follows its page, so there's nothing to hand back.
+                PageViewer(
+                    count: review.pages.count, current: $viewerPage, thumbnail: review.thumbnail,
+                    image: review.viewerPage, onSettle: {})
             }
             .sensoryFeedback(.error, trigger: refusals)
             // A field is judged once it's left, as typing is done.

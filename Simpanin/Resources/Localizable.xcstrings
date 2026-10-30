@@ -1893,6 +1893,17 @@
         }
       }
     },
+    "review.pageOpenHint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ketuk dua kali untuk memperbesar"
+          }
+        }
+      }
+    },
     "review.pages %lld" : {
       "extractionState" : "manual",
       "localizations" : {
