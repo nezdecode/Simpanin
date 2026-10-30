@@ -75,8 +75,8 @@ final class DocumentDetailModel {
         }
     }
 
-    /// Pages in the pager are reduced to this many pixels on their longer side; only the viewer decodes
-    /// one at full size.
+    /// Pages in the pager are reduced to this many pixels on their longer side; the viewer decodes a larger
+    /// one, up to `PageViewer.maxPixelSize`.
     nonisolated static let reducedPixelSize = 1_200
 
     let document: Document
