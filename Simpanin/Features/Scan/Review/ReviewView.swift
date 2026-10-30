@@ -144,17 +144,7 @@ struct ReviewView: View {
             .sheet(isPresented: $typePickerShown) {
                 TypePickerView(selection: $review.type)
             }
-            // On the screen, not the pages section: in a Form, a Section's modifiers go to its rows.
-            .fullScreenCover(isPresented: $viewerShown) {
-                // Nothing under the viewer follows its page, so there's nothing to hand back.
-                PageViewer(
-                    count: review.pages.count, current: $viewerPage, thumbnail: review.thumbnail,
-                    image: review.viewerPage, onSettle: {}
-                )
-                .checkedFieldsBar(review.checkedFields)
-                // Also what lets a swipe down close it.
-                .navigationTransition(.zoom(sourceID: viewerPage, in: transition))
-            }
+            .scanPageViewer(isPresented: $viewerShown, page: $viewerPage, review: review, transition: transition)
             .sensoryFeedback(.error, trigger: refusals)
             // A field is judged once it's left, as typing is done.
             .onChange(of: focusedField) { left, _ in
