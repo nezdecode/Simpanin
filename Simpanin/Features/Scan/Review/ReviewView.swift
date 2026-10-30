@@ -29,6 +29,9 @@ struct ReviewView: View {
     /// What the duplicate alert names, kept while it closes: answering it clears the model's duplicate.
     @State private var duplicateName = DocumentType.ktp
     @State private var discardConfirmShown = false
+    @State private var viewerShown = false
+    @State private var viewerPage = 0
+    @Namespace private var transition
     /// Counts refused taps on Simpan, for the error haptic.
     @State private var refusals = 0
     @FocusState private var focusedField: String?
@@ -45,10 +48,13 @@ struct ReviewView: View {
                     }
                     .foregroundStyle(.secondary)
                 }
-                Section {
-                    PageStrip(pages: review.pages, notes: review.pageNotes)
-                } footer: {
-                    pagesFooter
+                ReviewPagesSection(
+                    thumbnails: review.thumbnails, notes: review.pageNotes, reading: reading, transition: transition
+                ) { index in
+                    // The keyboard closes, so it isn't back over the form when the viewer closes.
+                    focusedField = nil
+                    viewerPage = index
+                    viewerShown = true
                 }
                 if reading {
                     Section {
@@ -138,6 +144,7 @@ struct ReviewView: View {
             .sheet(isPresented: $typePickerShown) {
                 TypePickerView(selection: $review.type)
             }
+            .scanPageViewer(isPresented: $viewerShown, page: $viewerPage, review: review, transition: transition)
             .sensoryFeedback(.error, trigger: refusals)
             // A field is judged once it's left, as typing is done.
             .onChange(of: focusedField) { left, _ in
@@ -209,17 +216,6 @@ struct ReviewView: View {
             }
             .sheet(isPresented: $expiryPickerShown) {
                 ExpiryCalendar(title: DocumentFieldStyle.validityTitle(for: review.type)) { review.setExpiry($0) }
-            }
-        }
-    }
-
-    /// "N halaman", then which page the fields came from and what other pages were read as, one text each.
-    /// A page with a badge is said in amber like a mark, so it's seen when the screen is skimmed.
-    private var pagesFooter: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("review.pages \(review.pages.count)")
-            ForEach(review.pageNotes.lines, id: \.text) { line in
-                if line.isMarked { WarningText(verbatim: line.text) } else { Text(verbatim: line.text) }
             }
         }
     }

@@ -23,7 +23,7 @@ extension ReviewModelTests {
     /// Encoding a few full-size pages takes long enough to freeze the screen, so it runs off the main actor.
     @Test func pagesAreEncodedOffTheMainActor() async throws {
         let review = model(encode: { _ in Thread.isMainThread ? nil : Data([1]) })
-        review.load(Self.ktp, pages: [try page()])
+        review.loadScan(Self.ktp, pages: [try page()])
         #expect(await review.save())
     }
 
@@ -40,7 +40,7 @@ extension ReviewModelTests {
                 _ = release.wait(timeout: .now() + 5)
                 return Data([1])
             })
-        review.load(Self.ktp, pages: [try page()])
+        review.loadScan(Self.ktp, pages: [try page()])
         let saving = Task { await review.save() }
         // The encode runs off the main actor; wait up to two seconds for it to start, never forever.
         for _ in 0..<2_000 where !started.withLock({ $0 }) {
@@ -62,7 +62,7 @@ extension ReviewModelTests {
     @Test func aPassportOrSTNKGetsItsDateByHand() async throws {
         let store = FakeDocuments()
         let review = model(store)
-        review.load(nil, pages: [try page()])
+        review.loadScan(nil, pages: [try page()])
         review.type = .stnk
         #expect(review.hasExpiry)
         #expect(review.expiryMissing)
@@ -82,7 +82,7 @@ extension ReviewModelTests {
         let review = model()
         let sim = ParsedDocument(
             type: .simC, fields: DocumentFields([:]), expiry: CalendarDate(year: 2029, month: 1, day: 4))
-        review.load(sim, pages: [try page()])
+        review.loadScan(sim, pages: [try page()])
         review.type = .simA
         #expect(review.expiryNote == nil)
         review.type = .stnk
@@ -93,7 +93,7 @@ extension ReviewModelTests {
     @Test func aLastPageThatCantBeEncodedSavesNothing() async throws {
         let store = FakeDocuments()
         let review = model(store, encode: { $0.width == 3 ? nil : Data([1]) })
-        review.load(Self.ktp, pages: [try page(), try page(width: 3)])
+        review.loadScan(Self.ktp, pages: [try page(), try page(width: 3)])
         #expect(await !review.save())
         #expect(review.saveError == .saveFailed)
         #expect(await store.created.isEmpty)
@@ -102,7 +102,7 @@ extension ReviewModelTests {
     @Test func aSIMKeepsItsExpiry() async throws {
         let store = FakeDocuments()
         let review = model(store)
-        review.load(Self.sim, pages: [try page()])
+        review.loadScan(Self.sim, pages: [try page()])
         #expect(await review.save())
         #expect(try await store.documents().first?.expiry == CalendarDate(year: 2027, month: 1, day: 4))
     }
@@ -111,7 +111,7 @@ extension ReviewModelTests {
     @Test func aSIMChangedToAKTPSavesNoExpiry() async throws {
         let store = FakeDocuments()
         let review = model(store)
-        review.load(Self.sim, pages: [try page()])
+        review.loadScan(Self.sim, pages: [try page()])
         review.type = .ktp
         #expect(await review.save())
         #expect(try await store.documents().first?.expiry == nil)
@@ -120,7 +120,7 @@ extension ReviewModelTests {
     @Test func aLabelOfOnlySpacesIsNoLabel() async throws {
         let store = FakeDocuments()
         let review = model(store)
-        review.load(Self.ktp, pages: [try page()])
+        review.loadScan(Self.ktp, pages: [try page()])
         review.label = "   "
         #expect(await review.save())
         #expect(try await store.documents().first?.label == nil)
@@ -155,7 +155,7 @@ extension ReviewModelTests {
 
     @Test func withNothingToAskSimpanSaves() throws {
         let review = model()
-        review.load(Self.ktp, pages: [try page()])
+        review.loadScan(Self.ktp, pages: [try page()])
         #expect(review.saveStep() == .save)
         review.setValue("", for: FieldKey.nik)
         #expect(review.saveStep() == .askNIK)
@@ -191,7 +191,7 @@ extension ReviewModelTests {
     /// Saving ends the questions, so a save that fails lets Simpan be tapped again.
     @Test func aSaveEndsTheQuestions() throws {
         let review = model()
-        review.load(Self.ktp, pages: [try page()])
+        review.loadScan(Self.ktp, pages: [try page()])
         review.setValue("", for: FieldKey.nik)
         #expect(review.saveStep() == .askNIK)
         #expect(review.saveStepWithoutNIK() == .save)

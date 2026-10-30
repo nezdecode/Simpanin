@@ -34,7 +34,7 @@ extension ReviewModelTests {
     @Test func aDuplicateStopsTheSaveAndAsks() async throws {
         let store = try await storeWithTheKTP()
         let review = model(store)
-        review.load(Self.ktp, pages: [try page()])
+        review.loadScan(Self.ktp, pages: [try page()])
         #expect(await !review.save())
         #expect(review.duplicate?.name == .ktp)
         #expect(review.saveError == nil)
@@ -55,7 +55,7 @@ extension ReviewModelTests {
         let store = FakeDocuments()
         try await saveDocument(.ktp, [:], in: store)
         let review = model(store)
-        review.load(Self.ktp, pages: [try page()])
+        review.loadScan(Self.ktp, pages: [try page()])
         review.setValue("", for: FieldKey.nik)
         #expect(await review.save())
         #expect(await store.fieldReads.isEmpty)
@@ -65,7 +65,7 @@ extension ReviewModelTests {
         let store = FakeDocuments()
         try await saveDocument(.ktp, [FieldKey.nik: "0012341708900002"], in: store)
         let review = model(store)
-        review.load(Self.ktp, pages: [try page()])
+        review.loadScan(Self.ktp, pages: [try page()])
         review.setValue("0012341708900002", for: FieldKey.nik)
         #expect(await !review.save())
         #expect(review.duplicate != nil)
@@ -74,7 +74,7 @@ extension ReviewModelTests {
     /// The type picker moves no values, so the NIK of a SIM page saved as KTP is always typed.
     @Test func aSIMPageSavedAsKTPIsComparedWithKTPs() async throws {
         let review = model(try await storeWithTheKTP())
-        review.load(Self.sim, pages: [try page()])
+        review.loadScan(Self.sim, pages: [try page()])
         review.type = .ktp
         review.setValue("0012341708900001", for: FieldKey.nik)
         #expect(await !review.save())
@@ -84,7 +84,7 @@ extension ReviewModelTests {
     @Test func simpanAfterTheWarningSavesWithoutCheckingAgain() async throws {
         let store = try await storeWithTheKTP()
         let review = model(store)
-        review.load(Self.ktp, pages: [try page()])
+        review.loadScan(Self.ktp, pages: [try page()])
         #expect(await !review.save())
         let reads = await store.fieldReads.count
         review.acceptDuplicate()
@@ -96,7 +96,7 @@ extension ReviewModelTests {
     @Test func aFailedSaveAfterTheWarningDoesntAskAgain() async throws {
         let store = try await storeWithTheKTP()
         let review = model(store)
-        review.load(Self.ktp, pages: [try page()])
+        review.loadScan(Self.ktp, pages: [try page()])
         #expect(await !review.save())
         review.acceptDuplicate()
         await store.setFailure(.storageFull)
@@ -111,7 +111,7 @@ extension ReviewModelTests {
         let store = try await storeWithTheKTP()
         try await saveDocument(.ktp, [FieldKey.nik: "0012341708900002"], in: store)
         let review = model(store)
-        review.load(Self.ktp, pages: [try page()])
+        review.loadScan(Self.ktp, pages: [try page()])
         #expect(await !review.save())
         review.acceptDuplicate()
         review.setValue("0012341708900002", for: FieldKey.nik)
@@ -124,7 +124,7 @@ extension ReviewModelTests {
         // A classless SIM matches every class, so the second type is a duplicate too.
         try await saveDocument(.sim, Self.sim.fields.values, in: store)
         let review = model(store)
-        review.load(Self.sim, pages: [try page()])
+        review.loadScan(Self.sim, pages: [try page()])
         #expect(await !review.save())
         review.acceptDuplicate()
         review.type = .simA
@@ -134,7 +134,7 @@ extension ReviewModelTests {
 
     @Test func kembaliThenSimpanChecksAgain() async throws {
         let review = model(try await storeWithTheKTP())
-        review.load(Self.ktp, pages: [try page()])
+        review.loadScan(Self.ktp, pages: [try page()])
         #expect(await !review.save())
         review.duplicateAnswered()
         #expect(review.saveStep() == .save)
@@ -145,7 +145,7 @@ extension ReviewModelTests {
     /// Between the check and its alert opening, Simpan stays tappable; a tap there starts nothing.
     @Test func aTapWhileTheWarningIsPendingStartsNoSecondCheck() async throws {
         let review = model(try await storeWithTheKTP())
-        review.load(Self.ktp, pages: [try page()])
+        review.loadScan(Self.ktp, pages: [try page()])
         #expect(await !review.save())
         #expect(review.saveStep() == nil)
         // The pages alert closing late resets the other questions, never this one.
@@ -156,7 +156,7 @@ extension ReviewModelTests {
     /// Pindai ulang or Batal in the moment before the alert opens would leave a warning nobody answers.
     @Test func aPendingWarningKeepsTheScanFromBeingDropped() async throws {
         let review = model(try await storeWithTheKTP())
-        review.load(Self.ktp, pages: [try page()])
+        review.loadScan(Self.ktp, pages: [try page()])
         #expect(!review.saveInProgress)
         #expect(await !review.save())
         #expect(review.saveInProgress)
@@ -211,15 +211,15 @@ extension ReviewModelTests {
 
     @Test func aRescanForgetsTheWarning() async throws {
         let review = model(try await storeWithTheKTP())
-        review.load(Self.ktp, pages: [try page()])
+        review.loadScan(Self.ktp, pages: [try page()])
         #expect(await !review.save())
-        review.load(Self.ktp, pages: [try page()])
+        review.loadScan(Self.ktp, pages: [try page()])
         #expect(review.duplicate == nil)
         #expect(review.saveStep() == .save)
         // Nor is an earlier Simpan in the alert kept for the new scan.
         #expect(await !review.save())
         review.acceptDuplicate()
-        review.load(Self.ktp, pages: [try page()])
+        review.loadScan(Self.ktp, pages: [try page()])
         #expect(await !review.save())
         #expect(review.duplicate != nil)
     }
@@ -227,7 +227,7 @@ extension ReviewModelTests {
     @Test func aSecondTapDuringTheCheckSavesNothingTwice() async throws {
         let store = try await storeWithTheKTP()
         let review = model(store)
-        review.load(Self.ktp, pages: [try page()])
+        review.loadScan(Self.ktp, pages: [try page()])
         await store.gateNextFieldsRead()
         let first = Task { await review.save() }
         let reading = await store.waitUntilReadingFields()
@@ -243,7 +243,7 @@ extension ReviewModelTests {
     @Test func aLockDuringTheCheckEndsInTheLockedSaveWithoutAsking() async throws {
         let store = try await storeWithTheKTP()
         let review = model(store)
-        review.load(Self.ktp, pages: [try page()])
+        review.loadScan(Self.ktp, pages: [try page()])
         await store.gateNextFieldsRead()
         let saving = Task { await review.save() }
         let reading = await store.waitUntilReadingFields()

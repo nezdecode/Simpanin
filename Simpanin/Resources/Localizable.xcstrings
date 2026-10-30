@@ -1893,6 +1893,17 @@
         }
       }
     },
+    "review.pageOpenHint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Membuka halaman di layar penuh."
+          }
+        }
+      }
+    },
     "review.pages %lld" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2857,6 +2868,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pakai Touch ID atau passcode HP"
+          }
+        }
+      }
+    },
+    "viewer.pageFailed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Halaman ini tidak bisa dibuka."
+          }
+        }
+      }
+    },
+    "viewer.pageOf %lld %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Halaman %1$lld dari %2$lld"
           }
         }
       }

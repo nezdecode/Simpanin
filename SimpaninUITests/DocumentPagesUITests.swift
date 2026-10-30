@@ -63,13 +63,13 @@ final class DocumentPagesUITests: UITestCase {
         XCTAssertEqual(pager.value as? String, "3 dari 3")
         screenshot("52 back from the viewer on the last page")
         pager.tap()
-        XCTAssertTrue(viewerShows(app, 3))
+        XCTAssertTrue(viewerShows(app, 3, of: 3))
         swipeViewer(app, left: false, to: 2)
         close.tap()
         XCTAssertEqual(pager.value as? String, "2 dari 3")
         screenshot("53 back from the viewer on a middle page")
         pager.tap()
-        XCTAssertTrue(viewerShows(app, 2))
+        XCTAssertTrue(viewerShows(app, 2, of: 3))
     }
 
     /// Swiping the viewer away from a page and back to it before closing shows that page again.
@@ -86,31 +86,15 @@ final class DocumentPagesUITests: UITestCase {
         XCTAssertEqual(pager.value as? String, "1 dari 3")
         screenshot("54 back on the first page after going to the second")
         pager.tap()
-        XCTAssertTrue(viewerShows(app, 1))
+        XCTAssertTrue(viewerShows(app, 1, of: 3))
     }
 
     @MainActor
     private func swipeViewer(_ app: XCUIApplication, left: Bool, to page: Int) {
         if left { app.swipeLeft() } else { app.swipeRight() }
-        XCTAssertTrue(viewerShows(app, page))
+        XCTAssertTrue(viewerShows(app, page, of: 3))
         // The viewer hands its page back once a swipe has settled.
         RunLoop.current.run(until: Date().addingTimeInterval(1))
-    }
-
-    /// The viewer's page on screen, not one beside it.
-    @MainActor
-    private func viewerShows(_ app: XCUIApplication, _ page: Int) -> Bool {
-        let label = NSPredicate(format: "label == %@", "Halaman \(page) dari 3")
-        let deadline = Date().addingTimeInterval(5)
-        while Date() < deadline {
-            if app.descendants(matching: .any).matching(label).allElementsBoundByIndex.contains(where: {
-                abs($0.frame.minX) < 1 && $0.frame.width >= app.frame.width - 1
-            }) {
-                return true
-            }
-            RunLoop.current.run(until: Date().addingTimeInterval(0.2))
-        }
-        return false
     }
 
     /// Opening the viewer masks the number again.

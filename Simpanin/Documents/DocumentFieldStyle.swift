@@ -33,7 +33,11 @@ nonisolated enum DocumentFieldStyle {
 
     static func dayFirst(_ stored: String) -> String {
         guard let date = CalendarDate(stored) else { return stored }
-        return String(format: "%02d-%02d-%04d", date.day, date.month, date.year)
+        return dayFirst(date)
+    }
+
+    static func dayFirst(_ date: CalendarDate) -> String {
+        String(format: "%02d-%02d-%04d", date.day, date.month, date.year)
     }
 
     /// An STNK's date is its yearly tax; every other type's is its validity.

@@ -96,7 +96,7 @@ struct DocumentDetailModelTests {
         let detail = try await model(pages: [Self.page(width: 4_000, height: 3_000)])
         await detail.load()
         let image = try #require(await detail.fullPage(0))
-        #expect(max(image.width, image.height) == DocumentDetailModel.viewerPixelSize)
+        #expect(max(image.width, image.height) == PageViewer.maxPixelSize)
         #expect(await store.pageReads.count == 2)
         #expect(await detail.fullPage(1) == nil)
     }
