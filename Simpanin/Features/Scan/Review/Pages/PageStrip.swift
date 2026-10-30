@@ -22,6 +22,8 @@ struct PageStrip: View {
     /// From `thumbnails(of:)`, never the scan itself; nil where one couldn't be made.
     let thumbnails: [CGImage?]
     let notes: PageNotes
+    /// The viewer zooms out of the page tapped and back into the one it closes on.
+    let transition: Namespace.ID
     let onOpen: (Int) -> Void
     @Environment(\.isEnabled) private var isEnabled
 
@@ -36,6 +38,7 @@ struct PageStrip: View {
                     }
                     // Plain, so a Form row with several buttons fires only the one tapped, and the page isn't tinted.
                     .buttonStyle(.plain)
+                    .matchedTransitionSource(id: index, in: transition)
                     .opacity(isEnabled ? 1 : 0.4)
                     // Read as its number, never as an image, so VoiceOver can't offer to describe the card aloud.
                     .accessibilityLabel(Text(verbatim: notes.accessibilityLabel(page: index)))

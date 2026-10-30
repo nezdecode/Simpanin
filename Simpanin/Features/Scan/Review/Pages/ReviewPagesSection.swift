@@ -18,11 +18,12 @@ struct ReviewPagesSection: View {
     let notes: PageNotes
     /// A rescan's pages are being read; the ones shown are about to be replaced, so they don't open.
     let reading: Bool
+    let transition: Namespace.ID
     let onOpen: (Int) -> Void
 
     var body: some View {
         Section {
-            PageStrip(thumbnails: thumbnails, notes: notes, onOpen: onOpen)
+            PageStrip(thumbnails: thumbnails, notes: notes, transition: transition, onOpen: onOpen)
                 .disabled(reading)
         } footer: {
             footer

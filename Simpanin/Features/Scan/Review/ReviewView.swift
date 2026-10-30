@@ -31,6 +31,7 @@ struct ReviewView: View {
     @State private var discardConfirmShown = false
     @State private var viewerShown = false
     @State private var viewerPage = 0
+    @Namespace private var transition
     /// Counts refused taps on Simpan, for the error haptic.
     @State private var refusals = 0
     @FocusState private var focusedField: String?
@@ -47,7 +48,9 @@ struct ReviewView: View {
                     }
                     .foregroundStyle(.secondary)
                 }
-                ReviewPagesSection(thumbnails: review.thumbnails, notes: review.pageNotes, reading: reading) { index in
+                ReviewPagesSection(
+                    thumbnails: review.thumbnails, notes: review.pageNotes, reading: reading, transition: transition
+                ) { index in
                     // The keyboard closes, so it isn't back over the form when the viewer closes.
                     focusedField = nil
                     viewerPage = index
@@ -146,7 +149,10 @@ struct ReviewView: View {
                 // Nothing under the viewer follows its page, so there's nothing to hand back.
                 PageViewer(
                     count: review.pages.count, current: $viewerPage, thumbnail: review.thumbnail,
-                    image: review.viewerPage, onSettle: {})
+                    image: review.viewerPage, onSettle: {}
+                )
+                // Also what lets a swipe down close it.
+                .navigationTransition(.zoom(sourceID: viewerPage, in: transition))
             }
             .sensoryFeedback(.error, trigger: refusals)
             // A field is judged once it's left, as typing is done.

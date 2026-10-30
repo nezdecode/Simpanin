@@ -20,7 +20,8 @@
     /// `-SimpaninUITestBrokenOldVault` puts a folder VaultCore can't read into Data lama.
     /// `-SimpaninUITestScan` makes "+" skip the camera, which the simulator lacks, and read a synthetic KTP;
     /// `-SimpaninUITestScanKTPAndSIM` does the same with two pages, a synthetic KTP and SIM A.
-    /// `-SimpaninUITestSlowRead` makes each synthetic page take two seconds to read.
+    /// `-SimpaninUITestSlowRead` makes each synthetic page take eight seconds to read, longer than a UI test
+    /// waits for the screen to settle after a tap.
     nonisolated enum UITestSetup {
         static var isActive: Bool { ProcessInfo.processInfo.arguments.contains("-SimpaninUITest") }
 
@@ -116,7 +117,7 @@
         /// a synthetic SIM A with the same NIK as its number.
         struct SyntheticRecognizer: TextRecognizer {
             func lines(in page: CGImage) async throws -> [String] {
-                if UITestSetup.readsSlowly { try await Task.sleep(for: .seconds(2)) }
+                if UITestSetup.readsSlowly { try await Task.sleep(for: .seconds(8)) }
                 return page.width == 9 ? Self.sim : Self.ktp
             }
 

@@ -36,6 +36,20 @@ final class ReviewViewerUITests: UITestCase {
         XCTAssertTrue(viewerShows(app, 1, of: 2))
     }
 
+    /// As on the document screen: the zoom back to the thumbnail lets a swipe down close it.
+    @MainActor
+    func testASwipeDownClosesTheViewer() throws {
+        let app = launch(["-SimpaninUITestScanKTPAndSIM"])
+        openReview(app)
+        thumbnail(app, 2).tap()
+        let close = app.buttons["viewer.close"]
+        XCTAssertTrue(close.waitForExistence(timeout: 5))
+        app.swipeDown(velocity: .fast)
+        expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: close)
+        waitForExpectations(timeout: 5)
+        XCTAssertTrue(app.navigationBars["Periksa data"].exists)
+    }
+
     /// Closing the viewer leaves the form as it was, a typed change too.
     @MainActor
     func testClosingTheViewerKeepsTheForm() throws {
@@ -111,17 +125,20 @@ final class ReviewViewerUITests: UITestCase {
     @MainActor
     func testThePagesCantBeOpenedWhileARescanIsRead() throws {
         let app = launch(["-SimpaninUITestScan", "-SimpaninUITestSlowRead"])
-        openReview(app)
+        // The first read is slow too, so this waits longer than openReview does.
+        XCTAssertTrue(app.navigationBars["Dokumen"].waitForExistence(timeout: 10))
+        app.buttons["list.scan"].tap()
+        XCTAssertTrue(app.textFields["review.field.name"].waitForExistence(timeout: 20))
         let page = app.buttons["review.page.1"]
         XCTAssertTrue(page.isEnabled)
         app.navigationBars.buttons["review.rescan"].tap()
         expectation(for: NSPredicate(format: "isEnabled == false"), evaluatedWith: page)
         waitForExpectations(timeout: 2)
         screenshot("56 pages dimmed while a rescan is read")
-        // Not tapped: a tap waits for the app to be idle, which the reading spinner keeps it from until the
-        // read is over and the page is enabled again. A disabled button is what VoiceOver reads as unavailable.
+        page.tap()
+        XCTAssertFalse(app.buttons["viewer.close"].waitForExistence(timeout: 1))
         expectation(for: NSPredicate(format: "isEnabled == true"), evaluatedWith: page)
-        waitForExpectations(timeout: 10)
+        waitForExpectations(timeout: 15)
     }
 
     @MainActor
