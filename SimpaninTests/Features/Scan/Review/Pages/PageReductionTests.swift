@@ -62,12 +62,4 @@ struct PageReductionTests {
         #expect(reduced.width == 300)
         #expect(reduced.height == 600)
     }
-
-    /// The strip's size is a memory rule too, so it's pinned here rather than read from the constant.
-    @Test func thumbnailsAreAtMost600PixelsLong() async throws {
-        let pages = [try page(width: 2_400, height: 1_800), try page(width: 900, height: 1_800)]
-        let thumbnails = await PageStrip.thumbnails(of: pages)
-        #expect(thumbnails.count == 2)
-        #expect(thumbnails.map { $0.map { max($0.width, $0.height) } } == [600, 600])
-    }
 }

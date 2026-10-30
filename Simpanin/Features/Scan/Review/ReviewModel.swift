@@ -22,7 +22,7 @@ import VaultCore
 final class ReviewModel {
     private(set) var pages: [CGImage] = []
     /// The pages made small once after the scan, for the strip, so it never draws a full-size scan.
-    private(set) var thumbnails: [CGImage?] = []
+    private(set) var thumbnails: [PageThumbnail] = []
     /// Set by the type sheet; picking one is the user's decision, so the parser's doubt goes. `load` sets
     /// the reasons again after setting the type.
     var type = DocumentType.other {
@@ -96,7 +96,7 @@ final class ReviewModel {
     var hasUserChanges: Bool { values != scanned || type != scannedType || expiry != scannedExpiry }
 
     /// After a scan or a rescan: every field comes from the new pages. The label stays.
-    func load(_ result: ParsedDocument?, pages: [CGImage], thumbnails: [CGImage?], reading: ScanReading? = nil) {
+    func load(_ result: ParsedDocument?, pages: [CGImage], thumbnails: [PageThumbnail], reading: ScanReading? = nil) {
         self.pages = pages
         self.thumbnails = thumbnails
         // Always replaced, so a rescan that failed never keeps the old scan's notes.

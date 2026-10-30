@@ -17,7 +17,7 @@ import VaultCore
 extension ReviewModel {
     /// The strip's small copy, which stands in while the viewer's larger one is made.
     func thumbnail(_ index: Int) -> CGImage? {
-        thumbnails.indices.contains(index) ? thumbnails[index] : nil
+        thumbnails.indices.contains(index) ? thumbnails[index].image : nil
     }
 
     /// A field under the enlarged page: what the form holds now, written as the card prints it.

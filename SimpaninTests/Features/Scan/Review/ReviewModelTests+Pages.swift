@@ -54,29 +54,30 @@ extension ReviewModelTests {
     @Test func loadKeepsAThumbnailPerPage() throws {
         let review = model()
         let pages = [try page(width: 8), try page(width: 8)]
-        let thumbnails = [try page(), try page()]
-        review.load(Self.ktp, pages: pages, thumbnails: thumbnails)
+        let small = try page()
+        review.load(Self.ktp, pages: pages, thumbnails: PageThumbnail.thumbnails(of: pages) { _, _ in small })
         #expect(review.thumbnails.count == 2)
-        #expect(zip(review.thumbnails, thumbnails).allSatisfy { $0 === $1 })
+        #expect(review.thumbnails.allSatisfy { $0.image === small })
         #expect(zip(review.pages, pages).allSatisfy { $0 === $1 })
     }
 
     @Test func aRescanReplacesTheThumbnails() throws {
         let review = model()
-        review.load(Self.ktp, pages: [try page(), try page()], thumbnails: [try page(), try page()])
+        review.loadScan(Self.ktp, pages: [try page(), try page()])
         let again = try page()
-        review.load(Self.ktp, pages: [try page(width: 8)], thumbnails: [again])
+        let pages = [try page(width: 8)]
+        review.load(Self.ktp, pages: pages, thumbnails: PageThumbnail.thumbnails(of: pages) { _, _ in again })
         #expect(review.thumbnails.count == 1)
-        #expect(review.thumbnails.first.flatMap { $0 } === again)
+        #expect(review.thumbnails.first?.image === again)
     }
 
     /// A thumbnail that can't be made leaves a placeholder; the scan's pages are kept and saved in full.
-    @Test func aFailedThumbnailIsAPlaceholderAndThePagesStay() async throws {
+    @Test func aFailedThumbnailIsAPlaceholderAndThePagesStay() throws {
         let review = model()
         let pages = [try page(), try page()]
-        let thumbnails = await PageStrip.thumbnails(of: pages, reduce: { _, _ in nil })
+        let thumbnails = PageThumbnail.thumbnails(of: pages) { _, _ in nil }
         #expect(thumbnails.count == 2)
-        #expect(thumbnails.allSatisfy { $0 == nil })
+        #expect(thumbnails.allSatisfy { $0.image == nil })
         review.load(Self.ktp, pages: pages, thumbnails: thumbnails)
         #expect(zip(review.pages, pages).allSatisfy { $0 === $1 })
     }

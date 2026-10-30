@@ -9,18 +9,13 @@
 //  file, You can obtain one at https://mozilla.org/MPL/2.0/.
 //
 
-import OSLog
 import SwiftUI
 
 /// Every page of a scan as a small thumbnail, numbered; the page count and the notes are in the section's
 /// footer. A page read as another document gets a badge, and VoiceOver reads its note with its number. A tap
 /// opens the page full screen.
 struct PageStrip: View {
-    /// Thumbnails are made this many pixels on their longer side: sharp at 112 pt, small in memory.
-    nonisolated static let thumbnailPixelSize = 600
-
-    /// From `thumbnails(of:)`, never the scan itself; nil where one couldn't be made.
-    let thumbnails: [CGImage?]
+    let thumbnails: [PageThumbnail]
     let notes: PageNotes
     /// The viewer zooms out of the page tapped and back into the one it closes on.
     let transition: Namespace.ID
@@ -34,7 +29,7 @@ struct PageStrip: View {
                     Button {
                         onOpen(index)
                     } label: {
-                        thumbnail(thumbnails[index], index: index)
+                        thumbnail(thumbnails[index].image, index: index)
                     }
                     // Plain, so a Form row with several buttons fires only the one tapped, and the page isn't tinted.
                     .buttonStyle(.plain)
@@ -49,16 +44,6 @@ struct PageStrip: View {
         }
         .scrollIndicators(.hidden)
         .scrollBounceBehavior(.basedOnSize)
-    }
-
-    /// Off the main actor: redrawing a few full-size pages takes long enough to freeze the screen.
-    @concurrent nonisolated static func thumbnails(
-        of pages: [CGImage], reduce: @Sendable (CGImage, Int) -> CGImage? = reducedPage
-    ) async -> [CGImage?] {
-        let thumbnails = pages.map { reduce($0, thumbnailPixelSize) }
-        let missing = thumbnails.filter { $0 == nil }.count
-        if missing > 0 { Logger.scan.error("\(missing) of \(pages.count) thumbnails couldn't be made") }
-        return thumbnails
     }
 
     private func thumbnail(_ page: CGImage?, index: Int) -> some View {

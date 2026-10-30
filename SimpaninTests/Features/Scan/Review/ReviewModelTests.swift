@@ -287,9 +287,8 @@ struct ReviewModelTests {
 }
 
 extension ReviewModel {
-    /// Loads a scan the way the scan flow does, so what a scan hands over is set up in one place. The test
-    /// pages are tiny, so they stand in as their own thumbnails.
+    /// Loads a scan the way the scan flow does, so what a scan hands over is set up in one place.
     func loadScan(_ result: ParsedDocument?, pages: [CGImage], reading: ScanReading? = nil) {
-        load(result, pages: pages, thumbnails: pages, reading: reading)
+        load(result, pages: pages, thumbnails: PageThumbnail.thumbnails(of: pages), reading: reading)
     }
 }

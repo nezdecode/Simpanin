@@ -95,7 +95,7 @@ struct ScanFlowView: View {
             guard let pages = newPages else { return }
             newPages = nil
             // Made while the text is read, so they're ready when it is.
-            async let thumbnails = PageStrip.thumbnails(of: pages)
+            async let thumbnails = PageThumbnail.made(of: pages)
             await scan.scanned(pages)
             let made = await thumbnails
             guard !Task.isCancelled else { return }
