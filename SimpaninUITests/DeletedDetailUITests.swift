@@ -122,6 +122,31 @@ final class DeletedDetailUITests: UITestCase {
         XCTAssertTrue(app.buttons["list.recentlyDeleted"].label.contains("0"))
     }
 
+    /// The list's save alert shows over the document after its own question has closed, and the document stays.
+    @MainActor
+    func testAFailedDeletePermanentlyShowsTheAlert() throws {
+        let app = deletedSample(["-SimpaninUITestBinError"])
+        openDeleted(app)
+        scrolledTo(app, "detail.deletePermanently").tap()
+        app.alerts["Hapus permanen?"].buttons["Hapus permanen"].tap()
+        let alert = app.alerts["Perubahan belum tersimpan. Coba lagi."]
+        XCTAssertTrue(alert.waitForExistence(timeout: 5))
+        alert.buttons.firstMatch.tap()
+        XCTAssertTrue(app.buttons["detail.restore"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.navigationBars["KTP"].buttons.element(boundBy: 0).label, "Baru dihapus")
+    }
+
+    @MainActor
+    func testAFailedRestoreShowsTheAlert() throws {
+        let app = deletedSample(["-SimpaninUITestBinError"])
+        openDeleted(app)
+        scrolledTo(app, "detail.restore").tap()
+        let alert = app.alerts["Perubahan belum tersimpan. Coba lagi."]
+        XCTAssertTrue(alert.waitForExistence(timeout: 5))
+        alert.buttons.firstMatch.tap()
+        XCTAssertTrue(app.buttons["detail.restore"].waitForExistence(timeout: 5))
+    }
+
     @MainActor
     func testLongPressRestores() throws {
         let app = deletedSample()
