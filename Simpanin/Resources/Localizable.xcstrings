@@ -914,6 +914,17 @@
         }
       }
     },
+    "notice.photosDropped" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dokumen dari Foto belum disimpan, jadi dibatalkan karena Simpanin terkunci. Foto aslinya tetap ada di app Foto."
+          }
+        }
+      }
+    },
     "notice.recoveredFromPages" : {
       "extractionState" : "manual",
       "localizations" : {

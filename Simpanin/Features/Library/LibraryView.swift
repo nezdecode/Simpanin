@@ -141,12 +141,12 @@ struct LibraryView: View {
             .onReceive(dayChanges) { _ in library.refreshDay() }
             .fullScreenCover(isPresented: $scanShown) {
                 ScanFlowView(
-                    store: Self.documentStore(for: vault), onScanStarted: lock.scanStarted,
-                    onScanEnded: lock.scanEnded, onRead: scanRead
-                ) {
-                    scanShown = false
-                    Task { await library.reload() }
-                }
+                    store: Self.documentStore(for: vault), onScanStarted: { lock.scanStarted(.camera) },
+                    onScanEnded: lock.scanEnded, onRead: scanRead,
+                    onDone: {
+                        scanShown = false
+                        Task { await library.reload() }
+                    })
             }
             .alert(Text("recovery.passcodeNeeded"), isPresented: $passcodeNeededShown) {
                 if let url = URL.appSettings {

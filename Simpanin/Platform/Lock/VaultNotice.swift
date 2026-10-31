@@ -21,6 +21,8 @@ nonisolated enum VaultNotice: Hashable, Sendable, CaseIterable {
     case repairWaitingForSpace
     /// "Pindaian yang belum disimpan dibuang karena Simpanin terkunci. ..."
     case scanDropped
+    /// "Dokumen dari Foto belum disimpan, jadi dibatalkan karena Simpanin terkunci. ..."
+    case photosDropped
 }
 
 extension VaultNotice {
@@ -30,6 +32,7 @@ extension VaultNotice {
         case .recoveredFromPages: LocalizedStringResource("notice.recoveredFromPages")
         case .repairWaitingForSpace: LocalizedStringResource("notice.repairWaitingForSpace")
         case .scanDropped: LocalizedStringResource("notice.scanDropped")
+        case .photosDropped: LocalizedStringResource("notice.photosDropped")
         }
     }
 }

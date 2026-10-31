@@ -21,6 +21,11 @@ nonisolated protocol VaultOpening: Sendable {
 
 extension VaultStore: VaultOpening {}
 
+/// Where a document being added comes from, so a lock that drops it says what happened to it.
+nonisolated enum ScanSource: Sendable {
+    case camera, photos
+}
+
 /// The lock: when the vault opens, locks, and shows a recovery screen. The clock, the store and the system
 /// checks are injected, so the state machine is tested without waiting or a device.
 @MainActor @Observable
@@ -60,9 +65,9 @@ final class LockController {
     private var failuresInARow = 0
     /// Bumped by every lock, so an attempt that was waiting for the vault can tell it lost.
     private var lockCount = 0
-    private var scanInProgress = false
+    private var scanInProgress: ScanSource?
     /// A lock dropped a scan; told once, after the next unlock.
-    private var scanDroppedByLock = false
+    private var scanDroppedByLock: ScanSource?
 
     #if DEBUG
         /// For the device checks: each open attempt and lock event, as statuses only.
@@ -185,9 +190,9 @@ final class LockController {
     }
 
     /// The scan flow says when a scan starts and ends, so a lock in between can be told after unlocking.
-    func scanStarted() { scanInProgress = true }
+    func scanStarted(_ source: ScanSource) { scanInProgress = source }
 
-    func scanEnded() { scanInProgress = false }
+    func scanEnded() { scanInProgress = nil }
 
     func lock() async {
         lockCount += 1
@@ -195,8 +200,8 @@ final class LockController {
         state = .locked
         notices = []
         // Locking removes every screen, a scan in progress with it; say so after unlocking.
-        if scanInProgress { scanDroppedByLock = true }
-        scanInProgress = false
+        if let scanInProgress { scanDroppedByLock = scanInProgress }
+        scanInProgress = nil
         failuresInARow = 0
     }
 
@@ -214,8 +219,12 @@ final class LockController {
         switch outcome {
         case .unlocked(let notices):
             failuresInARow = 0
-            self.notices = scanDroppedByLock ? notices.union([.scanDropped]) : notices
-            scanDroppedByLock = false
+            switch scanDroppedByLock {
+            case .camera: self.notices = notices.union([.scanDropped])
+            case .photos: self.notices = notices.union([.photosDropped])
+            case nil: self.notices = notices
+            }
+            scanDroppedByLock = nil
             state = .unlocked
         case .lockCover:
             state = .locked
