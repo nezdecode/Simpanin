@@ -38,11 +38,17 @@ jobs:
 
             Review this pull request for Simpanin, an iPhone app that keeps people's ID documents. A mistake can lose someone's document or leak it. The author has already reviewed the code before opening the pull request, so look for what that review could miss. Read CODING.md and CONTRIBUTING.md first; they are the rules.
 
-            1. The diff as merged (`gh pr diff`), including commits that read like late fixes. Look for bugs, lost or leaked data, and breaks of CODING.md, its section 13 above all.
-            2. Every commit message (`git log BASE..HEAD`) and the pull request's description (`gh pr view`) against the diff. Flag any claim the diff doesn't support: a change, a test or a check that isn't there.
-            3. CONTRIBUTING.md's privacy rules, and public text (code, comments, messages, the description) that points to private files or notes a reader can't open.
+            1. [diff] The diff as merged (`gh pr diff`), including commits that read like late fixes. Look for what a review of one file at a time misses:
+               - interactions across files, and actor isolation and concurrency;
+               - errors swallowed with `try?` where failing matters (CODING.md section 3);
+               - decrypted data kept or written where section 8 forbids it;
+               - logging that could hold a value without `.private`;
+               - a format change without a migration and a fixture test (section 9);
+               - new logic without a test (section 10).
+            2. [claim] Every commit message (`git log BASE..HEAD`) and the pull request's description (`gh pr view`) against the diff. Flag any claim the diff doesn't support: a change, a test or a check that isn't there.
+            3. [privacy] CONTRIBUTING.md's privacy rules, and public text (code, comments, messages, the description) that points to private files or notes a reader can't open.
 
-            Post each finding as an inline comment on its line, saying what's wrong and why it matters. Report only what you're confident about; skip style, which the linters check. If you find nothing, post one comment saying what you checked. Don't approve or request changes.
+            Post each finding as soon as you're sure of it, as an inline comment on its line, starting with its tag ([diff], [claim] or [privacy]), and say what's wrong and why it matters. Stop after 10 findings. Report only what you're confident about; skip style, which the linters check. If you find nothing, post one comment saying what you checked. Don't approve or request changes.
           claude_args: |
             --max-turns 40
             --allowedTools "Read,Grep,Glob,Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr comment:*),Bash(git log:*),Bash(git show:*),Bash(git diff:*),mcp__github_inline_comment__create_inline_comment"
