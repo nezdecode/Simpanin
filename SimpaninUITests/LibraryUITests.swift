@@ -119,13 +119,7 @@ final class LibraryUITests: UITestCase {
     @MainActor
     func testPilihDariFotoStartsNothingBeforeTambah() throws {
         let app = launch(["-SimpaninUITestScan"])
-        app.buttons["list.settings"].tap()
-        let row = app.buttons["settings.autoLock"]
-        XCTAssertTrue(row.waitForExistence(timeout: 5))
-        row.tap()
-        app.buttons["autoLock.immediately"].tap()
-        app.navigationBars["Kunci otomatis"].buttons.element(boundBy: 0).tap()
-        app.navigationBars["Pengaturan"].buttons.element(boundBy: 0).tap()
+        lockImmediately(app)
         XCTAssertTrue(app.navigationBars["Dokumen"].waitForExistence(timeout: 10))
         app.buttons["list.scan"].tap()
         app.buttons["list.scan.photos"].tap()

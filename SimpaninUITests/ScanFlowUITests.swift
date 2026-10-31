@@ -40,13 +40,7 @@ final class ScanFlowUITests: UITestCase {
     @MainActor
     func testALockDuringAScanDropsItAndSaysSo() throws {
         let app = launch(["-SimpaninUITestScan"])
-        app.buttons["list.settings"].tap()
-        let row = app.buttons["settings.autoLock"]
-        XCTAssertTrue(row.waitForExistence(timeout: 5))
-        row.tap()
-        app.buttons["autoLock.immediately"].tap()
-        app.navigationBars["Kunci otomatis"].buttons.element(boundBy: 0).tap()
-        app.navigationBars["Pengaturan"].buttons.element(boundBy: 0).tap()
+        lockImmediately(app)
         openReview(app)
 
         XCUIDevice.shared.press(.home)
@@ -129,13 +123,7 @@ final class ScanFlowUITests: UITestCase {
         openReview(app)
         app.buttons["review.save"].tap()
         XCTAssertTrue(waitForRows(1, in: app))
-        app.buttons["list.settings"].tap()
-        let row = app.buttons["settings.autoLock"]
-        XCTAssertTrue(row.waitForExistence(timeout: 5))
-        row.tap()
-        app.buttons["autoLock.immediately"].tap()
-        app.navigationBars["Kunci otomatis"].buttons.element(boundBy: 0).tap()
-        app.navigationBars["Pengaturan"].buttons.element(boundBy: 0).tap()
+        lockImmediately(app)
         openReview(app)
         app.buttons["review.save"].tap()
         let alert = app.alerts["Kamu sudah punya KTP dengan NIK ini."]
