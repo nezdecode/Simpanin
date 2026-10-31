@@ -37,10 +37,13 @@ jobs:
         with:
           persist-credentials: false
       - run: swift format lint --strict -r Packages/VaultCore Simpanin SimpaninTests SimpaninUITests
-      # A formatting slip shouldn't hide whether the tests pass.
+      # A formatting slip shouldn't hide whether the tests pass. The container runs as root, which reads files
+      # whatever their permissions, so the tests that make a file unreadable run as another user.
       - if: ${{ !cancelled() }}
-        run: swift test
-        working-directory: Packages/VaultCore
+        run: |
+          useradd --create-home tester
+          chown -R tester "$GITHUB_WORKSPACE"
+          su tester -c "cd Packages/VaultCore && swift test"
 
   swiftlint:
     runs-on: ubuntu-latest
