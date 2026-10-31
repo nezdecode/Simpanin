@@ -18,6 +18,7 @@ extension UITestCase {
     func startScan(_ app: XCUIApplication) {
         XCTAssertTrue(app.navigationBars["Dokumen"].waitForExistence(timeout: 10))
         app.buttons["list.scan"].tap()
+        app.buttons["list.scan.camera"].tap()
     }
 
     @MainActor

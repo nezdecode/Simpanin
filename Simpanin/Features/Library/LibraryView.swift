@@ -18,7 +18,9 @@ struct LibraryView: View {
     let vault: AppVault
     let lock: LockController
     @State private var library: LibraryModel
-    @State private var scanShown = false
+    /// The scan flow's source, set when it opens. One value, so the cover never builds the flow with the
+    /// source before: that opened the camera, and its permission prompt, for "Pilih dari Foto".
+    @State private var adding: ScanSource?
     @State private var passcodeNeededShown = false
     @State private var path = NavigationPath()
     @Environment(\.dynamicTypeSize) private var typeSize
@@ -39,9 +41,10 @@ struct LibraryView: View {
         #if DEBUG
             // Lets a UI test check the privacy cover sits above the scan flow: a recording starts once the
             // review shows and stops again, so the test sees the review before, under and after the cover.
+            // The pages can be read before the flow is on screen, while the "+" menu is still closing.
             if UITestSetup.capturesAfterScan {
                 Task {
-                    try? await Task.sleep(for: .seconds(2))
+                    try? await Task.sleep(for: .seconds(4))
                     lock.screenCaptured = true
                     try? await Task.sleep(for: .seconds(4))
                     lock.screenCaptured = false
@@ -139,12 +142,12 @@ struct LibraryView: View {
             }
             // Midnight with the app open, and a changed time zone.
             .onReceive(dayChanges) { _ in library.refreshDay() }
-            .fullScreenCover(isPresented: $scanShown) {
+            .fullScreenCover(item: $adding) { source in
                 ScanFlowView(
-                    source: .camera, store: Self.documentStore(for: vault), onScanStarted: lock.scanStarted,
+                    source: source, store: Self.documentStore(for: vault), onScanStarted: lock.scanStarted,
                     onScanEnded: lock.scanEnded, onRead: scanRead,
                     onDone: {
-                        scanShown = false
+                        adding = nil
                         Task { await library.reload() }
                     })
             }
@@ -215,23 +218,7 @@ struct LibraryView: View {
             .accessibilityIdentifier("list.settings")
         }
         ToolbarItem(placement: .topBarTrailing) {
-            Button {
-                // The vault's key needs a passcode, so each scan checks for one first.
-                if lock.passcodeState.stopsScanning {
-                    passcodeNeededShown = true
-                } else {
-                    scanShown = true
-                }
-            } label: {
-                Label {
-                    Text("main.scan")
-                } icon: {
-                    Image(systemName: "plus")
-                }
-            }
-            // A phone without VisionKit's document camera can't scan; nothing pretends it can.
-            .disabled(library.loadFailed || !Self.canScan)
-            .accessibilityIdentifier("list.scan")
+            AddDocumentMenu(hasCamera: Self.canScan, isDisabled: library.loadFailed, onAdd: add(from:))
         }
         #if DEBUG
             // A synthetic sample document, for the UI tests only: on a phone, next to "+", it was easy to
@@ -253,5 +240,14 @@ struct LibraryView: View {
                 }
             }
         #endif
+    }
+
+    /// The vault's key needs a passcode, so each scan or import checks for one first.
+    private func add(from source: ScanSource) {
+        if lock.passcodeState.stopsScanning {
+            passcodeNeededShown = true
+        } else {
+            adding = source
+        }
     }
 }

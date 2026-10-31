@@ -579,7 +579,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pindai KTP, SIM, atau paspor. Semuanya terenkripsi dan tetap di HP ini."
+            "value" : "Ketuk + untuk menambahkan KTP, SIM, atau paspor. Yang disimpan di Simpanin terenkripsi dan tetap di HP ini."
           }
         }
       }
@@ -848,6 +848,17 @@
         }
       }
     },
+    "main.add" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tambah dokumen"
+          }
+        }
+      }
+    },
     "main.allDocuments" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -877,6 +888,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dipindahkan ke Baru dihapus."
+          }
+        }
+      }
+    },
+    "main.pickPhotos" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pilih dari Foto"
           }
         }
       }

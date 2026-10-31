@@ -22,8 +22,10 @@ nonisolated protocol VaultOpening: Sendable {
 extension VaultStore: VaultOpening {}
 
 /// Where a document being added comes from, so a lock that drops it says what happened to it.
-nonisolated enum ScanSource: Sendable {
+nonisolated enum ScanSource: Identifiable, Sendable {
     case camera, photos
+
+    var id: Self { self }
 }
 
 /// The lock: when the vault opens, locks, and shows a recovery screen. The clock, the store and the system
