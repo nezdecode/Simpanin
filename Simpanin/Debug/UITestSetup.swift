@@ -68,16 +68,18 @@
 
         /// The store the document list reads. `-SimpaninUITestLoadError <n>` fails its first n loads;
         /// `-SimpaninUITestDeleteError` fails every Hapus; `-SimpaninUITestBinError` every Pulihkan and
-        /// Hapus permanen; `-SimpaninUITestSlowRestore` makes each Pulihkan take eight seconds.
+        /// Hapus permanen; `-SimpaninUITestSlowRestore` makes each Pulihkan take eight seconds, and
+        /// `-SimpaninUITestSlowSave` each Simpan.
         static func documentStore(for vault: AppVault) -> any DocumentStoring & PageReading {
             let count = value(after: "-SimpaninUITestLoadError").flatMap(Int.init)
             let failsDeletes = ProcessInfo.processInfo.arguments.contains("-SimpaninUITestDeleteError")
             let failsBin = ProcessInfo.processInfo.arguments.contains("-SimpaninUITestBinError")
             let slowRestore = ProcessInfo.processInfo.arguments.contains("-SimpaninUITestSlowRestore")
-            guard count != nil || failsDeletes || failsBin || slowRestore else { return vault.store }
+            let slowSave = ProcessInfo.processInfo.arguments.contains("-SimpaninUITestSlowSave")
+            guard count != nil || failsDeletes || failsBin || slowRestore || slowSave else { return vault.store }
             return ScriptedDocuments(
                 store: vault.store, failingLoads: count ?? 0, failsDeletes: failsDeletes, failsBin: failsBin,
-                slowRestore: slowRestore)
+                slowRestore: slowRestore, slowSave: slowSave)
         }
 
         /// `-SimpaninUITestCaptureAfterScan`: once the synthetic scan is read, act for a few seconds as if
@@ -181,16 +183,18 @@
         private let failsDeletes: Bool
         private let failsBin: Bool
         private let slowRestore: Bool
+        private let slowSave: Bool
 
         init(
             store: VaultStore, failingLoads: Int, failsDeletes: Bool = false, failsBin: Bool = false,
-            slowRestore: Bool = false
+            slowRestore: Bool = false, slowSave: Bool = false
         ) {
             self.store = store
             self.failingLoads = failingLoads
             self.failsDeletes = failsDeletes
             self.failsBin = failsBin
             self.slowRestore = slowRestore
+            self.slowSave = slowSave
         }
 
         func documents() async throws -> [Document] {
@@ -209,7 +213,8 @@
             type: DocumentType, label: String?, expiry: CalendarDate?, pinned: Bool, fields: DocumentFields,
             pages: [Data]
         ) async throws -> DocumentID {
-            try await store.createDocument(
+            if slowSave { try await Task.sleep(for: .seconds(8)) }
+            return try await store.createDocument(
                 type: type, label: label, expiry: expiry, pinned: pinned, fields: fields, pages: pages)
         }
 

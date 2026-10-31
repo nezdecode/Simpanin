@@ -134,11 +134,23 @@ struct ReviewView: View {
             // over the keyboard.
             .safeAreaInset(edge: .bottom) {
                 if focusedField == nil {
-                    Button(action: trySave) { Text("review.save") }
-                        .buttonStyle(.prominent)
-                        .disabled(reading || review.saving)
-                        .padding(16)
-                        .accessibilityIdentifier("review.save")
+                    // Preparing photos for the vault takes a few seconds, so Simpan says it's working.
+                    Button(action: trySave) {
+                        if review.saving {
+                            HStack(spacing: 8) {
+                                ProgressView().tint(Color(.onAccent))
+                                Text("review.saving")
+                            }
+                        } else {
+                            Text("review.save")
+                        }
+                    }
+                    .buttonStyle(.prominent)
+                    // Not disabled while saving: a disabled button turns see-through and "Menyimpan…" can't be
+                    // read over the form. Taps then do nothing.
+                    .disabled(reading)
+                    .padding(16)
+                    .accessibilityIdentifier("review.save")
                 }
             }
             .sheet(isPresented: $typePickerShown) {
@@ -289,7 +301,7 @@ extension ReviewView {
     /// Simpan never quietly does nothing: a wrong value takes the user to its field, with a haptic, and
     /// VoiceOver reads the reason; otherwise it asks what `ReviewModel.saveStep` says, or saves.
     private func trySave() {
-        guard let step = review.saveStep() else { return }
+        guard !review.saving, let step = review.saveStep() else { return }
         switch step {
         case .refuse(let key):
             focusedField = key

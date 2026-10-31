@@ -2289,6 +2289,17 @@
         }
       }
     },
+    "review.saving" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menyimpan…"
+          }
+        }
+      }
+    },
     "review.taxHint" : {
       "extractionState" : "manual",
       "localizations" : {

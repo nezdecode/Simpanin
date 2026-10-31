@@ -165,6 +165,21 @@ final class ReviewUITests: UITestCase {
         XCTAssertEqual(rows(app).count, 0)
     }
 
+    /// A save takes a moment, a few seconds for photos, so Simpan says it's working until it's done.
+    @MainActor
+    func testSimpanSaysItsSaving() throws {
+        let app = launch(["-SimpaninUITestScan", "-SimpaninUITestSlowSave"])
+        openReview(app)
+        app.buttons["review.save"].tap()
+        XCTAssertTrue(app.buttons["Menyimpan…"].waitForExistence(timeout: 5))
+        // A second tap while it saves never saves twice.
+        app.buttons["review.save"].tap()
+        screenshot("64 simpan while saving")
+        // The list stays under Periksa data, so the save is done once its new row is there.
+        XCTAssertTrue(rows(app).firstMatch.waitForExistence(timeout: 15))
+        XCTAssertEqual(rows(app).count, 1)
+    }
+
     @MainActor
     func testALabelThatLooksLikeANumberWarns() throws {
         let app = launch(["-SimpaninUITestScan"])
