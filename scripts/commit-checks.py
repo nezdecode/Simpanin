@@ -3,6 +3,7 @@
 #   python3 scripts/commit-checks.py staged          what the commit adds (pre-commit)
 #   python3 scripts/commit-checks.py staged --all    every tracked file, every line (by hand)
 #   python3 scripts/commit-checks.py message <file>  the commit message (commit-msg)
+#   python3 scripts/commit-checks.py commit <sha>    what one commit adds (scripts/ci-checks.sh)
 # Messages name a file and line, never a number that might be a real NIK.
 
 import datetime
@@ -47,8 +48,9 @@ def number_problem(text):
     return None
 
 
-def changed_lines(all_files):
-    """(path, line number, text) for every added line, or every line of every tracked text file."""
+def changed_lines(all_files, commit=None):
+    """(path, line number, text) for every line added by the staged changes or by one commit, or every line
+    of every tracked text file."""
     if all_files:
         for path in git('ls-files', '-z').split('\0'):
             if not path or not os.path.isfile(path):
@@ -60,14 +62,15 @@ def changed_lines(all_files):
             for number, text in enumerate(lines, 1):
                 yield path, number, text
         return
+    diff = ['diff', '--cached'] if commit is None else ['diff-tree', '--root', '--no-commit-id', '-r', commit]
     binary = {fields[2] for fields in (entry.split('\t') for entry in
-              git('diff', '--cached', '--numstat', '--diff-filter=ACMR').splitlines()) if fields[0] == '-'}
-    for path in git('diff', '--cached', '--name-only', '-z', '--diff-filter=ACMR').split('\0'):
+              git(*diff, '--numstat', '--diff-filter=ACMR').splitlines()) if fields[0] == '-'}
+    for path in git(*diff, '--name-only', '-z', '--diff-filter=ACMR').split('\0'):
         if not path or path in binary:
             continue
         number = 0
         in_hunk = False
-        for line in git('diff', '--cached', '-U0', '--no-color', '--no-ext-diff', '--', path).splitlines():
+        for line in git(*diff, '-p', '-U0', '--no-color', '--no-ext-diff', '--', path).splitlines():
             if line.startswith('@@'):
                 number = int(re.search(r'\+(\d+)', line).group(1))
                 in_hunk = True
@@ -110,7 +113,14 @@ def staged(all_files):
     problems = []
     if not all_files and git('symbolic-ref', '--short', '-q', 'HEAD', check=False).strip() == 'main':
         problems.append('this is main: commit on a branch, and merge through a pull request (CONTRIBUTING.md)')
-    for path, number, text in changed_lines(all_files):
+    problems += line_problems(changed_lines(all_files))
+    problems += header_problems(all_files)
+    return problems
+
+
+def line_problems(lines):
+    problems = []
+    for path, number, text in lines:
         reason = number_problem(text)
         if reason:
             problems.append(f'{path}:{number}: {reason}')
@@ -128,7 +138,6 @@ def staged(all_files):
                     problems.append(f'{path}:{number}: unchecked_sendable can only be disabled for one line')
                 elif ' - ' not in rest or not rest.split(' - ', 1)[1].strip():
                     problems.append(f'{path}:{number}: disabling unchecked_sendable needs " - <reason>"')
-    problems += header_problems(all_files)
     return problems
 
 
@@ -192,8 +201,11 @@ def main():
         problems, label = staged('--all' in sys.argv[2:]), 'pre-commit'
     elif len(sys.argv) == 3 and sys.argv[1] == 'message':
         problems, label = message(sys.argv[2]), 'commit-msg'
+    elif len(sys.argv) == 3 and sys.argv[1] == 'commit':
+        # A later commit can remove what an earlier one added, but a merge commit keeps both in history.
+        problems, label = line_problems(changed_lines(False, sys.argv[2])), f'commit {sys.argv[2][:7]}'
     else:
-        print('usage: commit-checks.py staged [--all] | message <file>', file=sys.stderr)
+        print('usage: commit-checks.py staged [--all] | message <file> | commit <sha>', file=sys.stderr)
         return 2
     if problems:
         print(f'{label}: refused:', file=sys.stderr)
