@@ -28,3 +28,16 @@ nonisolated enum PhotoDecoding {
         await CGImage.reduced(from: data, to: storedPixelSize)
     }
 }
+
+extension PhotoDecoding {
+    /// The photos for the vault, decoded and encoded one at a time, so only one large page is ever in
+    /// memory. Nil if any fails.
+    @concurrent static func storedPages(_ photos: [Data]) async -> [Data]? {
+        var pages: [Data] = []
+        for photo in photos {
+            guard let page = await stored(photo), let encoded = PageEncoding.jpeg(page) else { return nil }
+            pages.append(encoded)
+        }
+        return pages
+    }
+}

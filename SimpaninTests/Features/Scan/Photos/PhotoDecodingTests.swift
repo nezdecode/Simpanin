@@ -19,51 +19,6 @@ import UniformTypeIdentifiers
 
 @Suite("Photo decoding")
 struct PhotoDecodingTests {
-    /// A grey photo with a red square in its top left corner, as stored, before any orientation.
-    func photo(width: Int, height: Int) throws -> CGImage {
-        let context = try #require(
-            CGContext(
-                data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 4 * width,
-                space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue))
-        context.setFillColor(red: 0.5, green: 0.5, blue: 0.5, alpha: 1)
-        context.fill(CGRect(x: 0, y: 0, width: width, height: height))
-        let marker = max(1, min(width, height) / 4)
-        context.setFillColor(red: 1, green: 0, blue: 0, alpha: 1)
-        // A context's origin is at the bottom left.
-        context.fill(CGRect(x: 0, y: height - marker, width: marker, height: marker))
-        return try #require(context.makeImage())
-    }
-
-    /// The photo as a file, the way a camera writes one: an orientation, a small preview of its own, and the
-    /// place and camera it was taken with.
-    func file(
-        _ image: CGImage, type: UTType = .jpeg, orientation: Int = 1, withMetadata: Bool = false
-    ) throws -> Data {
-        let data = NSMutableData()
-        let destination = try #require(
-            CGImageDestinationCreateWithData(data, type.identifier as CFString, 1, nil))
-        var properties: [CFString: Any] = [
-            kCGImagePropertyOrientation: orientation,
-            kCGImageDestinationEmbedThumbnail: true,
-        ]
-        if withMetadata {
-            properties[kCGImagePropertyGPSDictionary] = [
-                kCGImagePropertyGPSLatitude: 1.5, kCGImagePropertyGPSLatitudeRef: "S",
-                kCGImagePropertyGPSLongitude: 100.5, kCGImagePropertyGPSLongitudeRef: "E",
-            ]
-            properties[kCGImagePropertyTIFFDictionary] = [
-                kCGImagePropertyTIFFMake: "Synthetic", kCGImagePropertyTIFFModel: "Test",
-                kCGImagePropertyTIFFDateTime: "2026:01:01 10:00:00",
-            ]
-            properties[kCGImagePropertyExifDictionary] = [
-                kCGImagePropertyExifDateTimeOriginal: "2026:01:01 10:00:00"
-            ]
-        }
-        CGImageDestinationAddImage(destination, image, properties as CFDictionary)
-        try #require(CGImageDestinationFinalize(destination))
-        return data as Data
-    }
-
     /// Whether the pixel near a corner is the red marker: top left, top right, bottom left or bottom right.
     func isRed(_ image: CGImage, top: Bool, left: Bool) throws -> Bool {
         let width = image.width
@@ -82,7 +37,8 @@ struct PhotoDecodingTests {
     }
 
     @Test func decodesJPEG() async throws {
-        let page = try #require(await PhotoDecoding.shown(try file(try photo(width: 400, height: 300))))
+        let page = try #require(
+            await PhotoDecoding.shown(try SyntheticPhoto.file(try SyntheticPhoto.image(width: 400, height: 300))))
         #expect(page.width == 400)
         #expect(page.height == 300)
         #expect(try isRed(page, top: true, left: true))
@@ -90,7 +46,8 @@ struct PhotoDecodingTests {
 
     /// Most iPhone photos are HEIC. Fails, rather than passing untested, where ImageIO has no HEIC encoder.
     @Test func decodesHEIC() async throws {
-        let data = try file(try photo(width: 400, height: 300), type: .heic, orientation: 6)
+        let data = try SyntheticPhoto.file(
+            try SyntheticPhoto.image(width: 400, height: 300), type: .heic, orientation: 6)
         let source = try #require(CGImageSourceCreateWithData(data as CFData, nil))
         #expect(CGImageSourceGetType(source) as String? == UTType.heic.identifier)
         let page = try #require(await PhotoDecoding.shown(data))
@@ -100,7 +57,9 @@ struct PhotoDecodingTests {
     }
 
     @Test func decodesPNG() async throws {
-        let page = try #require(await PhotoDecoding.shown(try file(try photo(width: 400, height: 300), type: .png)))
+        let page = try #require(
+            await PhotoDecoding.shown(
+                try SyntheticPhoto.file(try SyntheticPhoto.image(width: 400, height: 300), type: .png)))
         #expect(page.width == 400)
         #expect(try isRed(page, top: true, left: true))
     }
@@ -109,7 +68,7 @@ struct PhotoDecodingTests {
     /// so the stored top left lands top right. Orientation 8 turns the other way, to bottom left.
     @Test(arguments: [(6, true, false), (8, false, true)])
     func appliesOrientation(orientation: Int, top: Bool, left: Bool) async throws {
-        let data = try file(try photo(width: 400, height: 300), orientation: orientation)
+        let data = try SyntheticPhoto.file(try SyntheticPhoto.image(width: 400, height: 300), orientation: orientation)
         let page = try #require(await PhotoDecoding.shown(data))
         #expect(page.width == 300)
         #expect(page.height == 400)
@@ -119,19 +78,21 @@ struct PhotoDecodingTests {
 
     /// The file carries a small preview of its own; the page must come from the photo itself.
     @Test func shrinksToLongSide() async throws {
-        let page = try #require(await PhotoDecoding.shown(try file(try photo(width: 4_000, height: 500))))
+        let page = try #require(
+            await PhotoDecoding.shown(try SyntheticPhoto.file(try SyntheticPhoto.image(width: 4_000, height: 500))))
         #expect(page.width == PageViewer.maxPixelSize)
         #expect(page.height == 375)
     }
 
     @Test func keepsSmallPhotoSize() async throws {
-        let page = try #require(await PhotoDecoding.stored(try file(try photo(width: 640, height: 480))))
+        let page = try #require(
+            await PhotoDecoding.stored(try SyntheticPhoto.file(try SyntheticPhoto.image(width: 640, height: 480))))
         #expect(page.width == 640)
         #expect(page.height == 480)
     }
 
     @Test func storesAtStoredSize() async throws {
-        let data = try file(try photo(width: 6_500, height: 1_000))
+        let data = try SyntheticPhoto.file(try SyntheticPhoto.image(width: 6_500, height: 1_000))
         let stored = try #require(await PhotoDecoding.stored(data))
         #expect(stored.width == PhotoDecoding.storedPixelSize)
         let shown = try #require(await PhotoDecoding.shown(data))
@@ -143,10 +104,18 @@ struct PhotoDecodingTests {
         #expect(await PhotoDecoding.stored(Data()) == nil)
     }
 
+    /// One photo that won't decode fails them all, so a document is never saved with a page missing.
+    @Test func storedPagesFailWholeWhenOnePhotoFails() async throws {
+        let good = try SyntheticPhoto.file(try SyntheticPhoto.image(width: 400, height: 300))
+        #expect(await PhotoDecoding.storedPages([good, good])?.count == 2)
+        #expect(await PhotoDecoding.storedPages([good, Data("not a photo".utf8)]) == nil)
+    }
+
     /// What the vault gets from a photo with a place and a camera in it: none of that, and nothing that
     /// turns it, as it's already upright. ImageIO's own sizes in {Exif} are fine.
     @Test func savedPhotoPageHasNoMetadata() async throws {
-        let data = try file(try photo(width: 400, height: 300), orientation: 6, withMetadata: true)
+        let data = try SyntheticPhoto.file(
+            try SyntheticPhoto.image(width: 400, height: 300), orientation: 6, withMetadata: true)
         let original = try #require(CGImageSourceCreateWithData(data as CFData, nil))
         let originalProperties = try #require(
             CGImageSourceCopyPropertiesAtIndex(original, 0, nil) as? [CFString: Any])

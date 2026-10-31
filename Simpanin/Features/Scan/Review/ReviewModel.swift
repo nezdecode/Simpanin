@@ -66,10 +66,16 @@ final class ReviewModel {
 
     private let store: any DocumentStoring
     private let encode: @Sendable (CGImage) -> Data?
+    private let storePhotos: @Sendable ([Data]) async -> [Data]?
+    private var savedPages = SavedPages.shownPages
 
-    init(store: any DocumentStoring, encode: @escaping @Sendable (CGImage) -> Data? = PageEncoding.jpeg) {
+    init(
+        store: any DocumentStoring, encode: @escaping @Sendable (CGImage) -> Data? = PageEncoding.jpeg,
+        storePhotos: @escaping @Sendable ([Data]) async -> [Data]? = PhotoDecoding.storedPages
+    ) {
         self.store = store
         self.encode = encode
+        self.storePhotos = storePhotos
     }
 
     /// Worked out each time from the reading and the type chosen now, never stored.
@@ -95,9 +101,14 @@ final class ReviewModel {
     /// replace it.
     var hasUserChanges: Bool { values != scanned || type != scannedType || expiry != scannedExpiry }
 
-    /// After a scan or a rescan: every field comes from the new pages. The label stays.
-    func load(_ result: ParsedDocument?, pages: [CGImage], thumbnails: [PageThumbnail], reading: ScanReading? = nil) {
+    /// After a scan or a rescan: every field comes from the new pages. The label stays. The pages and where
+    /// their saved copies come from are set together, so a new pick never saves the old photos.
+    func load(
+        _ result: ParsedDocument?, pages: [CGImage], thumbnails: [PageThumbnail], reading: ScanReading? = nil,
+        saving savedPages: SavedPages = .shownPages
+    ) {
         self.pages = pages
+        self.savedPages = savedPages
         self.thumbnails = thumbnails
         // Always replaced, so a rescan that failed never keeps the old scan's notes.
         self.reading = reading
@@ -210,9 +221,12 @@ final class ReviewModel {
                 return false
             }
         }
-        let encoded = await Self.encoded(pages, with: encode)
+        let encoded = await savedPages.encoded(pages, encode: encode, storePhotos: storePhotos)
+        // Locking the vault removes this screen and cancels its save; a vault opened again meanwhile mustn't
+        // get the document the notice calls dropped.
+        guard !Task.isCancelled else { return false }
         // A page that can't be prepared is never left out, so nothing is saved.
-        guard encoded.count == pages.count else {
+        guard let encoded else {
             Logger.scan.error("A page couldn't be encoded; nothing was saved")
             saveError = .saveFailed
             return false
@@ -370,11 +384,5 @@ extension ReviewModel {
         guard dateKeys.contains(key) else { return nil }
         guard let date = yearFirst(text).flatMap(CalendarDate.init) else { return .notADate }
         return key == FieldKey.birthDate && date > .today ? .birthDateInFuture : nil
-    }
-
-    /// Off the main actor: a few full-size pages take long enough to freeze the screen.
-    @concurrent
-    private static func encoded(_ pages: [CGImage], with encode: @Sendable (CGImage) -> Data?) async -> [Data] {
-        pages.compactMap(encode)
     }
 }

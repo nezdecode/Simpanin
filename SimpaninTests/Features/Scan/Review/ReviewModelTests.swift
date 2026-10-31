@@ -42,11 +42,12 @@ struct ReviewModelTests {
         expiry: CalendarDate(year: 2027, month: 1, day: 4), expiryReasons: [.implausibleExpiry])
 
     func model(
-        _ store: FakeDocuments = FakeDocuments(), encode: @escaping @Sendable (CGImage) -> Data? = { _ in Data([1]) }
+        _ store: FakeDocuments = FakeDocuments(), encode: @escaping @Sendable (CGImage) -> Data? = { _ in Data([1]) },
+        storePhotos: @escaping @Sendable ([Data]) async -> [Data]? = PhotoDecoding.storedPages
     )
         -> ReviewModel
     {
-        ReviewModel(store: store, encode: encode)
+        ReviewModel(store: store, encode: encode, storePhotos: storePhotos)
     }
 
     @Test func aKTPScanFillsTheForm() throws {
