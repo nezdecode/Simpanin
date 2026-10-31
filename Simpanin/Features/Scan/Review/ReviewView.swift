@@ -16,6 +16,7 @@ import VaultCore
 /// "Periksa data": the pages and what the scan read, to check and correct before "Simpan ke vault".
 struct ReviewView: View {
     @Bindable var review: ReviewModel
+    let source: ScanSource
     /// Vision is still reading the pages.
     let reading: Bool
     let onCancel: () -> Void
@@ -49,7 +50,8 @@ struct ReviewView: View {
                     .foregroundStyle(.secondary)
                 }
                 ReviewPagesSection(
-                    thumbnails: review.thumbnails, notes: review.pageNotes, reading: reading, transition: transition
+                    thumbnails: review.thumbnails, notes: review.pageNotes,
+                    footnote: ReviewText.pagesFootnote(source), reading: reading, transition: transition
                 ) { index in
                     // The keyboard closes, so it isn't back over the form when the viewer closes.
                     focusedField = nil
@@ -108,19 +110,21 @@ struct ReviewView: View {
                 } else {
                     // In the bar, so it's in reach wherever the form is scrolled to.
                     ToolbarItem(placement: .primaryAction) {
-                        Button(action: onRescan) { Text("review.rescan") }
+                        Button(action: onRescan) { Text(ReviewText.rescan(source)) }
                             .disabled(reading || review.saveInProgress)
                             .accessibilityIdentifier("review.rescan")
                     }
                 }
             }
             // Batal throws the scan away, so it always asks first.
-            .alert(Text("review.discardConfirm"), isPresented: $discardConfirmShown) {
+            .alert(Text(ReviewText.discardConfirm(source)), isPresented: $discardConfirmShown) {
                 Button(role: .destructive, action: onCancel) { Text("review.discard") }
                 Button(role: .cancel) {
                 } label: {
                     Text("review.keepChecking")
                 }
+            } message: {
+                if let message = ReviewText.discardMessage(source) { Text(message) }
             }
             // VoiceOver's escape closes the keyboard while editing, and otherwise works like Batal.
             .accessibilityAction(.escape) {

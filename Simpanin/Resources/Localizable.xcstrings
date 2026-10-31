@@ -1816,6 +1816,17 @@
         }
       }
     },
+    "review.discardPhotosConfirm" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buang tanpa menyimpan?"
+          }
+        }
+      }
+    },
     "review.duplicate.ktp" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2036,6 +2047,28 @@
         }
       }
     },
+    "review.originalsKept" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Foto aslinya tetap ada di app Foto."
+          }
+        }
+      }
+    },
+    "review.originalsStay" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Foto aslinya masih ada di app Foto."
+          }
+        }
+      }
+    },
     "review.otherPages" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2098,6 +2131,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld halaman"
+          }
+        }
+      }
+    },
+    "review.pickAgain" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pilih foto lain"
+          }
+        }
+      }
+    },
+    "review.pickAgainConfirm" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Perubahan yang kamu buat akan diganti foto yang baru dipilih."
           }
         }
       }

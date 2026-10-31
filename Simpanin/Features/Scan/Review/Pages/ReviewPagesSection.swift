@@ -16,6 +16,8 @@ import SwiftUI
 struct ReviewPagesSection: View {
     let thumbnails: [PageThumbnail]
     let notes: PageNotes
+    /// Under the count, like "Foto aslinya masih ada di app Foto."
+    var footnote: LocalizedStringResource?
     /// A rescan's pages are being read; the ones shown are about to be replaced, so they don't open.
     let reading: Bool
     let transition: Namespace.ID
@@ -35,6 +37,7 @@ struct ReviewPagesSection: View {
     private var footer: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text("review.pages \(thumbnails.count)")
+            if let footnote { Text(footnote) }
             ForEach(notes.lines, id: \.text) { line in
                 if line.isMarked { WarningText(verbatim: line.text) } else { Text(verbatim: line.text) }
             }

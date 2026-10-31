@@ -15,6 +15,29 @@ import VaultCore
 
 /// The texts "Periksa data" shows for its marks, refusals and the duplicate alert.
 nonisolated enum ReviewText {
+    /// The bar's button that replaces every page.
+    static func rescan(_ source: ScanSource) -> LocalizedStringResource {
+        source == .photos ? "review.pickAgain" : "review.rescan"
+    }
+
+    static func rescanConfirm(_ source: ScanSource) -> LocalizedStringResource {
+        source == .photos ? "review.pickAgainConfirm" : "review.rescanConfirm"
+    }
+
+    /// Batal's question. Picked photos also say their originals stay in Photos.
+    static func discardConfirm(_ source: ScanSource) -> LocalizedStringResource {
+        source == .photos ? "review.discardPhotosConfirm" : "review.discardConfirm"
+    }
+
+    static func discardMessage(_ source: ScanSource) -> LocalizedStringResource? {
+        source == .photos ? "review.originalsKept" : nil
+    }
+
+    /// Under the pages: importing never moves or deletes the photo it came from.
+    static func pagesFootnote(_ source: ScanSource) -> LocalizedStringResource? {
+        source == .photos ? "review.originalsStay" : nil
+    }
+
     /// What shows under the type or the expiry: "Periksa lagi", with its reason when one is known.
     static func text(for note: ReviewModel.Note, numberKey: String?, onType: Bool = false) -> LocalizedStringResource {
         switch note {

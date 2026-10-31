@@ -107,8 +107,8 @@ struct ScanFlowView: View {
                 .onDisappear(perform: DocumentCameraCache.clear)
             } else {
                 ReviewView(
-                    review: review, reading: review.pages.isEmpty || scan.state == .reading, onCancel: end,
-                    onRescan: rescan, onSave: save)
+                    review: review, source: source, reading: review.pages.isEmpty || scan.state == .reading,
+                    onCancel: end, onRescan: rescan, onSave: save)
             }
         }
         .task(id: photoLoads) {
@@ -146,9 +146,9 @@ struct ScanFlowView: View {
             if screen == .ended { end() }
         }
         .confirmationDialog(
-            Text("review.rescanConfirm"), isPresented: $rescanConfirmShown, titleVisibility: .visible
+            Text(ReviewText.rescanConfirm(source)), isPresented: $rescanConfirmShown, titleVisibility: .visible
         ) {
-            Button(action: scanAgain) { Text("review.rescan") }
+            Button(action: scanAgain) { Text(ReviewText.rescan(source)) }
         }
         .alert(
             Text("photos.failed"),
