@@ -1475,6 +1475,72 @@
         }
       }
     },
+    "photos.add %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tambah (%lld)"
+          }
+        }
+      }
+    },
+    "photos.failed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Foto tidak bisa dibuka."
+          }
+        }
+      }
+    },
+    "photos.failed.message" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidak ada foto yang ditambahkan. Kalau fotonya di iCloud, pastikan HP tersambung ke internet, lalu pilih lagi."
+          }
+        }
+      }
+    },
+    "photos.loading" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Memuat foto…"
+          }
+        }
+      }
+    },
+    "photos.loadingProgress %lld %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Memuat foto %1$lld dari %2$lld…"
+          }
+        }
+      }
+    },
+    "photos.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pilih foto"
+          }
+        }
+      }
+    },
     "recovery.cannotOpenNow" : {
       "extractionState" : "manual",
       "localizations" : {
