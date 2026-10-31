@@ -42,7 +42,7 @@ jobs:
       - if: ${{ !cancelled() }}
         run: |
           useradd --create-home tester
-          chown -R tester "$GITHUB_WORKSPACE"
+          chown -R tester:tester "$GITHUB_WORKSPACE"
           su tester -c "cd Packages/VaultCore && swift test"
 
   swiftlint:
