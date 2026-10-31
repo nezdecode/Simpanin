@@ -11,7 +11,6 @@
 
 import CoreGraphics
 import Foundation
-import ImageIO
 import Observation
 import VaultCore
 import os
@@ -156,7 +155,8 @@ final class DocumentDetailModel {
                 let data = try await pageReader.pageData(pageID, of: document.id)
                 // Not kept after the screen has gone; a return reads it again.
                 guard !Task.isCancelled else { return }
-                pages[index] = await Self.reduced(data, to: Self.reducedPixelSize).map(PageState.shown) ?? .failed
+                pages[index] =
+                    await CGImage.reduced(from: data, to: Self.reducedPixelSize).map(PageState.shown) ?? .failed
             } catch VaultError.locked {
                 return
             } catch {
@@ -194,7 +194,7 @@ final class DocumentDetailModel {
         guard document.pageIDs.indices.contains(index) else { return nil }
         do {
             let data = try await pageReader.pageData(document.pageIDs[index], of: document.id)
-            return await Self.reduced(data, to: PageViewer.maxPixelSize)
+            return await CGImage.reduced(from: data, to: PageViewer.maxPixelSize)
         } catch VaultError.locked {
             // The lock takes the viewer away; nothing to log.
             return nil
@@ -236,18 +236,5 @@ final class DocumentDetailModel {
 
     func deletePermanently() async {
         if await onDeletePermanently(document.id) { closed = true }
-    }
-
-    /// ImageIO's thumbnail, decoded straight to that size off the main actor; never `UIImage(data:)`, which
-    /// decodes the full bitmap.
-    @concurrent private static func reduced(_ data: Data, to pixelSize: Int) async -> CGImage? {
-        guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
-        let options: [CFString: Any] = [
-            kCGImageSourceCreateThumbnailFromImageAlways: true,
-            kCGImageSourceCreateThumbnailWithTransform: true,
-            kCGImageSourceShouldCacheImmediately: true,
-            kCGImageSourceThumbnailMaxPixelSize: pixelSize,
-        ]
-        return CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary)
     }
 }
