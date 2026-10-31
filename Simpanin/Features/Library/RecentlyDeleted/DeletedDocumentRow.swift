@@ -12,12 +12,44 @@
 import SwiftUI
 import VaultCore
 
-/// A document in Baru dihapus, with the days until it's purged. Swipe to restore.
+/// A document in Baru dihapus, with the days until it's purged. A tap opens it; a swipe, a long press or
+/// VoiceOver's action restores it.
 struct DeletedDocumentRow: View {
     let document: VaultCore.Document
+    let onOpen: () -> Void
     let onRestore: () -> Void
 
     var body: some View {
+        Button(action: onOpen) {
+            HStack {
+                content
+                Spacer(minLength: 0)
+                DisclosureChevron()
+            }
+        }
+        .foregroundStyle(.primary)
+        .accessibilityIdentifier("document.row")
+        .accessibilityAction(named: Text("button.restore"), onRestore)
+        .contextMenu {
+            Button(action: onRestore) {
+                Label {
+                    Text("button.restore")
+                } icon: {
+                    Image(systemName: "arrow.uturn.backward")
+                }
+            }
+        }
+        .swipeActions {
+            Button {
+                onRestore()
+            } label: {
+                Text("button.restore")
+            }
+            .tint(.accentColor)
+        }
+    }
+
+    private var content: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(DocumentStyle.name(document.type, label: document.label)).font(.headline)
             if let deletedAt = document.deletedAt {
@@ -29,14 +61,5 @@ struct DeletedDocumentRow: View {
             }
         }
         .accessibilityElement(children: .combine)
-        .accessibilityIdentifier("document.row")
-        .swipeActions {
-            Button {
-                onRestore()
-            } label: {
-                Text("button.restore")
-            }
-            .tint(.accentColor)
-        }
     }
 }

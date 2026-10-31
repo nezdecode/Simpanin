@@ -15,6 +15,10 @@ import VaultCore
 /// Baru dihapus: documents waiting for their purge, with the days left.
 struct RecentlyDeletedView: View {
     let library: LibraryModel
+    let documentScreen: (VaultCore.Document) -> DocumentDetailView
+    /// A destination of its own rather than a value link: this screen is pushed by a view, and a value
+    /// appended to the stack's path would land underneath it.
+    @State private var opened: VaultCore.Document?
 
     var body: some View {
         Group {
@@ -31,14 +35,22 @@ struct RecentlyDeletedView: View {
                             Text("list.recentlyDeletedEmpty").foregroundStyle(.secondary)
                         }
                         ForEach(library.deleted) { document in
-                            DeletedDocumentRow(document: document) { Task { await library.restore(document.id) } }
+                            DeletedDocumentRow(document: document) {
+                                opened = document
+                            } onRestore: {
+                                Task { await library.restore(document.id) }
+                            }
                         }
                     } footer: {
-                        Text("deleted.explanation")
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("deleted.explanation")
+                            if !library.deleted.isEmpty { Text("deleted.openHint") }
+                        }
                     }
                 }
             }
         }
         .navigationTitle(Text("list.recentlyDeleted"))
+        .navigationDestination(item: $opened, destination: documentScreen)
     }
 }

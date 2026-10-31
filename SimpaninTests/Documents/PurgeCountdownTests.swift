@@ -1,5 +1,5 @@
 //
-//  RecentlyDeletedTests.swift
+//  PurgeCountdownTests.swift
 //  SimpaninTests
 //
 //  Created by Inez Amanda on 14/10/26.
@@ -14,8 +14,8 @@ import Testing
 
 @testable import Simpanin
 
-@Suite("Baru dihapus")
-struct RecentlyDeletedTests {
+@Suite("Purge countdown")
+struct PurgeCountdownTests {
     // MARK: Baru dihapus counts down to the purge
 
     @Test func daysUntilPurge() {
@@ -28,5 +28,14 @@ struct RecentlyDeletedTests {
         #expect(PurgeCountdown.daysLeft(deletedAt: deleted, now: deleted + 31 * day) == 0)
         #expect(String(localized: PurgeCountdown.text(daysLeft: 23)) == "Dihapus permanen dalam 23 hari")
         #expect(String(localized: PurgeCountdown.text(daysLeft: 0)) == "Dihapus permanen hari ini")
+    }
+
+    @Test func noticeCountsDownToThePurge() {
+        #expect(
+            String(localized: PurgeCountdown.notice(daysLeft: 29))
+                == "Dihapus permanen dalam 29 hari. Pulihkan dulu untuk menyalin nomornya.")
+        #expect(
+            String(localized: PurgeCountdown.notice(daysLeft: 0))
+                == "Dihapus permanen hari ini. Pulihkan dulu untuk menyalin nomornya.")
     }
 }

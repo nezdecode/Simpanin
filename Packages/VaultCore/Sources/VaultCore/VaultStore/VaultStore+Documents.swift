@@ -151,9 +151,11 @@ extension VaultStore {
         }
     }
 
-    /// Purges a document now, even a live one.
+    /// Purges a document in Recently deleted now. A live one is refused, so an app can't purge a document
+    /// that a restore has just brought back.
     public func deletePermanently(_ id: DocumentID) throws {
         let entry = try entry(id)
+        guard entry.deletedAt != nil else { throw VaultError.documentNotDeleted }
         try purge([entry])
     }
 

@@ -16,13 +16,19 @@ struct SettingsView: View {
     let vault: AppVault
     let lock: LockController
     let library: LibraryModel
+    /// Builds a document opened from Baru dihapus; the list owns the store it needs.
+    let documentScreen: (VaultCore.Document) -> DocumentDetailView
     /// Owned here and shared with Data lama, so the size and the list come from one place.
     @State private var oldVaults: OldVaultsModel
 
-    init(vault: AppVault, lock: LockController, library: LibraryModel) {
+    init(
+        vault: AppVault, lock: LockController, library: LibraryModel,
+        documentScreen: @escaping (VaultCore.Document) -> DocumentDetailView
+    ) {
         self.vault = vault
         self.lock = lock
         self.library = library
+        self.documentScreen = documentScreen
         _oldVaults = State(initialValue: OldVaultsModel(store: vault.store, folder: vault.locations.quarantine))
     }
 
@@ -44,7 +50,7 @@ struct SettingsView: View {
             }
             Section {
                 NavigationLink {
-                    RecentlyDeletedView(library: library)
+                    RecentlyDeletedView(library: library, documentScreen: documentScreen)
                 } label: {
                     LabeledContent {
                         // No count while the list can't load: a 0 would say the bin is empty.

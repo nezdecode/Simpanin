@@ -122,6 +122,17 @@
         }
       }
     },
+    "button.deletePermanently" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hapus permanen"
+          }
+        }
+      }
+    },
     "button.done" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -243,6 +254,39 @@
         }
       }
     },
+    "deleted.noticeIn %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dihapus permanen dalam %lld hari. Pulihkan dulu untuk menyalin nomornya."
+          }
+        }
+      }
+    },
+    "deleted.noticeToday" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dihapus permanen hari ini. Pulihkan dulu untuk menyalin nomornya."
+          }
+        }
+      }
+    },
+    "deleted.openHint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ketuk untuk melihat dokumennya dulu. Geser atau tekan lama untuk langsung memulihkan."
+          }
+        }
+      }
+    },
     "deleted.purgeIn %lld" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -331,6 +375,39 @@
         }
       }
     },
+    "detail.deletePermanentlyMessage" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dokumen ini dan kuncinya hilang, dan tidak bisa dipulihkan."
+          }
+        }
+      }
+    },
+    "detail.deletePermanentlyTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hapus permanen?"
+          }
+        }
+      }
+    },
+    "detail.deleted %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dihapus %@"
+          }
+        }
+      }
+    },
     "detail.hidden" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -371,6 +448,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%1$@ · ditambahkan %2$@"
+          }
+        }
+      }
+    },
+    "detail.labelDeleted %@ %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ · dihapus %2$@"
           }
         }
       }

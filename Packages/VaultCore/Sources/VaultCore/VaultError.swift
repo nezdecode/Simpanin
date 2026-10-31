@@ -41,6 +41,8 @@ public enum VaultError: Error, Equatable, Sendable {
     case pageNotFound
     /// The document is in Recently deleted. Restore it before editing it or its pages.
     case documentDeleted
+    /// Only a document in Recently deleted can be deleted permanently. Nothing is changed.
+    case documentNotDeleted
     /// A quarantine folder's vault.json is unreadable or names another vault.
     case quarantineUnreadable
     /// The quarantine entry names the vault that is in use. Nothing is deleted.
