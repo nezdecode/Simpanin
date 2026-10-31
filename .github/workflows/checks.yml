@@ -1,0 +1,57 @@
+# The hooks' checks, the linters and VaultCore's tests on every pull request into main, on Linux so they
+# cost the fewest Actions minutes. They advise and don't block: check them before merging (CONTRIBUTING.md).
+# The app's own tests need the simulator and stay local (scripts/test.sh).
+name: Checks
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+
+concurrency:
+  group: checks-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  hooks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - run: scripts/ci-checks.sh ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }}
+
+  swift:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # The Swift release the code is formatted and built with: swift-format comes with the toolchain, and
+    # another release can format differently. Move it when Xcode's Swift moves.
+    container: swift:6.4.0
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - run: swift format lint --strict -r Packages/VaultCore Simpanin SimpaninTests SimpaninUITests
+      # A formatting slip shouldn't hide whether the tests pass. The container runs as root, which reads files
+      # whatever their permissions, so the tests that make a file unreadable run as another user.
+      - if: ${{ !cancelled() }}
+        run: |
+          useradd --create-home tester
+          chown -R tester:tester "$GITHUB_WORKSPACE"
+          su tester -c "cd Packages/VaultCore && swift test"
+
+  swiftlint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # The version .swiftlint.yml asks for; SwiftLint refuses to run as any other.
+    container: ghcr.io/realm/swiftlint:0.59.1
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - run: swiftlint lint --strict

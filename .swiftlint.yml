@@ -1,6 +1,10 @@
 # SwiftLint checks naming, size and code smells. Layout (indentation, line breaks,
 # trailing commas) belongs to swift-format, configured in .swift-format.
 
+# The hooks and the pull request checks lint with the same SwiftLint, so a newer one with new rules is a
+# change of its own. Update this and the image in .github/workflows/checks.yml together.
+swiftlint_version: 0.59.1
+
 included:
   - Packages/VaultCore/Sources
   - Packages/VaultCore/Tests

@@ -1,0 +1,54 @@
+# A review of each pull request as it's published, once, when it opens or leaves draft. It runs on the
+# maintainer's Claude subscription (the CLAUDE_CODE_OAUTH_TOKEN secret) with the workflow's own token, so no
+# GitHub App gets access to the repository.
+# Never switch this to pull_request_target: it runs pull requests from forks with the repository's secrets.
+name: Review
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    # opened fires for drafts too; a draft is reviewed when it's marked ready. A fork's pull request gets no
+    # secrets, so it's left to the maintainer.
+    if: github.event.pull_request.draft == false && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      # Pinned to a commit: this step holds both tokens, and a tag can move. v1.0.264.
+      - uses: anthropics/claude-code-action@d70510b174a1244958df0b03166a54912811f3e6
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.pull_request.number }}
+            BASE: ${{ github.event.pull_request.base.sha }}
+            HEAD: ${{ github.event.pull_request.head.sha }}
+
+            Review this pull request for Simpanin, an iPhone app that keeps people's ID documents. A mistake can lose someone's document or leak it. The author has already reviewed the code before opening the pull request, so look for what that review could miss. Read CODING.md and CONTRIBUTING.md first; they are the rules.
+
+            1. [diff] The diff as merged (`gh pr diff`), including commits that read like late fixes. Look for what a review of one file at a time misses:
+               - interactions across files, and actor isolation and concurrency;
+               - errors swallowed with `try?` where failing matters (CODING.md section 3);
+               - decrypted data kept or written where section 8 forbids it;
+               - logging that could hold a value without `.private`;
+               - a format change without a migration and a fixture test (section 9);
+               - new logic without a test (section 10).
+            2. [claim] Every commit message (`git log BASE..HEAD`) and the pull request's description (`gh pr view`) against the diff. Flag any claim the diff doesn't support: a change, a test or a check that isn't there.
+            3. [privacy] CONTRIBUTING.md's privacy rules, and public text (code, comments, messages, the description) that points to private files or notes a reader can't open.
+
+            Start with what matters most: lost or leaked data, then decrypted data (section 8) and format changes (section 9), then the rest. Post each finding as soon as you're sure of it, as an inline comment on its line, starting with its tag ([diff], [claim] or [privacy]), and say what's wrong and why it matters. Stop after 10 findings. Report only what you're confident about; skip style, which the linters check. If you find nothing, post one comment saying what you checked. Don't approve or request changes.
+          claude_args: |
+            --max-turns 40
+            --allowedTools "Read,Grep,Glob,Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr comment:*),Bash(git log:*),Bash(git show:*),Bash(git diff:*),mcp__github_inline_comment__create_inline_comment"

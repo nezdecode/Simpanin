@@ -62,4 +62,6 @@ Keep moves and reformatting in their own commits, separate from changes in behav
 
 Don't commit to `main`. Each piece of work gets its own branch, named `type/scope-topic` with the same types and scopes as commits, like `feat/parsers-sim` or `fix/vaultcore-flush`. When a branch holds several kinds of commits, name it after its main purpose. Branches merged before 15 Oct 2026 used `scope/topic`. Keep the small commits on that branch, then open a pull request into `main` that says what changed and which tests you ran.
 
+Each pull request runs the hooks' checks, swift-format, SwiftLint and VaultCore's tests on GitHub (`.github/workflows/checks.yml`), and gets one review from Claude when it opens or leaves draft (`review.yml`). The app's tests need the simulator, so they stay with `scripts/test.sh`. To run the hooks' checks over every commit of a branch, as the pull request will, use `scripts/ci-checks.sh main HEAD`. The checks advise and don't block a merge, so look at them before merging.
+
 Merge with **Create a merge commit**. Don't squash or rebase: notes and reviews refer to commits by their hash, and both of those create new hashes.
