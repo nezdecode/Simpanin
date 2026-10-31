@@ -48,7 +48,7 @@ jobs:
             2. [claim] Every commit message (`git log BASE..HEAD`) and the pull request's description (`gh pr view`) against the diff. Flag any claim the diff doesn't support: a change, a test or a check that isn't there.
             3. [privacy] CONTRIBUTING.md's privacy rules, and public text (code, comments, messages, the description) that points to private files or notes a reader can't open.
 
-            Post each finding as soon as you're sure of it, as an inline comment on its line, starting with its tag ([diff], [claim] or [privacy]), and say what's wrong and why it matters. Stop after 10 findings. Report only what you're confident about; skip style, which the linters check. If you find nothing, post one comment saying what you checked. Don't approve or request changes.
+            Start with what matters most: lost or leaked data, then decrypted data (section 8) and format changes (section 9), then the rest. Post each finding as soon as you're sure of it, as an inline comment on its line, starting with its tag ([diff], [claim] or [privacy]), and say what's wrong and why it matters. Stop after 10 findings. Report only what you're confident about; skip style, which the linters check. If you find nothing, post one comment saying what you checked. Don't approve or request changes.
           claude_args: |
             --max-turns 40
             --allowedTools "Read,Grep,Glob,Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr comment:*),Bash(git log:*),Bash(git show:*),Bash(git diff:*),mcp__github_inline_comment__create_inline_comment"
