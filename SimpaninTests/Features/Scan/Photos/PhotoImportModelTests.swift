@@ -142,4 +142,110 @@ struct PhotoImportModelTests {
         #expect(await loading.value == nil)
         #expect(model.state == .idle)
     }
+
+    // MARK: - The flow
+
+    /// Ticking photos is no decision yet: the flow starts, and the lock may call it dropped, only on Tambah.
+    @Test func nothingStartsBeforeTambah() throws {
+        var started = 0
+        let model = PhotoImportModel(loader: ScriptedPhotos([:]), onStarted: { started += 1 })
+        model.add()
+        #expect(model.screen == .picker)
+        model.selection = items("a")
+        #expect(started == 0)
+        #expect(model.screen == .picker)
+        model.add()
+        #expect(started == 1)
+        #expect(model.screen == .loading)
+    }
+
+    @Test func emptySelectionEndsFlow() {
+        let model = PhotoImportModel(loader: ScriptedPhotos([:]))
+        model.cancelPicker()
+        #expect(model.screen == .ended)
+    }
+
+    @Test func batalWhileLoadingEndsFlow() async throws {
+        let photos = ScriptedPhotos(["a": .held(try photo(width: 300))])
+        defer { photos.release.finish() }
+        let model = PhotoImportModel(loader: photos)
+        model.selection = items("a")
+        model.add()
+        let loading = Task { await model.loadAdded() }
+        try await waitUntilHolding(photos)
+        model.cancel()
+        #expect(model.screen == .ended)
+        photos.release.yield()
+        #expect(await loading.value == nil)
+    }
+
+    @Test func firstPickFailureEndsFlow() async {
+        let model = PhotoImportModel(loader: ScriptedPhotos(["a": .fails]))
+        model.selection = items("a")
+        model.add()
+        #expect(await model.loadAdded() == nil)
+        #expect(model.state == .failed)
+        model.failureSeen()
+        #expect(model.state == .idle)
+        #expect(model.screen == .ended)
+    }
+
+    /// The pages loaded first, and what the user typed about them, stay when the next pick fails.
+    @Test func rePickKeepsPagesWhenItFails() async throws {
+        var started = 0
+        let photos = ScriptedPhotos(["a": .photo(try photo(width: 300)), "b": .fails])
+        let model = PhotoImportModel(loader: photos, onStarted: { started += 1 })
+        model.selection = items("a")
+        model.add()
+        #expect(await model.loadAdded()?.pages.count == 1)
+        #expect(model.screen == .review)
+        model.pickAgain()
+        #expect(model.screen == .picker)
+        #expect(model.selection.isEmpty)
+        model.selection = items("b")
+        model.add()
+        #expect(await model.loadAdded() == nil)
+        model.failureSeen()
+        #expect(model.screen == .review)
+        #expect(started == 1)
+    }
+
+    @Test func rePickCancelledKeepsPages() async throws {
+        let photos = ScriptedPhotos(["a": .photo(try photo(width: 300)), "b": .held(try photo(width: 200))])
+        defer { photos.release.finish() }
+        let model = PhotoImportModel(loader: photos)
+        model.selection = items("a")
+        model.add()
+        #expect(await model.loadAdded() != nil)
+        // Batal in the picker.
+        model.pickAgain()
+        model.cancelPicker()
+        #expect(model.screen == .review)
+        // Batal while the new photos load.
+        model.pickAgain()
+        model.selection = items("b")
+        model.add()
+        let loading = Task { await model.loadAdded() }
+        try await waitUntilHolding(photos)
+        model.cancel()
+        #expect(model.screen == .review)
+        photos.release.yield()
+        #expect(await loading.value == nil)
+        #expect(model.screen == .review)
+    }
+
+    /// Slow iCloud photos load one by one, so the screen says which one, rather than look stuck.
+    @Test func saysWhichPhotoIsLoading() async throws {
+        let photos = ScriptedPhotos(["a": .photo(try photo(width: 300)), "b": .held(try photo(width: 200))])
+        defer { photos.release.finish() }
+        let model = PhotoImportModel(loader: photos)
+        model.selection = items("a", "b")
+        model.add()
+        let loading = Task { await model.loadAdded() }
+        try await waitUntilHolding(photos)
+        #expect(model.loadingNumber == 2)
+        #expect(model.loadingCount == 2)
+        photos.release.yield()
+        #expect(await loading.value?.pages.count == 2)
+    }
 }
