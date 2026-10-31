@@ -217,4 +217,36 @@ extension ReviewModelTests {
         #expect(await !review.save())
         #expect(review.saveStep() == .save)
     }
+
+    /// The lock removes Periksa data and cancels its save. While the pages are still being prepared, nothing
+    /// is saved: the notice will say the scan was dropped, so the vault mustn't get it after the next unlock.
+    @Test func lockDuringSavePreparationSavesNothing() async throws {
+        let store = FakeDocuments()
+        let review = model(store)
+        review.loadScan(Self.ktp, pages: [try page()])
+        var reported = 0
+        let saving = Task { await review.save(onSaved: { reported += 1 }) }
+        // On the main actor, the save hasn't started yet: it's cancelled before its pages are prepared.
+        saving.cancel()
+        #expect(await !saving.value)
+        #expect(await store.created.isEmpty)
+        #expect(reported == 0)
+        #expect(review.saveError == nil)
+    }
+
+    /// Once the vault is writing, a lock lets it finish, and the scan counts as saved, not dropped.
+    @Test func lockDuringWriteStillSaves() async throws {
+        let store = FakeDocuments()
+        await store.gateNextCreate()
+        let review = model(store)
+        review.loadScan(Self.ktp, pages: [try page()])
+        var reported = 0
+        let saving = Task { await review.save(onSaved: { reported += 1 }) }
+        try #require(await store.waitUntilCreating())
+        saving.cancel()
+        await store.releaseCreate()
+        #expect(await saving.value)
+        #expect(await store.created.count == 1)
+        #expect(reported == 1)
+    }
 }

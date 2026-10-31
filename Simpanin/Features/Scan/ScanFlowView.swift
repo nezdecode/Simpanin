@@ -25,8 +25,9 @@ struct ScanFlowView: View {
     @State private var review: ReviewModel
     @State private var scan: ScanModel
     @State private var cameraShown = false
-    /// Reads run in `.task(id: reads)`, so SwiftUI cancels one when the flow goes away.
+    /// Reads and saves run in `.task(id:)`, so SwiftUI cancels them when the flow goes away.
     @State private var reads = 0
+    @State private var saves = 0
     @State private var newPages: [CGImage]?
     @State private var rescanConfirmShown = false
     @State private var pageFailedShown = false
@@ -106,6 +107,12 @@ struct ScanFlowView: View {
             scan.discard()
             onRead()
         }
+        // Not cancelled once the vault is writing: the save checks for the lock only while it prepares pages.
+        .task(id: saves) {
+            guard saves > 0 else { return }
+            // The scan ends the moment the vault has it, so a lock right after doesn't call it dropped.
+            if await review.save(onSaved: onScanEnded) { end() }
+        }
         .onAppear(perform: start)
         .confirmationDialog(
             Text("review.rescanConfirm"), isPresented: $rescanConfirmShown, titleVisibility: .visible
@@ -164,10 +171,9 @@ struct ScanFlowView: View {
     }
 
     private func save() {
-        Task {
-            // The scan ends the moment the vault has it, so a lock right after doesn't call it dropped.
-            if await review.save(onSaved: onScanEnded) { end() }
-        }
+        // A new id cancels the task before it, so a save already running is never replaced.
+        guard !review.saving else { return }
+        saves += 1
     }
 
     private func end() {
