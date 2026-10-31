@@ -4,6 +4,7 @@
 # and SwiftLint.
 # Real document scans must never be committed; see .gitignore.
 # Install once per clone: git config core.hooksPath scripts/hooks
+# scripts/ci-checks.sh repeats the image and private-file patterns for pull requests; change both together.
 
 bad=$(git diff --cached --name-only --diff-filter=ACMR -z \
   | tr '\0' '\n' \

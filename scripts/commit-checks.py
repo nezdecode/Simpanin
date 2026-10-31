@@ -23,7 +23,7 @@ DOCS_PATH = re.compile(r'(?<![\w./:-])docs/')
 # across two lines isn't seen, as the checks read one line at a time.
 DESIGN_DOC = re.compile(r'design[\s_\u2013-]*doc', re.I)
 # Files that name docs/ to guard it.
-NAMES_DOCS_ON_PURPOSE = {'.gitignore', 'scripts/hooks/pre-commit', 'scripts/commit-checks.py'}
+NAMES_DOCS_ON_PURPOSE = {'.gitignore', 'scripts/hooks/pre-commit', 'scripts/commit-checks.py', 'scripts/ci-checks.sh'}
 CREATED_BY = re.compile(r'^//  Created by (.+) on (\d{1,2})/(\d{1,2})/(\d{2})\.$', re.M)
 # A disable of unchecked_sendable must be for the next, this or previous line and give a reason.
 DISABLE = re.compile(r'swiftlint:disable(?::(next|this|previous))?\s+(.*)')

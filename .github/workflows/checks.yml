@@ -1,0 +1,51 @@
+# The hooks' checks, the linters and VaultCore's tests on every pull request into main, on Linux so they
+# cost the fewest Actions minutes. They advise and don't block: check them before merging (CONTRIBUTING.md).
+# The app's own tests need the simulator and stay local (scripts/test.sh).
+name: Checks
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+
+concurrency:
+  group: checks-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  hooks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - run: scripts/ci-checks.sh ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }}
+
+  swift:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Pinned to this repository's Swift version: swift-format comes with the toolchain and can format
+    # differently in another release.
+    container: swift:6.4.0
+    steps:
+      - uses: actions/checkout@v7
+      - run: swift format lint --strict -r Packages/VaultCore Simpanin SimpaninTests SimpaninUITests
+      - uses: actions/cache@v6
+        with:
+          path: Packages/VaultCore/.build
+          key: vaultcore-${{ runner.os }}-swift-6.4.0-${{ hashFiles('Packages/VaultCore/Package.resolved') }}
+      - run: swift test
+        working-directory: Packages/VaultCore
+
+  swiftlint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # The version the hooks run; a newer SwiftLint may bring rules the code hasn't met yet.
+    container: ghcr.io/realm/swiftlint:0.59.1
+    steps:
+      - uses: actions/checkout@v7
+      - run: swiftlint lint --strict
