@@ -161,6 +161,22 @@ final class DeletedDetailUITests: UITestCase {
         XCTAssertTrue(tile(app, "Saya").waitForExistence(timeout: 5))
     }
 
+    /// With a page enlarged when the restore lands, the viewer goes with the document, so no decrypted page
+    /// stays up after its screen has closed.
+    @MainActor
+    func testARestoreFromTheRowClosesTheViewerToo() throws {
+        let app = deletedSample(["-SimpaninUITestSlowRestore"])
+        rows(app).firstMatch.press(forDuration: 1.2)
+        app.buttons["Pulihkan"].tap()
+        openDeleted(app)
+        pages(app).tap()
+        let close = app.buttons["viewer.close"]
+        XCTAssertTrue(close.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Tidak ada dokumen yang baru dihapus"].waitForExistence(timeout: 15))
+        XCTAssertFalse(close.exists)
+        XCTAssertFalse(app.navigationBars["KTP"].exists)
+    }
+
     @MainActor
     func testLongPressRestores() throws {
         let app = deletedSample()

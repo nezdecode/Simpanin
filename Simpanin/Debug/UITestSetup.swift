@@ -68,7 +68,7 @@
 
         /// The store the document list reads. `-SimpaninUITestLoadError <n>` fails its first n loads;
         /// `-SimpaninUITestDeleteError` fails every Hapus; `-SimpaninUITestBinError` every Pulihkan and
-        /// Hapus permanen; `-SimpaninUITestSlowRestore` makes each Pulihkan take five seconds.
+        /// Hapus permanen; `-SimpaninUITestSlowRestore` makes each Pulihkan take eight seconds.
         static func documentStore(for vault: AppVault) -> any DocumentStoring & PageReading {
             let count = value(after: "-SimpaninUITestLoadError").flatMap(Int.init)
             let failsDeletes = ProcessInfo.processInfo.arguments.contains("-SimpaninUITestDeleteError")
@@ -219,7 +219,7 @@
         }
         func restore(_ id: DocumentID) async throws {
             if failsBin { throw VaultError.fileUnavailable }
-            if slowRestore { try await Task.sleep(for: .seconds(5)) }
+            if slowRestore { try await Task.sleep(for: .seconds(8)) }
             try await store.restore(id)
         }
         func deletePermanently(_ id: DocumentID) async throws {
