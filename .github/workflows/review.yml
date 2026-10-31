@@ -1,0 +1,36 @@
+# A review of each pull request as it's published, once, when it opens or leaves draft. It runs on the
+# maintainer's Claude subscription (the CLAUDE_CODE_OAUTH_TOKEN secret) with the workflow's own token, so no
+# GitHub App gets access to the repository.
+# Never switch this to pull_request_target: it runs pull requests from forks with the repository's secrets.
+name: Review
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    # opened fires for drafts too; a draft is reviewed when it's marked ready.
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          plugin_marketplaces: "https://github.com/anthropics/claude-plugins-official.git"
+          plugins: "code-review@claude-plugins-official"
+          prompt: "/code-review:code-review --comment ${{ github.repository }}/pull/${{ github.event.pull_request.number }}"
+          claude_args: |
+            --max-turns 40
+            --allowedTools "mcp__github_inline_comment__create_inline_comment"
+            --append-system-prompt "Simpanin keeps people's ID documents, so read CODING.md and CONTRIBUTING.md first and review against them. The author's own review has already looked at the code before this pull request opened. Besides bugs, check three things: the whole diff as merged, including commits that read like late fixes; that every commit message and the pull request's description claim only what the diff contains; and CODING.md section 13 with CONTRIBUTING.md's privacy rules, including that no public text points to private files or notes."
