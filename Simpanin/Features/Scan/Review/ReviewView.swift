@@ -134,23 +134,7 @@ struct ReviewView: View {
             // over the keyboard.
             .safeAreaInset(edge: .bottom) {
                 if focusedField == nil {
-                    // Preparing photos for the vault takes a few seconds, so Simpan says it's working.
-                    Button(action: trySave) {
-                        if review.saving {
-                            HStack(spacing: 8) {
-                                ProgressView().tint(Color(.onAccent))
-                                Text("review.saving")
-                            }
-                        } else {
-                            Text("review.save")
-                        }
-                    }
-                    .buttonStyle(.prominent)
-                    // Not disabled while saving: a disabled button turns see-through and "Menyimpan…" can't be
-                    // read over the form. Taps then do nothing.
-                    .disabled(reading)
-                    .padding(16)
-                    .accessibilityIdentifier("review.save")
+                    SaveBar(saving: review.saving, isDisabled: reading, onSave: trySave)
                 }
             }
             .sheet(isPresented: $typePickerShown) {
