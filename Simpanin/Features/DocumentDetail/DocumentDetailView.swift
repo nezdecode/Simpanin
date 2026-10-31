@@ -69,7 +69,8 @@ struct DocumentDetailView: View {
             .onChange(of: model.phase) { _, phase in
                 if phase == .gone { dismiss() }
             }
-            .onChange(of: isListed()) { _, listed in
+            // Initial too: the restore can land between the tap and this screen's first look.
+            .onChange(of: isListed(), initial: true) { _, listed in
                 if !listed { dismiss() }
             }
             .alert(Text("detail.deletePermanentlyTitle"), isPresented: $purgeAsked) {
