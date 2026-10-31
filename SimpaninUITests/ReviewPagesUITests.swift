@@ -98,8 +98,7 @@ final class ReviewPagesUITests: UITestCase {
             "-SimpaninUITestScanKTPAndSIM", "-UIPreferredContentSizeCategoryName",
             "UICTContentSizeCategoryAccessibilityXXXL",
         ])
-        XCTAssertTrue(app.navigationBars["Dokumen"].waitForExistence(timeout: 10))
-        app.buttons["list.scan"].tap()
+        startScan(app)
         XCTAssertTrue(app.descendants(matching: .any)["review.page.2"].waitForExistence(timeout: 10))
         XCTAssertEqual(
             app.descendants(matching: .any)["review.page.2"].label, "Halaman 2 dari 2, terbaca sebagai SIM A")

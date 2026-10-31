@@ -142,8 +142,7 @@ final class ReviewUITests: UITestCase {
         ])
         // The fields sit far below at this size, and a form builds its rows only as they scroll in, so the
         // review is found by its first page.
-        XCTAssertTrue(app.navigationBars["Dokumen"].waitForExistence(timeout: 10))
-        app.buttons["list.scan"].tap()
+        startScan(app)
         XCTAssertTrue(app.descendants(matching: .any)["review.page.1"].waitForExistence(timeout: 10))
         XCTAssertTrue(app.descendants(matching: .any)["review.page.1"].isHittable)
         XCTAssertTrue(app.navigationBars.buttons["review.rescan"].isHittable)

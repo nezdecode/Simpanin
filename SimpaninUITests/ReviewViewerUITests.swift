@@ -126,8 +126,7 @@ final class ReviewViewerUITests: UITestCase {
     func testThePagesCantBeOpenedWhileARescanIsRead() throws {
         let app = launch(["-SimpaninUITestScan", "-SimpaninUITestSlowRead"])
         // The first read is slow too, so this waits longer than openReview does.
-        XCTAssertTrue(app.navigationBars["Dokumen"].waitForExistence(timeout: 10))
-        app.buttons["list.scan"].tap()
+        startScan(app)
         XCTAssertTrue(app.textFields["review.field.name"].waitForExistence(timeout: 20))
         let page = app.buttons["review.page.1"]
         XCTAssertTrue(page.isEnabled)
@@ -191,8 +190,7 @@ final class ReviewViewerUITests: UITestCase {
         let app = launch([
             "-SimpaninUITestScan", "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL",
         ])
-        XCTAssertTrue(app.navigationBars["Dokumen"].waitForExistence(timeout: 10))
-        app.buttons["list.scan"].tap()
+        startScan(app)
         // The top of the form: at this size the lower rows aren't built until scrolled to.
         let page = thumbnail(app, 1)
         XCTAssertTrue(page.waitForExistence(timeout: 10))

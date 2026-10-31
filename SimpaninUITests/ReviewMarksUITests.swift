@@ -58,8 +58,7 @@ final class ReviewMarksUITests: UITestCase {
         let app = launch([
             "-SimpaninUITestScan", "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL",
         ])
-        XCTAssertTrue(app.navigationBars["Dokumen"].waitForExistence(timeout: 10))
-        app.buttons["list.scan"].tap()
+        startScan(app)
         let name = app.textFields["review.field.name"]
         for _ in 0..<6 where !name.exists { app.swipeUp() }
         XCTAssertTrue(name.waitForExistence(timeout: 5))
