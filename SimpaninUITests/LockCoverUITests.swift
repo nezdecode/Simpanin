@@ -78,6 +78,8 @@ final class LockCoverUITests: UITestCase {
         screenshot("08 mulai vault baru")
         confirm.tap()
         XCTAssertTrue(app.navigationBars["Dokumen"].waitForExistence(timeout: 10))
+        // The user has already chosen, so the new vault opens straight away, without the welcome.
+        XCTAssertFalse(app.staticTexts["welcome.title"].exists)
 
         // The vault failed before it was created, so nothing was moved aside. The broken folder
         // is shown, but can't be deleted yet.

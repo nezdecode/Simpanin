@@ -24,6 +24,16 @@ struct DocumentCamera: UIViewControllerRepresentable {
     /// False in the simulator, which has no camera.
     static var isSupported: Bool { VNDocumentCameraViewController.isSupported }
 
+    /// Whether to offer scanning, in "+" and on the welcome screen. UI tests can hide the camera or
+    /// stand in for it.
+    static var isAvailable: Bool {
+        #if DEBUG
+            if UITestSetup.hidesCamera { return false }
+            if UITestSetup.scansSynthetically { return true }
+        #endif
+        return isSupported
+    }
+
     func makeUIViewController(context: Context) -> VNDocumentCameraViewController {
         let camera = VNDocumentCameraViewController()
         camera.delegate = context.coordinator

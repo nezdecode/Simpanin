@@ -95,6 +95,12 @@
             isActive && ProcessInfo.processInfo.arguments.contains("-SimpaninUITestExpiringSamples")
         }
 
+        /// `-SimpaninUITestWelcome`: the throwaway vault starts empty, so the welcome shows. Without it every test
+        /// starts on the list, as it did before the welcome existed.
+        static var showsWelcome: Bool {
+            isActive && ProcessInfo.processInfo.arguments.contains("-SimpaninUITestWelcome")
+        }
+
         /// `-SimpaninUITestNoCamera`: "+" acts as on a phone without a document camera, which the iOS 27
         /// simulator otherwise has.
         static var hidesCamera: Bool {
@@ -211,7 +217,7 @@
                 vault: opener, autoLock: AutoLock.stored(in: settings), settings: settings,
                 passcode: { turnedOff && opened.lock?.state == .unlocked ? .notSet : passcode },
                 vaultExists: { VaultStore.vaultExists(in: vault.locations.root) },
-                vaultIsEmpty: { false },
+                vaultIsEmpty: { showsWelcome ? try VaultStore.isEmpty(in: vault.locations.root) : false },
                 protectedDataAvailable: { true })
             opened.lock = lock
             return lock

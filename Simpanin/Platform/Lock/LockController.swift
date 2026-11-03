@@ -66,6 +66,8 @@ final class LockController {
     private var scanInProgress: ScanSource?
     /// A lock dropped a scan; told once, after the next unlock.
     private var scanDroppedByLock: ScanSource?
+    /// While the welcome's choice creates the vault, so the welcome stays up instead of the lock cover.
+    private(set) var isCreatingVault = false
     /// Chosen on the welcome screen. Nothing was scanned yet, so a lock drops it without a notice.
     private var pendingScan: ScanSource?
 
@@ -90,6 +92,8 @@ final class LockController {
         self.vaultExists = vaultExists
         self.vaultIsEmpty = vaultIsEmpty
         self.protectedDataAvailable = protectedDataAvailable
+        // Decided now rather than on the first activation, so the first frame never shows the lock cover.
+        if protectedDataAvailable(), passcode() != .notSet, isKnownEmpty { state = .noVault }
     }
 
     // MARK: - Scene phase
@@ -175,7 +179,9 @@ final class LockController {
             return
         }
         pendingScan = scan
+        isCreatingVault = true
         await open()
+        isCreatingVault = false
         if state != .unlocked { pendingScan = nil }
     }
 

@@ -11,12 +11,14 @@
 
 import SwiftUI
 
-/// "+": scan a document or pick photos of one. A phone without VisionKit's document camera can't scan, so
-/// there "+" opens Photos without a menu of one item.
-struct AddDocumentMenu: View {
+/// "+", and the empty list's "Tambah dokumen": scan a document or pick photos of one. A phone without
+/// VisionKit's document camera can't scan, so there it opens Photos without a menu of one item.
+struct AddDocumentMenu<Title: View>: View {
     let hasCamera: Bool
     let isDisabled: Bool
+    var identifier = "list.scan"
     let onAdd: (ScanSource) -> Void
+    @ViewBuilder let title: () -> Title
 
     var body: some View {
         Group {
@@ -43,25 +45,30 @@ struct AddDocumentMenu: View {
                     }
                     .accessibilityIdentifier("list.scan.photos")
                 } label: {
-                    label
+                    title()
                 }
             } else {
                 Button {
                     onAdd(.photos)
                 } label: {
-                    label
+                    title()
                 }
             }
         }
         .disabled(isDisabled)
-        .accessibilityIdentifier("list.scan")
+        .accessibilityIdentifier(identifier)
     }
+}
 
-    private var label: some View {
-        Label {
-            Text("main.add")
-        } icon: {
-            Image(systemName: "plus")
+extension AddDocumentMenu where Title == Label<Text, Image> {
+    /// The toolbar's "+".
+    init(hasCamera: Bool, isDisabled: Bool, onAdd: @escaping (ScanSource) -> Void) {
+        self.init(hasCamera: hasCamera, isDisabled: isDisabled, onAdd: onAdd) {
+            Label {
+                Text("main.add")
+            } icon: {
+                Image(systemName: "plus")
+            }
         }
     }
 }

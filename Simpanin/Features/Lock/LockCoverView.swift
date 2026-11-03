@@ -20,6 +20,8 @@ struct LockCoverView: View {
     var body: some View {
         if case .recovery(let screen) = lock.state {
             RecoveryView(screen: screen, vault: vault, lock: lock)
+        } else if lock.state == .noVault || lock.isCreatingVault {
+            WelcomeView(lock: lock)
         } else {
             LockedView(lock: lock)
         }

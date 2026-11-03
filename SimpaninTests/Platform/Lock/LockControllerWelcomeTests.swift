@@ -72,6 +72,16 @@ struct LockControllerWelcomeTests {
         #expect(await vault.openCount == 0)
     }
 
+    /// Before the scene is active, so the first frame draws the welcome, never the lock cover.
+    @Test func theWelcomeShowsFromTheFirstFrame() {
+        #expect(makeController(FakeVault([])).state == .noVault)
+        conditions.protectedData = false
+        #expect(makeController(FakeVault([])).state == .locked)
+        conditions.protectedData = true
+        conditions.passcode = .notSet
+        #expect(makeController(FakeVault([])).state == .locked)
+    }
+
     @Test func returningDuringTheWelcomeNeverOpens() async {
         let vault = FakeVault([])
         let controller = await welcome(vault)
@@ -209,6 +219,18 @@ struct LockControllerWelcomeTests {
         #expect(controller.state == .unlocked)
         #expect(controller.takePendingScan() == .camera)
         #expect(await vault.openCount == 1)
+    }
+
+    @Test func theWelcomeStaysUpWhileTheVaultIsCreated() async {
+        let vault = FakeVault([])
+        let controller = await welcome(vault)
+        await vault.gateNextOpen()
+        let creating = Task { await controller.createVault(then: .camera) }
+        #expect(await vault.waitUntilOpening())
+        #expect(controller.isCreatingVault)
+        await vault.release()
+        await creating.value
+        #expect(!controller.isCreatingVault)
     }
 
     @Test func aLockWhileCreatingDropsTheChosenScanWithoutANotice() async {
