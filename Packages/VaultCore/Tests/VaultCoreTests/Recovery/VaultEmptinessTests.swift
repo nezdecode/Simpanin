@@ -86,6 +86,17 @@ struct VaultEmptinessTests {
         #expect(throws: (any Error).self) { try VaultStore.isEmpty(in: vault.root) }
     }
 
+    /// Its files can't even be looked for, so it may hold a vault: never taken for an empty one.
+    @Test func anUnreadableVaultFolderThrows() throws {
+        let vault = try TestVault()
+        try makeFolders(vault)
+        try touch(vault.root.appending(path: "vault.json"))
+        let fileManager = FileManager.default
+        try fileManager.setAttributes([.posixPermissions: 0o000], ofItemAtPath: vault.root.path)
+        defer { try? fileManager.setAttributes([.posixPermissions: 0o755], ofItemAtPath: vault.root.path) }
+        #expect(throws: VaultError.fileUnavailable) { try VaultStore.isEmpty(in: vault.root) }
+    }
+
     @Test func openingAnEmptyFolderWithAHeaderTempFileCreatesAVault() async throws {
         let vault = try TestVault()
         try makeFolders(vault)
