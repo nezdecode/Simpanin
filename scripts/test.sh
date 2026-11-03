@@ -1,7 +1,7 @@
 #!/bin/bash
 # Runs the app's tests on the iOS 27 "iPhone 17" simulator and fails unless they ran and passed.
 #   scripts/test.sh                              every test, unit and UI
-#   scripts/test.sh --only SimpaninTests         one target, or Target/Class
+#   scripts/test.sh --only SimpaninTests         one target, or Target/Class; repeat --only for several
 # SIMPANIN_SIMULATOR names another simulator by id. SIMPANIN_IDLE_TIMEOUT (seconds, default 300) stops a
 # run that prints nothing for that long: xcodebuild has hung after the build with no output. After Swift
 # Testing's summary the limit is 60 seconds, since xcodebuild often hangs there after a failing run.
@@ -11,10 +11,21 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+# Anything it doesn't know stops it: a filter it skipped once ran less than the command asked for.
 only=()
-if [ "${1:-}" = "--only" ]; then
-  only=(-only-testing:"${2:?--only needs a target or Target/Class}")
-fi
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --only)
+      [ -n "${2:-}" ] && [ "${2#-}" = "$2" ] || { echo "test.sh: --only needs a target or Target/Class" >&2; exit 2; }
+      only+=(-only-testing:"$2")
+      shift 2
+      ;;
+    *)
+      echo "test.sh: unknown argument '$1'; use --only <Target or Target/Class>, as often as needed" >&2
+      exit 2
+      ;;
+  esac
+done
 
 simulator="${SIMPANIN_SIMULATOR:-$(xcrun simctl list devices available -j | python3 -B -c '
 import json, sys
