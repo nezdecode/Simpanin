@@ -18,12 +18,14 @@ import Testing
 @testable import Simpanin
 
 /// Hands over scripted photos by item identifier. A held photo waits for `release` and, like Photos may,
-/// ignores cancellation.
+/// ignores cancellation; a cancellable one waits until its task is cancelled and throws, as Photos' own
+/// loader does.
 nonisolated final class ScriptedPhotos: PhotoLoading {
     enum Outcome: Sendable {
         case photo(Data)
         case nothing, fails
         case held(Data)
+        case cancellable
     }
 
     struct Failure: Error {}
@@ -47,6 +49,10 @@ nonisolated final class ScriptedPhotos: PhotoLoading {
             held.withLock { $0 = true }
             for await _ in released { break }
             return data
+        case .cancellable:
+            held.withLock { $0 = true }
+            try await Task.sleep(for: .seconds(10))
+            return nil
         case .fails: throw Failure()
         case .nothing, nil: return nil
         }
@@ -141,6 +147,37 @@ struct PhotoImportModelTests {
         photos.release.yield()
         #expect(await loading.value == nil)
         #expect(model.state == .idle)
+        #expect(model.screen == .ended)
+    }
+
+    /// Photos' loader throws once the lock cancels it; that's the lock, not a photo that can't be opened.
+    @Test func lockDuringImportThatThrowsKeepsNothing() async throws {
+        let photos = ScriptedPhotos(["a": .cancellable])
+        let model = PhotoImportModel(loader: photos)
+        let loading = Task { await model.load(items("a")) }
+        try await waitUntilHolding(photos)
+        loading.cancel()
+        #expect(await loading.value == nil)
+        #expect(model.state == .idle)
+        #expect(model.screen == .ended)
+    }
+
+    /// A lock while a second pick loads keeps the first pick's pages in Periksa data.
+    @Test func lockDuringRePickKeepsPages() async throws {
+        let photos = ScriptedPhotos(["a": .photo(try photo(width: 300)), "b": .cancellable])
+        let model = PhotoImportModel(loader: photos)
+        model.selection = items("a")
+        model.add()
+        #expect(await model.loadAdded() != nil)
+        model.pickAgain()
+        model.selection = items("b")
+        model.add()
+        let loading = Task { await model.loadAdded() }
+        try await waitUntilHolding(photos)
+        loading.cancel()
+        #expect(await loading.value == nil)
+        #expect(model.state == .idle)
+        #expect(model.screen == .review)
     }
 
     // MARK: - The flow
