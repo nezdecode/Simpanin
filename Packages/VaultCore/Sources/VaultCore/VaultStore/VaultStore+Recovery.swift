@@ -93,6 +93,10 @@ extension VaultStore {
         try Self.listPageFiles(in: pagesDirectory)
     }
 
+    nonisolated static func pageFilesExist(in pagesDirectory: URL) throws -> Bool {
+        try !listPageFiles(in: pagesDirectory).isEmpty
+    }
+
     private nonisolated static func listPageFiles(in pagesDirectory: URL) throws -> [PageFileInfo] {
         let fileManager = FileManager.default
         guard fileManager.fileExists(atPath: pagesDirectory.path) else { return [] }

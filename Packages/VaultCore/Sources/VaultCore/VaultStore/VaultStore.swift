@@ -138,7 +138,7 @@ public actor VaultStore {
         let pages = pagesDirectory(in: rootDirectory)
         guard try itemExists(pages) else { return true }
         do {
-            return try !vaultFilesExist(in: rootDirectory)
+            return try !pageFilesExist(in: pages)
         } catch {
             throw VaultError.fileUnavailable
         }
