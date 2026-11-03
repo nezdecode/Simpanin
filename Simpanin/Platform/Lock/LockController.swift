@@ -66,6 +66,9 @@ final class LockController {
     private var scanInProgress: ScanSource?
     /// A lock dropped a scan; told once, after the next unlock.
     private var scanDroppedByLock: ScanSource?
+    /// The vault opened while the app was inactive, as after a Face ID prompt: the cover keeps its lock
+    /// screen until the app is active, so an unlock never flashes the open cover.
+    private(set) var holdsLockScreen = false
     /// While the welcome's choice creates the vault, so the welcome stays up instead of the lock cover.
     private(set) var isCreatingVault = false
     /// Chosen on the welcome screen. Nothing was scanned yet, so a lock drops it without a notice.
@@ -108,6 +111,7 @@ final class LockController {
     /// app inactive and active again, so prompting on every activation would loop after a cancel.
     func sceneDidBecomeActive() async {
         coverShown = false
+        holdsLockScreen = false
         let returning = !hasBeenActive || backgroundedAt != nil
         hasBeenActive = true
         if let backgroundedAt, state == .unlocked, clock.now.timeIntervalSince(backgroundedAt) >= relockTimeout {
@@ -242,6 +246,7 @@ final class LockController {
         if let scanInProgress { scanDroppedByLock = scanInProgress }
         scanInProgress = nil
         pendingScan = nil
+        holdsLockScreen = false
         failuresInARow = 0
     }
 
@@ -265,6 +270,9 @@ final class LockController {
             case nil: self.notices = notices
             }
             scanDroppedByLock = nil
+            // Only while inactive, which always ends with an activation. Recording covers an active app,
+            // so a hold set then would never be cleared.
+            holdsLockScreen = coverShown
             state = .unlocked
         case .lockCover:
             // A create that didn't finish leaves nothing behind, so the welcome is still the way in.

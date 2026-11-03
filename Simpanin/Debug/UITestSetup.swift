@@ -84,6 +84,11 @@
                 slowRestore: slowRestore, slowSave: slowSave)
         }
 
+        /// `-SimpaninUITestRecordingAfterLock`: Kunci also acts as if a recording started, and it never stops.
+        static var recordsAfterLock: Bool {
+            isActive && ProcessInfo.processInfo.arguments.contains("-SimpaninUITestRecordingAfterLock")
+        }
+
         /// `-SimpaninUITestCaptureAfterScan`: once the synthetic scan is read, act for a few seconds as if
         /// the screen were being recorded, so a test can check the cover sits above the scan flow.
         static var capturesAfterScan: Bool {

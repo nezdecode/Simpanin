@@ -232,6 +232,17 @@
         }
       }
     },
+    "cover.recording" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Disembunyikan selama layar direkam atau ditampilkan di layar lain."
+          }
+        }
+      }
+    },
     "debug.addSample" : {
       "extractionState" : "manual",
       "localizations" : {

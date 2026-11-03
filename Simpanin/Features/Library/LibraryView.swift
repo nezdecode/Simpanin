@@ -196,7 +196,13 @@ struct LibraryView: View {
     @ToolbarContentBuilder private var toolbar: some ToolbarContent {
         ToolbarItem(placement: .topBarLeading) {
             Button {
-                Task { await lock.lock() }
+                Task {
+                    await lock.lock()
+                    #if DEBUG
+                        // A recording that starts once the vault is locked, for the cover's UI test.
+                        if UITestSetup.recordsAfterLock { lock.screenCaptured = true }
+                    #endif
+                }
             } label: {
                 Label {
                     Text("main.lockNow")
