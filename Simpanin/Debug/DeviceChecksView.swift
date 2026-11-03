@@ -143,7 +143,7 @@
                 }.value
                 // The lock has closed this screen, so a step that failed goes to the lock's log, which the
                 // report shows; the app only closes when everything went.
-                guard results.allSatisfy({ ["removed", "not there", "done"].contains($0.result) }) else {
+                guard StartOver.succeeded(results) else {
                     for line in results { lock.log("start over, \(line.label): \(line.result)") }
                     return
                 }
