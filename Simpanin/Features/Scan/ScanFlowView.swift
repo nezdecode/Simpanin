@@ -165,7 +165,7 @@ struct ScanFlowView: View {
         .alert(
             Text("photos.failed"),
             isPresented: Binding {
-                photos.state == .failed
+                photos.loadFailed
             } set: {
                 if !$0 { photos.failureSeen() }
             }

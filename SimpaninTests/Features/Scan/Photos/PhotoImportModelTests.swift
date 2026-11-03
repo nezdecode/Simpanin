@@ -92,19 +92,22 @@ struct PhotoImportModelTests {
         let photos = ScriptedPhotos(["a": .photo(try photo(width: 300)), "b": outcome])
         let model = PhotoImportModel(loader: photos)
         #expect(await model.load(items("a", "b")) == nil)
-        #expect(model.state == .failed)
+        #expect(model.loadFailed)
     }
 
     @Test func showsLoadingUntilDone() async throws {
         let photos = ScriptedPhotos(["a": .held(try photo(width: 300))])
         defer { photos.release.finish() }
         let model = PhotoImportModel(loader: photos)
-        let loading = Task { await model.load(items("a")) }
+        model.selection = items("a")
+        model.add()
+        let loading = Task { await model.loadAdded() }
         try await waitUntilHolding(photos)
-        #expect(model.state == .loading)
+        #expect(model.screen == .loading)
         photos.release.yield()
         #expect(await loading.value != nil)
-        #expect(model.state == .idle)
+        #expect(model.screen == .review)
+        #expect(!model.loadFailed)
     }
 
     /// Batal while loading ends at once; the photo Photos hands over later is dropped.
@@ -115,10 +118,10 @@ struct PhotoImportModelTests {
         let loading = Task { await model.load(items("a")) }
         try await waitUntilHolding(photos)
         model.cancel()
-        #expect(model.state == .idle)
+        #expect(!model.loadFailed)
         photos.release.yield()
         #expect(await loading.value == nil)
-        #expect(model.state == .idle)
+        #expect(!model.loadFailed)
     }
 
     /// A load that outlives Batal never overrides the pick made after it.
@@ -133,7 +136,7 @@ struct PhotoImportModelTests {
         #expect(picked.pages.map(\.width) == [200])
         photos.release.yield()
         #expect(await late.value == nil)
-        #expect(model.state == .idle)
+        #expect(!model.loadFailed)
     }
 
     /// The lock removes the flow, which cancels its task; nothing loaded is handed on.
@@ -146,7 +149,7 @@ struct PhotoImportModelTests {
         loading.cancel()
         photos.release.yield()
         #expect(await loading.value == nil)
-        #expect(model.state == .idle)
+        #expect(!model.loadFailed)
         #expect(model.screen == .ended)
     }
 
@@ -158,7 +161,7 @@ struct PhotoImportModelTests {
         try await waitUntilHolding(photos)
         loading.cancel()
         #expect(await loading.value == nil)
-        #expect(model.state == .idle)
+        #expect(!model.loadFailed)
         #expect(model.screen == .ended)
     }
 
@@ -176,7 +179,7 @@ struct PhotoImportModelTests {
         try await waitUntilHolding(photos)
         loading.cancel()
         #expect(await loading.value == nil)
-        #expect(model.state == .idle)
+        #expect(!model.loadFailed)
         #expect(model.screen == .review)
     }
 
@@ -221,9 +224,9 @@ struct PhotoImportModelTests {
         model.selection = items("a")
         model.add()
         #expect(await model.loadAdded() == nil)
-        #expect(model.state == .failed)
+        #expect(model.loadFailed)
         model.failureSeen()
-        #expect(model.state == .idle)
+        #expect(!model.loadFailed)
         #expect(model.screen == .ended)
     }
 

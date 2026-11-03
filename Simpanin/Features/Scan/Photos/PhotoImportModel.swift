@@ -20,10 +20,6 @@ import SwiftUI
 /// shows. Kept in memory only.
 @MainActor @Observable
 final class PhotoImportModel {
-    enum State: Equatable {
-        case idle, loading, failed
-    }
-
     enum Screen: Equatable {
         case picker, loading, review, ended
     }
@@ -34,7 +30,8 @@ final class PhotoImportModel {
         let pages: [CGImage]
     }
 
-    private(set) var state = State.idle
+    /// A photo couldn't be loaded or decoded; the alert says so until it's closed.
+    private(set) var loadFailed = false
     private(set) var screen = Screen.picker
     /// What's ticked in the picker. Nothing loads, and the flow doesn't count as started, until Tambah.
     var selection: [PhotosPickerItem] = []
@@ -95,7 +92,7 @@ final class PhotoImportModel {
 
     /// The failed photo's alert was closed.
     func failureSeen() {
-        state = .idle
+        loadFailed = false
         added = []
         screen = hasPages ? .review : .ended
     }
@@ -108,7 +105,7 @@ final class PhotoImportModel {
     func load(_ items: [PhotosPickerItem]) async -> Picked? {
         generation += 1
         let run = generation
-        state = .loading
+        loadFailed = false
         loadingCount = items.count
         var photos: [Data] = []
         var pages: [CGImage] = []
@@ -120,26 +117,25 @@ final class PhotoImportModel {
             } catch {
                 guard isCurrent(run) else { return nil }
                 Logger.scan.error("Photo load failed: \(ErrorSummary.describe(error), privacy: .public)")
-                state = .failed
+                loadFailed = true
                 return nil
             }
             guard isCurrent(run) else { return nil }
             guard let data, let page = await decode(data) else {
-                if isCurrent(run) { state = .failed }
+                if isCurrent(run) { loadFailed = true }
                 return nil
             }
             guard isCurrent(run) else { return nil }
             photos.append(data)
             pages.append(page)
         }
-        state = .idle
         return Picked(photos: photos, pages: pages)
     }
 
     /// Batal while loading: ends at once, without waiting for Photos.
     func cancel() {
         generation += 1
-        state = .idle
+        loadFailed = false
         added = []
         screen = hasPages ? .review : .ended
     }
