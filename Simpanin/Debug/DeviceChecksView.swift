@@ -104,7 +104,8 @@
                 } footer: {
                     Text(
                         "Deletes every document, Data lama and the vault keys, then closes Simpanin. "
-                            + "Open it again to see the welcome."
+                            + "Open it again to see the welcome. If something stays, the keys are kept and "
+                            + "the report below says what happened."
                     )
                 }
                 Section("Report") {
@@ -140,9 +141,10 @@
                 let results = await Task.detached {
                     StartOver.run(locations: vault.locations, accessGroup: accessGroup)
                 }.value
-                // A step that failed stays on screen to copy; the app only closes when everything went.
+                // The lock has closed this screen, so a step that failed goes to the lock's log, which the
+                // report shows; the app only closes when everything went.
                 guard results.allSatisfy({ ["removed", "not there", "done"].contains($0.result) }) else {
-                    lines += results
+                    for line in results { lock.log("start over, \(line.label): \(line.result)") }
                     return
                 }
                 exit(0)
