@@ -173,7 +173,8 @@ final class DeletedDetailUITests: UITestCase {
         let close = app.buttons["viewer.close"]
         XCTAssertTrue(close.waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Tidak ada dokumen yang baru dihapus"].waitForExistence(timeout: 15))
-        XCTAssertFalse(close.exists)
+        // The list behind updates first; the viewer's close animation follows, within about a second.
+        XCTAssertTrue(close.waitForNonExistence(timeout: 3))
         XCTAssertFalse(app.navigationBars["KTP"].exists)
     }
 
