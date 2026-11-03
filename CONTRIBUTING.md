@@ -28,7 +28,7 @@ Two scripts run what the hooks can't:
 
 ```sh
 scripts/test.sh                      # every test on the iOS 27 iPhone 17 simulator
-scripts/test.sh --only SimpaninTests # one target, or Target/Class
+scripts/test.sh --only SimpaninTests # one target, or Target/Class; repeat --only for several
 scripts/install-device.sh            # build, and install on your iPhone only if the build succeeded
 ```
 
