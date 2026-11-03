@@ -136,4 +136,14 @@ final class LibraryUITests: UITestCase {
         XCTAssertEqual(notices.count, 0)
         XCTAssertFalse(app.textFields["review.field.name"].exists)
     }
+
+    /// Without a document camera, "+" has nothing to choose between, so it opens Pilih foto at once.
+    @MainActor
+    func testPlusOpensPhotosWithoutCamera() throws {
+        let app = launch(["-SimpaninUITestNoCamera"])
+        XCTAssertTrue(app.navigationBars["Dokumen"].waitForExistence(timeout: 10))
+        app.buttons["list.scan"].tap()
+        XCTAssertTrue(app.buttons["photos.add"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons["list.scan.camera"].exists)
+    }
 }

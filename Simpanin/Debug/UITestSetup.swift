@@ -95,6 +95,12 @@
             isActive && ProcessInfo.processInfo.arguments.contains("-SimpaninUITestExpiringSamples")
         }
 
+        /// `-SimpaninUITestNoCamera`: "+" acts as on a phone without a document camera, which the iOS 27
+        /// simulator otherwise has.
+        static var hidesCamera: Bool {
+            isActive && ProcessInfo.processInfo.arguments.contains("-SimpaninUITestNoCamera")
+        }
+
         static var scansSynthetically: Bool { scansKTP || scansKTPAndSIM }
 
         /// So a test can act on Periksa data while a rescan is still being read.

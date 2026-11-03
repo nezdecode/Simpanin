@@ -55,6 +55,7 @@ struct LibraryView: View {
 
     private static var canScan: Bool {
         #if DEBUG
+            if UITestSetup.hidesCamera { return false }
             if UITestSetup.scansSynthetically { return true }
         #endif
         return DocumentCamera.isSupported
