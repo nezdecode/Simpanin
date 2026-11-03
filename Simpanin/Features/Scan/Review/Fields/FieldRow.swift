@@ -44,7 +44,7 @@ struct FieldRow: View {
                 }
             }
             .focused(focus, equals: key)
-            .keyboardType(ReviewView.keyboard(for: key))
+            .keyboardType(Self.keyboard(for: key))
             // Nothing typed here is corrected or learned by the keyboard, so a name isn't "fixed" and no
             // value comes back as a suggestion in another app.
             .autocorrectionDisabled()
@@ -74,6 +74,15 @@ struct FieldRow: View {
         if let refusal { return Text("review.labelWithReason \(title) \(String(localized: refusal))") }
         if let markReason { return Text("review.labelWithMark \(title) \(String(localized: markReason))") }
         return Text(title)
+    }
+
+    static func keyboard(for key: String) -> UIKeyboardType {
+        switch key {
+        case FieldKey.nik: .numberPad
+        case FieldKey.birthDate: .numberPad
+        case FieldKey.simNumber: .numbersAndPunctuation
+        default: .default
+        }
     }
 }
 

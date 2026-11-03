@@ -13,10 +13,17 @@ import XCTest
 
 /// Steps the scan tests share. A synthetic page and text stand in for the camera, which the simulator lacks.
 extension UITestCase {
+    /// "+" from the list, with the synthetic scan standing in for the camera.
     @MainActor
-    func openReview(_ app: XCUIApplication) {
+    func startScan(_ app: XCUIApplication) {
         XCTAssertTrue(app.navigationBars["Dokumen"].waitForExistence(timeout: 10))
         app.buttons["list.scan"].tap()
+        app.buttons["list.scan.camera"].tap()
+    }
+
+    @MainActor
+    func openReview(_ app: XCUIApplication) {
+        startScan(app)
         XCTAssertTrue(app.textFields["review.field.name"].waitForExistence(timeout: 10))
     }
 

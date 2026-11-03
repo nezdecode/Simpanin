@@ -113,4 +113,84 @@ final class LibraryUITests: UITestCase {
         XCTAssertTrue(app.buttons["banner.menu"].isHittable)
         screenshot("32 banner at the largest text size")
     }
+
+    /// Pilih dari Foto opens the picker and nothing else: no camera, and no camera permission prompt. Ticking
+    /// photos isn't adding them, so a lock before Tambah drops nothing and says nothing.
+    @MainActor
+    func testPilihDariFotoStartsNothingBeforeTambah() throws {
+        let app = launch(["-SimpaninUITestScan"])
+        lockImmediately(app)
+        XCTAssertTrue(app.navigationBars["Dokumen"].waitForExistence(timeout: 10))
+        app.buttons["list.scan"].tap()
+        app.buttons["list.scan.photos"].tap()
+        XCTAssertTrue(app.buttons["photos.add"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons["photos.add"].isEnabled)
+        screenshot("65 pilih dari foto")
+
+        XCUIDevice.shared.press(.home)
+        // Coming back locks the vault; in UI tests the unlock prompt that follows succeeds by itself.
+        app.activate()
+        XCTAssertTrue(app.staticTexts["list.empty"].waitForExistence(timeout: 10))
+        let notices = app.staticTexts.matching(
+            NSPredicate(format: "label BEGINSWITH 'Pindaian yang belum' OR label BEGINSWITH 'Dokumen dari Foto'"))
+        XCTAssertEqual(notices.count, 0)
+        XCTAssertFalse(app.textFields["review.field.name"].exists)
+    }
+
+    /// Without a document camera, "+" has nothing to choose between, so it opens Pilih foto at once.
+    @MainActor
+    func testPlusOpensPhotosWithoutCamera() throws {
+        let app = launch(["-SimpaninUITestNoCamera"])
+        XCTAssertTrue(app.navigationBars["Dokumen"].waitForExistence(timeout: 10))
+        app.buttons["list.scan"].tap()
+        XCTAssertTrue(app.buttons["photos.add"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons["list.scan.camera"].exists)
+    }
+
+    /// With a document camera, "+" offers both ways in, and starts neither until one is chosen.
+    @MainActor
+    func testPlusOffersScanAndPhotos() throws {
+        let app = launch()
+        XCTAssertTrue(app.navigationBars["Dokumen"].waitForExistence(timeout: 10))
+        XCTAssertEqual(app.buttons["list.scan"].label, "Tambah dokumen")
+        app.buttons["list.scan"].tap()
+        XCTAssertTrue(app.buttons["list.scan.camera"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.buttons["list.scan.camera"].label, "Pindai dokumen")
+        XCTAssertEqual(app.buttons["list.scan.photos"].label, "Pilih dari Foto")
+        XCTAssertFalse(app.buttons["photos.add"].exists)
+        screenshot("73 tambah dokumen menu")
+    }
+
+    /// A passcode turned off while Simpanin is open: "+" says the passcode is needed and opens nothing.
+    @MainActor
+    func testPlusAsksForPasscodeBeforePhotos() throws {
+        let app = launch(["-SimpaninUITestPasscode", "turnedOff"])
+        XCTAssertTrue(app.navigationBars["Dokumen"].waitForExistence(timeout: 10))
+        app.buttons["list.scan"].tap()
+        app.buttons["list.scan.photos"].tap()
+        let alert = app.alerts["Simpanin butuh passcode HP untuk mengunci dokumenmu."]
+        XCTAssertTrue(alert.waitForExistence(timeout: 5))
+        XCTAssertTrue(alert.buttons["Buka Pengaturan"].exists)
+        alert.buttons["Batal"].tap()
+        XCTAssertFalse(app.buttons["photos.add"].exists)
+        XCTAssertTrue(app.staticTexts["list.empty"].exists)
+    }
+
+    /// A list that couldn't load can't take a new document yet: "+" waits.
+    @MainActor
+    func testPlusDisabledWhenListFailed() throws {
+        let app = launch(["-SimpaninUITestLoadError", "1"])
+        XCTAssertTrue(app.descendants(matching: .any)["load.failed"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["list.scan"].isEnabled)
+    }
+
+    /// The empty list points to "+" and says what it adds.
+    @MainActor
+    func testEmptyLibrarySaysTapPlus() throws {
+        let app = launch()
+        let empty = app.staticTexts["list.empty"]
+        XCTAssertTrue(empty.waitForExistence(timeout: 10))
+        XCTAssertTrue(
+            empty.label.contains("Ketuk + untuk menambahkan KTP, SIM, atau paspor."), empty.label)
+    }
 }

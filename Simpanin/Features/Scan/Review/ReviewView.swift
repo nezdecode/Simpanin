@@ -16,6 +16,7 @@ import VaultCore
 /// "Periksa data": the pages and what the scan read, to check and correct before "Simpan ke vault".
 struct ReviewView: View {
     @Bindable var review: ReviewModel
+    let source: ScanSource
     /// Vision is still reading the pages.
     let reading: Bool
     let onCancel: () -> Void
@@ -49,7 +50,8 @@ struct ReviewView: View {
                     .foregroundStyle(.secondary)
                 }
                 ReviewPagesSection(
-                    thumbnails: review.thumbnails, notes: review.pageNotes, reading: reading, transition: transition
+                    thumbnails: review.thumbnails, notes: review.pageNotes,
+                    footnote: ReviewText.pagesFootnote(source), reading: reading, transition: transition
                 ) { index in
                     // The keyboard closes, so it isn't back over the form when the viewer closes.
                     focusedField = nil
@@ -73,7 +75,7 @@ struct ReviewView: View {
                     }
                     ValiditySection(
                         type: review.type, hasExpiry: review.hasExpiry, expiry: review.expiry,
-                        note: review.expiryNote.map { Self.text(for: $0, numberKey: review.numberKey) },
+                        note: review.expiryNote.map { ReviewText.text(for: $0, numberKey: review.numberKey) },
                         onChange: { review.setExpiry($0) }, onPick: { expiryPickerShown = true })
                 }
             }
@@ -108,19 +110,21 @@ struct ReviewView: View {
                 } else {
                     // In the bar, so it's in reach wherever the form is scrolled to.
                     ToolbarItem(placement: .primaryAction) {
-                        Button(action: onRescan) { Text("review.rescan") }
+                        Button(action: onRescan) { Text(ReviewText.rescan(source)) }
                             .disabled(reading || review.saveInProgress)
                             .accessibilityIdentifier("review.rescan")
                     }
                 }
             }
             // Batal throws the scan away, so it always asks first.
-            .alert(Text("review.discardConfirm"), isPresented: $discardConfirmShown) {
+            .alert(Text(ReviewText.discardConfirm(source)), isPresented: $discardConfirmShown) {
                 Button(role: .destructive, action: onCancel) { Text("review.discard") }
                 Button(role: .cancel) {
                 } label: {
                     Text("review.keepChecking")
                 }
+            } message: {
+                if let message = ReviewText.discardMessage(source) { Text(message) }
             }
             // VoiceOver's escape closes the keyboard while editing, and otherwise works like Batal.
             .accessibilityAction(.escape) {
@@ -134,11 +138,7 @@ struct ReviewView: View {
             // over the keyboard.
             .safeAreaInset(edge: .bottom) {
                 if focusedField == nil {
-                    Button(action: trySave) { Text("review.save") }
-                        .buttonStyle(.prominent)
-                        .disabled(reading || review.saving)
-                        .padding(16)
-                        .accessibilityIdentifier("review.save")
+                    SaveBar(saving: review.saving, isDisabled: reading, onSave: trySave)
                 }
             }
             .sheet(isPresented: $typePickerShown) {
@@ -196,7 +196,7 @@ struct ReviewView: View {
                 }
             }
             // Kembali is the default: the likeliest reason is a document saved before and forgotten.
-            .alert(Text(Self.duplicateTitle(duplicateName)), isPresented: $duplicateShown) {
+            .alert(Text(ReviewText.duplicateTitle(duplicateName)), isPresented: $duplicateShown) {
                 Button(role: .cancel) {
                 } label: {
                     Text("review.goBack")
@@ -233,7 +233,7 @@ struct ReviewView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("review.type").foregroundStyle(Color.primary)
                     if let note = review.typeNote {
-                        WarningText(Self.text(for: note, numberKey: review.numberKey, onType: true))
+                        WarningText(ReviewText.text(for: note, numberKey: review.numberKey, onType: true))
                     }
                 }
             }
@@ -272,8 +272,8 @@ struct ReviewView: View {
         let note = review.note(for: key)
         var refusal: LocalizedStringResource?
         var markReason: LocalizedStringResource?
-        if case .refusal(let problem) = note { refusal = Self.reason(for: problem) }
-        if case .mark(let reason?) = note { markReason = Self.reasonText(reason, numberKey: review.numberKey) }
+        if case .refusal(let problem) = note { refusal = ReviewText.reason(for: problem) }
+        if case .mark(let reason?) = note { markReason = ReviewText.reasonText(reason, numberKey: review.numberKey) }
         let match = review.showsBirthDateMatch && key == review.numberKey
         return FieldRow(
             key: key, value: review.values[key] ?? "", isLast: key == review.fieldKeys.last, refusal: refusal,
@@ -289,7 +289,7 @@ extension ReviewView {
     /// Simpan never quietly does nothing: a wrong value takes the user to its field, with a haptic, and
     /// VoiceOver reads the reason; otherwise it asks what `ReviewModel.saveStep` says, or saves.
     private func trySave() {
-        guard let step = review.saveStep() else { return }
+        guard !review.saving, let step = review.saveStep() else { return }
         switch step {
         case .refuse(let key):
             focusedField = key
@@ -335,50 +335,5 @@ extension ReviewView {
             return
         }
         focusedField = order[index + 1]
-    }
-
-    /// What shows under the type or the expiry: "Periksa lagi", with its reason when one is known.
-    static func text(for note: ReviewModel.Note, numberKey: String?, onType: Bool = false) -> LocalizedStringResource {
-        switch note {
-        case .refusal(let problem): reason(for: problem)
-        case .mark(nil): "review.checkAgain"
-        case .mark(let reason?):
-            "review.markWithReason \(String(localized: reasonText(reason, numberKey: numberKey, onType: onType)))"
-        case .dateFromAnotherType: "review.markWithReason \(String(localized: "review.dateFromAnotherType"))"
-        }
-    }
-
-    /// The text of a reason. Three name the number that holds the birth date: the NIK on a KTP, the number
-    /// on a SIM. On the type, a lookalike is a SIM class read with a 1 for an I. The key is built as a plain
-    /// string: interpolated, the code would become an argument.
-    static func reasonText(_ reason: CheckReason, numberKey: String?, onType: Bool = false) -> LocalizedStringResource {
-        var key = "review.reason." + reason.rawValue
-        if onType && reason == .lookalike { key += ".type" }
-        if [.noDateInNumber, .disagreesWithBirthDate, .sexDisagrees].contains(reason) {
-            key += numberKey == FieldKey.simNumber ? ".simNumber" : ".nik"
-        }
-        return LocalizedStringResource(String.LocalizationValue(key))
-    }
-
-    /// "Kamu sudah punya SIM A dengan nomor ini.": a KTP has a NIK, a SIM a number.
-    static func duplicateTitle(_ name: DocumentType) -> LocalizedStringResource {
-        name == .ktp ? "review.duplicate.ktp" : "review.duplicate.sim \(String(localized: DocumentStyle.name(name)))"
-    }
-
-    static func reason(for problem: ReviewModel.FieldProblem) -> LocalizedStringResource {
-        switch problem {
-        case .notADate: "review.notADate"
-        case .birthDateInFuture: "review.birthDateInFuture"
-        case .nikLength: "review.nikLength"
-        }
-    }
-
-    static func keyboard(for key: String) -> UIKeyboardType {
-        switch key {
-        case FieldKey.nik: .numberPad
-        case FieldKey.birthDate: .numberPad
-        case FieldKey.simNumber: .numbersAndPunctuation
-        default: .default
-        }
     }
 }

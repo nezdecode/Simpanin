@@ -51,6 +51,10 @@ struct RecoveryContentTests {
         #expect(
             String(localized: VaultNotice.scanDropped.message)
                 == "Pindaian yang belum disimpan dibuang karena Simpanin terkunci. Pindai lagi kalau perlu.")
+        #expect(
+            String(localized: VaultNotice.photosDropped.message)
+                == "Dokumen dari Foto belum disimpan, jadi dibatalkan karena Simpanin terkunci. "
+                + "Foto aslinya tetap ada di app Foto.")
     }
 
     @Test func buttonTexts() {

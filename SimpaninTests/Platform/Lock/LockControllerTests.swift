@@ -270,15 +270,27 @@ struct NoticeTests {
     /// Locking removes every screen and drops a scan in progress; after unlocking the user is told.
     @Test func aScanDroppedByTheLockIsToldAfterUnlocking() async {
         let controller = await unlocked()
-        controller.scanStarted()
+        controller.scanStarted(.camera)
         await controller.lock()
         await controller.unlock()
         #expect(controller.notices.contains(.scanDropped))
+        #expect(!controller.notices.contains(.photosDropped))
+    }
+
+    /// Photos added with Tambah are dropped too, but their originals are still in Photos, so the notice
+    /// says that instead of asking for a new scan.
+    @Test func lockAfterPhotosTellsPhotosDropped() async {
+        let controller = await unlocked()
+        controller.scanStarted(.photos)
+        await controller.lock()
+        await controller.unlock()
+        #expect(controller.notices.contains(.photosDropped))
+        #expect(!controller.notices.contains(.scanDropped))
     }
 
     @Test func aScanThatEndedBeforeTheLockIsntMentioned() async {
         let controller = await unlocked()
-        controller.scanStarted()
+        controller.scanStarted(.photos)
         controller.scanEnded()
         await controller.lock()
         await controller.unlock()
@@ -287,7 +299,7 @@ struct NoticeTests {
 
     @Test func theDroppedScanIsToldOnce() async {
         let controller = await unlocked()
-        controller.scanStarted()
+        controller.scanStarted(.camera)
         await controller.lock()
         await controller.unlock()
         controller.dismiss(.scanDropped)

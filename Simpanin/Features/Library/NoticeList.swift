@@ -18,7 +18,7 @@ struct NoticeList: View {
 
     /// Every notice must be listed here, or it's never shown; a test checks that.
     static let order: [VaultNotice] = [
-        .scanDropped, .recoveredFromPages, .newestChangeMayBeLost, .repairWaitingForSpace,
+        .scanDropped, .photosDropped, .recoveredFromPages, .newestChangeMayBeLost, .repairWaitingForSpace,
     ]
 
     var body: some View {

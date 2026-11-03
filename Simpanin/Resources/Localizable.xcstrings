@@ -579,7 +579,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pindai KTP, SIM, atau paspor. Semuanya terenkripsi dan tetap di HP ini."
+            "value" : "Ketuk + untuk menambahkan KTP, SIM, atau paspor. Yang disimpan di Simpanin terenkripsi dan tetap di HP ini."
           }
         }
       }
@@ -848,6 +848,17 @@
         }
       }
     },
+    "main.add" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tambah dokumen"
+          }
+        }
+      }
+    },
     "main.allDocuments" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -881,6 +892,17 @@
         }
       }
     },
+    "main.pickPhotos" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pilih dari Foto"
+          }
+        }
+      }
+    },
     "main.scan" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -910,6 +932,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Perubahan terakhir mungkin belum tersimpan. Periksa dokumen yang baru kamu ubah."
+          }
+        }
+      }
+    },
+    "notice.photosDropped" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dokumen dari Foto belum disimpan, jadi dibatalkan karena Simpanin terkunci. Foto aslinya tetap ada di app Foto."
           }
         }
       }
@@ -1464,6 +1497,72 @@
         }
       }
     },
+    "photos.add %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tambah (%lld)"
+          }
+        }
+      }
+    },
+    "photos.failed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Foto tidak bisa dibuka."
+          }
+        }
+      }
+    },
+    "photos.failed.message" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidak ada foto yang ditambahkan. Kalau fotonya di iCloud, pastikan HP tersambung ke internet, lalu pilih lagi."
+          }
+        }
+      }
+    },
+    "photos.loading" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Memuat foto…"
+          }
+        }
+      }
+    },
+    "photos.loadingProgress %lld %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Memuat foto %1$lld dari %2$lld…"
+          }
+        }
+      }
+    },
+    "photos.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pilih foto"
+          }
+        }
+      }
+    },
     "recovery.cannotOpenNow" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1717,6 +1816,17 @@
         }
       }
     },
+    "review.discardPhotosConfirm" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buang tanpa menyimpan?"
+          }
+        }
+      }
+    },
     "review.duplicate.ktp" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1937,6 +2047,28 @@
         }
       }
     },
+    "review.originalsKept" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Foto aslinya tetap ada di app Foto."
+          }
+        }
+      }
+    },
+    "review.originalsStay" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Foto aslinya masih ada di app Foto."
+          }
+        }
+      }
+    },
     "review.otherPages" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1999,6 +2131,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld halaman"
+          }
+        }
+      }
+    },
+    "review.pickAgain" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pilih foto lain"
+          }
+        }
+      }
+    },
+    "review.pickAgainConfirm" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Perubahan yang kamu buat akan diganti foto yang baru dipilih."
           }
         }
       }
@@ -2285,6 +2439,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Simpan saja"
+          }
+        }
+      }
+    },
+    "review.saving" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menyimpan…"
           }
         }
       }

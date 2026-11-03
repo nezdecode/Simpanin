@@ -65,6 +65,18 @@ class UITestCase: XCTestCase {
         return false
     }
 
+    /// Kunci otomatis "Segera", so leaving the app and coming back locks the vault, then back to the list.
+    @MainActor
+    func lockImmediately(_ app: XCUIApplication) {
+        app.buttons["list.settings"].tap()
+        let row = app.buttons["settings.autoLock"]
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        row.tap()
+        app.buttons["autoLock.immediately"].tap()
+        app.navigationBars["Kunci otomatis"].buttons.element(boundBy: 0).tap()
+        app.navigationBars["Pengaturan"].buttons.element(boundBy: 0).tap()
+    }
+
     @MainActor
     func rows(_ app: XCUIApplication) -> XCUIElementQuery {
         app.descendants(matching: .any).matching(identifier: "document.row")
