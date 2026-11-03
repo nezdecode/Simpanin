@@ -117,7 +117,7 @@
         }
 
         /// A card's width in pixels; the SIM's page is one wider, which is how the recognizer below tells them
-        /// apart, so a rescan reads the same.
+        /// apart, so a rescan reads the same. A page two wider reads no text, like a photo of no document.
         private static let cardWidth = 1_712
 
         /// Cards with a photo box and lines, no text, so the viewer and the strip show something in screenshots.
@@ -145,7 +145,8 @@
 
         /// `-SimpaninUITestPickPhotos <mode>`: UI tests can't drive the system picker, so Pilih dari Foto opens
         /// with one synthetic photo already ticked, and Tambah hands it over through `SyntheticPhotos`. The
-        /// mode is `ktp`, `fails` (a photo that can't be opened) or `slow` (eight seconds to hand it over).
+        /// mode is `ktp`, `blank` (a photo with no document), `fails` (a photo that can't be opened) or `slow`
+        /// (eight seconds to hand it over).
         static var picksPhotos: String? { isActive ? value(after: "-SimpaninUITestPickPhotos") : nil }
 
         static var syntheticPhotoSelection: [PhotosPickerItem] {
@@ -159,7 +160,8 @@
             func data(for item: PhotosPickerItem) async throws -> Data? {
                 if mode == "slow" { try await Task.sleep(for: .seconds(8)) }
                 if mode == "fails" { return Data("not a photo".utf8) }
-                return UITestSetup.cardPage(width: UITestSetup.cardWidth).flatMap(PageEncoding.jpeg)
+                let width = mode == "blank" ? cardWidth + 2 : cardWidth
+                return UITestSetup.cardPage(width: width).flatMap(PageEncoding.jpeg)
             }
         }
 
@@ -168,7 +170,11 @@
         struct SyntheticRecognizer: TextRecognizer {
             func lines(in page: CGImage) async throws -> [String] {
                 if UITestSetup.readsSlowly { try await Task.sleep(for: .seconds(8)) }
-                return page.width == cardWidth + 1 ? Self.sim : Self.ktp
+                switch page.width {
+                case cardWidth + 1: return Self.sim
+                case cardWidth + 2: return []
+                default: return Self.ktp
+                }
             }
 
             private static let ktp = [
@@ -185,6 +191,7 @@
             ]
         }
 
+        /// `-SimpaninUITestPasscode notSet`: a phone without a passcode; `turnedOff`, see `lockController(for:)`.
         static var passcode: PasscodeState {
             value(after: "-SimpaninUITestPasscode") == "notSet" ? .notSet : .set
         }
@@ -195,11 +202,24 @@
                 openFailure.map { ScriptedOpening(store: vault.store, failure: $0.error, times: $0.times) }
                 ?? vault.store
             let passcode = passcode
+            // `turnedOff`: the passcode is there while the vault opens and gone once it's open, as when it's
+            // turned off in Settings while Simpanin runs.
+            let turnedOff = value(after: "-SimpaninUITestPasscode") == "turnedOff"
+            let opened = OpenedLock()
             // The same launch path as the app: the lock starts from the stored choice.
-            return LockController(
-                vault: opener, autoLock: AutoLock.stored(in: settings), settings: settings, passcode: { passcode },
+            let lock = LockController(
+                vault: opener, autoLock: AutoLock.stored(in: settings), settings: settings,
+                passcode: { turnedOff && opened.lock?.state == .unlocked ? .notSet : passcode },
                 vaultExists: { VaultStore.vaultExists(in: vault.locations.root) },
                 protectedDataAvailable: { true })
+            opened.lock = lock
+            return lock
+        }
+
+        /// Lets the passcode check see the lock it belongs to, which only exists once that check is made.
+        @MainActor
+        private final class OpenedLock {
+            weak var lock: LockController?
         }
     }
 
