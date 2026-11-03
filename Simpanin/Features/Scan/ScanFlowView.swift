@@ -52,8 +52,11 @@ struct ScanFlowView: View {
         _review = State(initialValue: ReviewModel(store: store))
         _scan = State(initialValue: ScanModel(recognizer: Self.recognizer))
         // Photos count as started only on Tambah: ticking a photo is no decision yet.
-        _photos = State(
-            initialValue: PhotoImportModel(loader: PhotosPickerLoader(), onStarted: { onScanStarted(.photos) }))
+        let photos = PhotoImportModel(loader: Self.photoLoader, onStarted: { onScanStarted(.photos) })
+        #if DEBUG
+            photos.selection = UITestSetup.syntheticPhotoSelection
+        #endif
+        _photos = State(initialValue: photos)
         // Shown from the first frame, so "+" never shows an empty review first.
         _cameraShown = State(initialValue: source == .camera && !Self.scansSynthetically)
     }
@@ -66,9 +69,18 @@ struct ScanFlowView: View {
         #endif
     }
 
+    private static var photoLoader: any PhotoLoading {
+        #if DEBUG
+            if let mode = UITestSetup.picksPhotos { return UITestSetup.SyntheticPhotos(mode: mode) }
+        #endif
+        return PhotosPickerLoader()
+    }
+
     private static var recognizer: @Sendable (RecognitionMethod) -> any TextRecognizer {
         #if DEBUG
-            if UITestSetup.scansSynthetically { return { _ in UITestSetup.SyntheticRecognizer() } }
+            if UITestSetup.scansSynthetically || UITestSetup.picksPhotos != nil {
+                return { _ in UITestSetup.SyntheticRecognizer() }
+            }
         #endif
         return { VisionTextRecognizer(method: $0) }
     }

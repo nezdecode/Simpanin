@@ -12,6 +12,8 @@
 #if DEBUG
     import Foundation
     import CoreGraphics
+    import PhotosUI
+    import SwiftUI
     import VaultCore
 
     /// Launch arguments the UI tests use. `-SimpaninUITest` starts on a fresh throwaway vault
@@ -135,6 +137,26 @@
             return context.makeImage()
         }
 
+        /// `-SimpaninUITestPickPhotos <mode>`: UI tests can't drive the system picker, so Pilih dari Foto opens
+        /// with one synthetic photo already ticked, and Tambah hands it over through `SyntheticPhotos`. The
+        /// mode is `ktp`, `fails` (a photo that can't be opened) or `slow` (eight seconds to hand it over).
+        static var picksPhotos: String? { isActive ? value(after: "-SimpaninUITestPickPhotos") : nil }
+
+        static var syntheticPhotoSelection: [PhotosPickerItem] {
+            picksPhotos == nil ? [] : [PhotosPickerItem(itemIdentifier: "synthetic-ktp")]
+        }
+
+        /// The synthetic card as a JPEG file, read by `SyntheticRecognizer` like a scanned one.
+        struct SyntheticPhotos: PhotoLoading {
+            let mode: String
+
+            func data(for item: PhotosPickerItem) async throws -> Data? {
+                if mode == "slow" { try await Task.sleep(for: .seconds(8)) }
+                if mode == "fails" { return Data("not a photo".utf8) }
+                return UITestSetup.cardPage(width: UITestSetup.cardWidth).flatMap(PageEncoding.jpeg)
+            }
+        }
+
         /// A synthetic KTP whose name is marked, so the review screen shows Periksa lagi, and on the wider page
         /// a synthetic SIM A with the same NIK as its number.
         struct SyntheticRecognizer: TextRecognizer {
@@ -197,7 +219,7 @@
             self.slowSave = slowSave
         }
 
-        func documents() async throws -> [Document] {
+        func documents() async throws -> [VaultCore.Document] {
             if failingLoads > 0 {
                 failingLoads -= 1
                 throw VaultError.locked
@@ -205,7 +227,7 @@
             return try await store.documents()
         }
 
-        func recentlyDeleted() async throws -> [Document] { try await store.recentlyDeleted() }
+        func recentlyDeleted() async throws -> [VaultCore.Document] { try await store.recentlyDeleted() }
         func fields(of id: DocumentID) async throws -> DocumentFields { try await store.fields(of: id) }
 
         // swiftlint:disable:next function_parameter_count - mirrors VaultStore.createDocument
