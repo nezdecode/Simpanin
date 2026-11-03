@@ -111,6 +111,16 @@ struct PhotoDecodingTests {
         #expect(await PhotoDecoding.storedPages([good, Data("not a photo".utf8)]) == nil)
     }
 
+    /// A lock during Simpan cancels the save, so no more photos are decoded at the stored size.
+    @Test func storedPagesStopWhenCancelled() async throws {
+        let good = try SyntheticPhoto.file(try SyntheticPhoto.image(width: 400, height: 300))
+        let saving = Task {
+            withUnsafeCurrentTask { $0?.cancel() }
+            return await PhotoDecoding.storedPages([good, good])
+        }
+        #expect(await saving.value == nil)
+    }
+
     /// What the vault gets from a photo with a place and a camera in it: none of that, and nothing that
     /// turns it, as it's already upright. ImageIO's own sizes in {Exif} are fine.
     @Test func savedPhotoPageHasNoMetadata() async throws {
