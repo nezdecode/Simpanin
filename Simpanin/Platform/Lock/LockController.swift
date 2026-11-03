@@ -71,12 +71,17 @@ final class LockController {
     private(set) var holdsLockScreen = false
     /// While the welcome's choice creates the vault, so the welcome stays up instead of the lock cover.
     private(set) var isCreatingVault = false
+    /// Any create, also after "Mulai vault baru", so a lock before anything was written leaves the welcome.
+    private var creating = false
     /// Chosen on the welcome screen. Nothing was scanned yet, so a lock drops it without a notice.
     private var pendingScan: ScanSource?
 
     #if DEBUG
         /// For the device checks: each open attempt and lock event, as statuses only.
         private(set) var attemptLog: [String] = []
+
+        /// For a device check whose screen a lock closes, so its result still reaches the report.
+        func log(_ line: String) { attemptLog.append(line) }
     #endif
 
     init(
@@ -118,7 +123,8 @@ final class LockController {
             await lock()
         }
         backgroundedAt = nil
-        if returning, state == .locked || retriesOnReturn { await unlock() }
+        // From the welcome too: it promises a passcode lock, and the passcode may have gone meanwhile.
+        if returning, state == .locked || state == .noVault || retriesOnReturn { await unlock() }
     }
 
     /// Saves the Kunci otomatis choice and applies it at once, so the stored choice and the
@@ -183,9 +189,12 @@ final class LockController {
             return
         }
         pendingScan = scan
-        // Only from the welcome: after "Mulai vault baru" the recovery screen stays while the vault is made.
+        // Only from the welcome, so the welcome stays up; after "Mulai vault baru" the lock screen shows, as
+        // for any open.
         isCreatingVault = state == .noVault
+        creating = true
         await open(creating: true)
+        creating = false
         isCreatingVault = false
         if state != .unlocked { pendingScan = nil }
     }
@@ -200,7 +209,7 @@ final class LockController {
 
     /// Nothing was open, so a lock on the welcome, or during a create that wrote nothing yet, keeps the
     /// welcome rather than drawing the lock screen on a phone with no vault.
-    private var welcomeAfterLock: Bool { (state == .noVault || isCreatingVault) && isKnownEmpty }
+    private var welcomeAfterLock: Bool { (state == .noVault || creating) && isKnownEmpty }
 
     /// `creating`: making a vault shows no prompt, so a retry would only land back on the welcome and hide the
     /// error; the first failure counts as the last.

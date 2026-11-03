@@ -71,7 +71,7 @@ struct StartNewVaultTests {
         #expect(await vault.openCount == 2)
     }
 
-    /// The user already chose a new vault, so the recovery screen stays while it's created, never the welcome.
+    /// The user already chose a new vault, so it's created behind the lock screen like any open, never the welcome.
     @Test func startingANewVaultNeverShowsTheWelcomeWhileCreating() async {
         let conditions = LaunchConditions()
         conditions.vaultCreated()
@@ -88,10 +88,34 @@ struct StartNewVaultTests {
         await vault.gateNextOpen()
         let confirming = Task { await model.confirm() }
         #expect(await vault.waitUntilOpening())
-        #expect(CoverContent(lock) != .welcome)
+        #expect(CoverContent(lock) == .lockScreen)
         await vault.release()
         await confirming.value
         #expect(lock.state == .unlocked)
+    }
+
+    /// The new vault wasn't made yet, so a lock leaves the welcome, not Buka over an empty folder.
+    @Test func aLockWhileStartingANewVaultThatLeftNothingShowsTheWelcome() async {
+        let conditions = LaunchConditions()
+        conditions.vaultCreated()
+        let vault = FakeVault([.failure(.vaultKeyMissing), .success(OpenReport())])
+        let lock = LockController(
+            vault: vault, clock: FixedClock(), passcode: { conditions.passcode },
+            vaultExists: { conditions.headerExists }, vaultIsEmpty: { try conditions.isEmpty() },
+            protectedDataAvailable: { true })
+        await lock.unlock()
+        let model = StartNewVaultModel(store: FakeQuarantine(), quarantineFolder: quarantineFolder, lock: lock)
+        model.typed = "MULAI BARU"
+        conditions.headerExists = false
+        conditions.empty = true
+        await vault.gateNextOpen()
+        let confirming = Task { await model.confirm() }
+        #expect(await vault.waitUntilOpening())
+        await lock.protectedDataWillBecomeUnavailable()
+        #expect(lock.state == .noVault)
+        await vault.release()
+        await confirming.value
+        #expect(lock.state == .noVault)
     }
 
     @Test func aFirstFailureAfterStartingANewVaultShowsItsScreen() async {

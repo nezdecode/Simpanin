@@ -178,4 +178,18 @@ struct LockControllerCreateTests {
         #expect(controller.state == .recovery(.cannotOpenNow))
         #expect(controller.takePendingScan() == nil)
     }
+
+    /// The system cancels the create when the app leaves, so nothing was made: the welcome again.
+    @Test func leavingDuringTheCreateKeepsTheWelcome() async {
+        let vault = FakeVault([.failure(.vaultKeyUnavailable(status: -25293))])
+        let controller = await welcome(vault)
+        await vault.gateNextOpen()
+        let creating = Task { await controller.createVault(then: .camera) }
+        #expect(await vault.waitUntilOpening())
+        controller.sceneDidEnterBackground()
+        await vault.release()
+        await creating.value
+        #expect(controller.state == .noVault)
+        #expect(controller.takePendingScan() == nil)
+    }
 }

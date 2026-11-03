@@ -78,6 +78,18 @@ struct LockControllerWelcomeTests {
         #expect(controller.state == .noVault)
     }
 
+    /// The welcome promises a passcode lock, so a return checks the passcode is still there.
+    @Test func turningThePasscodeOffDuringTheWelcomeShowsThePasscodeScreenOnReturn() async {
+        let vault = FakeVault([])
+        let controller = await welcome(vault)
+        await controller.protectedDataWillBecomeUnavailable()
+        conditions.passcode = .notSet
+        controller.sceneDidEnterBackground()
+        await controller.sceneDidBecomeActive()
+        #expect(controller.state == .recovery(.passcodeNeeded))
+        #expect(await vault.openCount == 0)
+    }
+
     @Test func firstLaunchWithoutAPasscodeShowsThePasscodeScreen() async {
         conditions.passcode = .notSet
         let vault = FakeVault([])
