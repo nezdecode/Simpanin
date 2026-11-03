@@ -232,6 +232,17 @@
         }
       }
     },
+    "cover.recording" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Disembunyikan selama layar direkam atau ditampilkan di layar lain."
+          }
+        }
+      }
+    },
     "debug.addSample" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -579,7 +590,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ketuk + untuk menambahkan KTP, SIM, atau paspor. Yang disimpan di Simpanin terenkripsi dan tetap di HP ini."
+            "value" : "Tambahkan KTP, SIM, atau paspor. Yang disimpan di Simpanin terenkripsi dan tetap di HP ini."
           }
         }
       }
@@ -1559,6 +1570,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pilih foto"
+          }
+        }
+      }
+    },
+    "privacy.deviceOnly" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dokumen hanya ada di HP ini. Kalau HP hilang, ganti, atau Simpanin dihapus, dokumennya ikut hilang."
+          }
+        }
+      }
+    },
+    "privacy.noAccount" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Simpanin tidak punya akun, server, atau analitik."
           }
         }
       }
@@ -2553,17 +2586,6 @@
         }
       }
     },
-    "settings.deviceOnly" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dokumen hanya ada di HP ini. Kalau HP hilang atau ganti, dokumen tidak ikut pindah."
-          }
-        }
-      }
-    },
     "settings.noAccount %@" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3143,6 +3165,61 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Halaman %1$lld dari %2$lld"
+          }
+        }
+      }
+    },
+    "welcome.later" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nanti saja"
+          }
+        }
+      }
+    },
+    "welcome.lock.faceID" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terkunci dengan Face ID atau passcode HP ini."
+          }
+        }
+      }
+    },
+    "welcome.lock.passcode" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terkunci dengan passcode HP ini."
+          }
+        }
+      }
+    },
+    "welcome.lock.touchID" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terkunci dengan Touch ID atau passcode HP ini."
+          }
+        }
+      }
+    },
+    "welcome.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dokumen pentingmu, terkunci di HP ini."
           }
         }
       }

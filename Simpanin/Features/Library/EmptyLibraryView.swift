@@ -11,20 +11,30 @@
 
 import SwiftUI
 
-/// "Belum ada dokumen".
+/// "Belum ada dokumen", with the same choices as "+".
 struct EmptyLibraryView: View {
+    let hasCamera: Bool
+    let onAdd: (ScanSource) -> Void
+
     var body: some View {
         VStack(spacing: 12) {
-            IconBadge(
-                systemImage: "lock.shield", size: 52, symbolFont: .system(size: 26), tint: Color(.onAccent),
-                background: .accentColor)
-            Text("empty.title").font(.title3.bold())
-            Text("empty.body").foregroundStyle(.secondary).multilineTextAlignment(.center)
+            VStack(spacing: 12) {
+                IconBadge(
+                    systemImage: "lock.shield", size: 52, symbolFont: .system(size: 26), tint: Color(.onAccent),
+                    background: .accentColor)
+                Text("empty.title").font(.title3.bold())
+                Text("empty.body").foregroundStyle(.secondary).multilineTextAlignment(.center)
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityIdentifier("list.empty")
+            AddDocumentMenu(hasCamera: hasCamera, isDisabled: false, identifier: "list.empty.add", onAdd: onAdd) {
+                Text("main.add")
+            }
+            .buttonStyle(.prominent(fillsWidth: false))
+            .padding(.top, 12)
         }
         .padding(.vertical, 60)
         .padding(.horizontal, 20)
         .frame(maxWidth: .infinity)
-        .accessibilityElement(children: .combine)
-        .accessibilityIdentifier("list.empty")
     }
 }

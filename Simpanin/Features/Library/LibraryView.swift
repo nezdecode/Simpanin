@@ -53,14 +53,6 @@ struct LibraryView: View {
         #endif
     }
 
-    private static var canScan: Bool {
-        #if DEBUG
-            if UITestSetup.hidesCamera { return false }
-            if UITestSetup.scansSynthetically { return true }
-        #endif
-        return DocumentCamera.isSupported
-    }
-
     private static func documentStore(for vault: AppVault) -> any DocumentStoring & PageReading {
         #if DEBUG
             if UITestSetup.isActive { return UITestSetup.documentStore(for: vault) }
@@ -86,7 +78,7 @@ struct LibraryView: View {
                         LoadFailedView { Task { await library.reload() } }
                             .padding(.top, 80)
                     } else if library.documents.isEmpty {
-                        EmptyLibraryView()
+                        EmptyLibraryView(hasCamera: DocumentCamera.isAvailable, onAdd: add(from:))
                     } else {
                         ExpiryBanner(
                             documents: library.bannerDocuments, today: today, onOpen: { path.append($0.id) },
@@ -137,6 +129,14 @@ struct LibraryView: View {
             }
             .toolbar { toolbar }
             .task { await library.reload() }
+            // The scan chosen on the welcome screen starts at once and without the slide-up, so the empty
+            // list barely shows. The passcode was checked when the vault was created.
+            .onAppear {
+                guard let scan = lock.takePendingScan() else { return }
+                var transaction = Transaction()
+                transaction.disablesAnimations = true
+                withTransaction(transaction) { adding = scan }
+            }
             // A night may have passed while the app was away.
             .onChange(of: scenePhase) { _, phase in
                 if phase == .active { library.refreshDay() }
@@ -196,7 +196,13 @@ struct LibraryView: View {
     @ToolbarContentBuilder private var toolbar: some ToolbarContent {
         ToolbarItem(placement: .topBarLeading) {
             Button {
-                Task { await lock.lock() }
+                Task {
+                    await lock.lock()
+                    #if DEBUG
+                        // A recording that starts once the vault is locked, for the cover's UI test.
+                        if UITestSetup.recordsAfterLock { lock.screenCaptured = true }
+                    #endif
+                }
             } label: {
                 Label {
                     Text("main.lockNow")
@@ -219,7 +225,7 @@ struct LibraryView: View {
             .accessibilityIdentifier("list.settings")
         }
         ToolbarItem(placement: .topBarTrailing) {
-            AddDocumentMenu(hasCamera: Self.canScan, isDisabled: library.loadFailed, onAdd: add(from:))
+            AddDocumentMenu(hasCamera: DocumentCamera.isAvailable, isDisabled: library.loadFailed, onAdd: add(from:))
         }
         #if DEBUG
             // A synthetic sample document, for the UI tests only: on a phone, next to "+", it was easy to

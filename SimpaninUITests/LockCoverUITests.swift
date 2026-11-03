@@ -24,6 +24,16 @@ final class LockCoverUITests: UITestCase {
         XCTAssertTrue(rows(app).firstMatch.waitForExistence(timeout: 5))
     }
 
+    /// Locked stays the lock screen while the screen is recorded, with Buka.
+    @MainActor
+    func testALockedVaultWhileRecordingShowsTheLockScreen() throws {
+        let app = launch(["-SimpaninUITestRecordingAfterLock"])
+        app.buttons["list.lock"].tap()
+        XCTAssertTrue(app.buttons["lock.open"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.staticTexts["lock.subtitle"].label, "Terkunci. Dokumenmu terenkripsi di HP ini.")
+        screenshot("06b lock cover while recording")
+    }
+
     /// Every recovery screen that open() can lead to, with its text and way out.
     @MainActor
     func testRecoveryScreens() throws {
@@ -78,6 +88,8 @@ final class LockCoverUITests: UITestCase {
         screenshot("08 mulai vault baru")
         confirm.tap()
         XCTAssertTrue(app.navigationBars["Dokumen"].waitForExistence(timeout: 10))
+        // The user has already chosen, so the new vault opens straight away, without the welcome.
+        XCTAssertFalse(app.staticTexts["welcome.title"].exists)
 
         // The vault failed before it was created, so nothing was moved aside. The broken folder
         // is shown, but can't be deleted yet.
@@ -100,6 +112,11 @@ final class LockCoverUITests: UITestCase {
         XCTAssertTrue(app.staticTexts["lock.title"].waitForExistence(timeout: 10))
         XCTAssertFalse(app.textFields["review.field.nik"].exists)
         XCTAssertFalse(app.textFields["review.field.name"].exists)
+        // The vault is open, so the cover says why, never "Terkunci", and has no Buka.
+        XCTAssertEqual(
+            app.staticTexts["lock.subtitle"].label,
+            "Disembunyikan selama layar direkam atau ditampilkan di layar lain.")
+        XCTAssertFalse(app.buttons["lock.open"].exists)
         screenshot("25 cover above the scan flow")
         // When it stops, the review and its fields come back.
         XCTAssertTrue(app.textFields["review.field.nik"].waitForExistence(timeout: 10))

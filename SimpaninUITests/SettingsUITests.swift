@@ -21,6 +21,10 @@ final class SettingsUITests: UITestCase {
         let oldVaults = app.buttons["settings.oldVaults"]
         XCTAssertTrue(oldVaults.waitForExistence(timeout: 5))
         XCTAssertTrue(oldVaults.label.contains("11"), "Data lama's size: \(oldVaults.label)")
+        XCTAssertTrue(
+            app.staticTexts[
+                "Dokumen hanya ada di HP ini. Kalau HP hilang, ganti, atau Simpanin dihapus, dokumennya ikut hilang."
+            ].exists)
         screenshot("04 settings")
         app.buttons["settings.oldVaults"].tap()
         XCTAssertTrue(app.descendants(matching: .any)["oldVaults.unreadable"].waitForExistence(timeout: 5))

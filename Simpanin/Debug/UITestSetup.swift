@@ -84,6 +84,11 @@
                 slowRestore: slowRestore, slowSave: slowSave)
         }
 
+        /// `-SimpaninUITestRecordingAfterLock`: Kunci also acts as if a recording started, and it never stops.
+        static var recordsAfterLock: Bool {
+            isActive && ProcessInfo.processInfo.arguments.contains("-SimpaninUITestRecordingAfterLock")
+        }
+
         /// `-SimpaninUITestCaptureAfterScan`: once the synthetic scan is read, act for a few seconds as if
         /// the screen were being recorded, so a test can check the cover sits above the scan flow.
         static var capturesAfterScan: Bool {
@@ -93,6 +98,12 @@
         /// `-SimpaninUITestExpiringSamples`: samples expire within days, so the banner shows.
         static var expiringSamples: Bool {
             isActive && ProcessInfo.processInfo.arguments.contains("-SimpaninUITestExpiringSamples")
+        }
+
+        /// `-SimpaninUITestWelcome`: the throwaway vault starts empty, so the welcome shows. Without it every test
+        /// starts on the list, as it did before the welcome existed.
+        static var showsWelcome: Bool {
+            isActive && ProcessInfo.processInfo.arguments.contains("-SimpaninUITestWelcome")
         }
 
         /// `-SimpaninUITestNoCamera`: "+" acts as on a phone without a document camera, which the iOS 27
@@ -211,6 +222,7 @@
                 vault: opener, autoLock: AutoLock.stored(in: settings), settings: settings,
                 passcode: { turnedOff && opened.lock?.state == .unlocked ? .notSet : passcode },
                 vaultExists: { VaultStore.vaultExists(in: vault.locations.root) },
+                vaultIsEmpty: { showsWelcome ? try VaultStore.isEmpty(in: vault.locations.root) : false },
                 protectedDataAvailable: { true })
             opened.lock = lock
             return lock

@@ -184,13 +184,33 @@ final class LibraryUITests: UITestCase {
         XCTAssertFalse(app.buttons["list.scan"].isEnabled)
     }
 
-    /// The empty list points to "+" and says what it adds.
+    /// The empty list says what it adds, and its button offers the same choices as "+".
     @MainActor
-    func testEmptyLibrarySaysTapPlus() throws {
+    func testEmptyLibrarySaysWhatToAdd() throws {
         let app = launch()
         let empty = app.staticTexts["list.empty"]
         XCTAssertTrue(empty.waitForExistence(timeout: 10))
-        XCTAssertTrue(
-            empty.label.contains("Ketuk + untuk menambahkan KTP, SIM, atau paspor."), empty.label)
+        XCTAssertTrue(empty.label.contains("Tambahkan KTP, SIM, atau paspor."), empty.label)
+    }
+
+    @MainActor
+    func testTheEmptyListButtonOpensTheAddMenu() throws {
+        let app = launch()
+        let add = app.buttons["list.empty.add"]
+        XCTAssertTrue(add.waitForExistence(timeout: 10))
+        XCTAssertEqual(add.label, "Tambah dokumen")
+        add.tap()
+        XCTAssertTrue(app.buttons["list.scan.camera"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["list.scan.photos"].exists)
+        screenshot("84 empty list with its add menu")
+    }
+
+    @MainActor
+    func testTheEmptyListButtonOpensPhotosWithoutTheCamera() throws {
+        let app = launch(["-SimpaninUITestNoCamera", "-SimpaninUITestPickPhotos", "ktp"])
+        let add = app.buttons["list.empty.add"]
+        XCTAssertTrue(add.waitForExistence(timeout: 10))
+        add.tap()
+        XCTAssertTrue(app.buttons["photos.add"].waitForExistence(timeout: 10))
     }
 }

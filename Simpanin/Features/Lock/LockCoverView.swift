@@ -18,10 +18,10 @@ struct LockCoverView: View {
     let lock: LockController
 
     var body: some View {
-        if case .recovery(let screen) = lock.state {
-            RecoveryView(screen: screen, vault: vault, lock: lock)
-        } else {
-            LockedView(lock: lock)
+        switch CoverContent(lock) {
+        case .recovery(let screen): RecoveryView(screen: screen, vault: vault, lock: lock)
+        case .welcome: WelcomeView(lock: lock)
+        case .lockScreen, .nameOnly, .recording: LockedView(lock: lock)
         }
     }
 }

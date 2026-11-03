@@ -124,9 +124,47 @@ public actor VaultStore {
     public nonisolated static func vaultExists(in rootDirectory: URL) -> Bool {
         FileManager.default.fileExists(atPath: rootDirectory.appending(path: headerFileName).path)
     }
-    var indexURL: URL { root.appending(path: "index.enc") }
-    var previousIndexURL: URL { root.appending(path: "index.prev.enc") }
-    var pagesDirectory: URL { root.appending(path: "pages", directoryHint: .isDirectory) }
+
+    /// Whether `rootDirectory` holds nothing that could belong to a vault: no header, no index and
+    /// no page file. Leftover temp files don't count, as they were never part of a save. Throws
+    /// `fileUnavailable` when anything it looks for can't be checked, so an unreadable vault is never
+    /// taken for an empty one.
+    public nonisolated static func isEmpty(in rootDirectory: URL) throws -> Bool {
+        let files = [
+            rootDirectory.appending(path: headerFileName), indexURL(in: rootDirectory),
+            previousIndexURL(in: rootDirectory),
+        ]
+        for file in files where try itemExists(file) { return false }
+        let pages = pagesDirectory(in: rootDirectory)
+        guard try itemExists(pages) else { return true }
+        do {
+            return try !pageFilesExist(in: pages)
+        } catch {
+            throw VaultError.fileUnavailable
+        }
+    }
+
+    /// Only "no such file" means missing, as in `readFile(at:)`; `fileExists` would also say false for a
+    /// folder it isn't allowed to look in.
+    private nonisolated static func itemExists(_ url: URL) throws -> Bool {
+        do {
+            _ = try FileManager.default.attributesOfItem(atPath: url.path)
+            return true
+        } catch CocoaError.fileReadNoSuchFile, CocoaError.fileNoSuchFile {
+            return false
+        } catch {
+            throw VaultError.fileUnavailable
+        }
+    }
+
+    var indexURL: URL { Self.indexURL(in: root) }
+    var previousIndexURL: URL { Self.previousIndexURL(in: root) }
+    var pagesDirectory: URL { Self.pagesDirectory(in: root) }
+    nonisolated static func indexURL(in root: URL) -> URL { root.appending(path: "index.enc") }
+    nonisolated static func previousIndexURL(in root: URL) -> URL { root.appending(path: "index.prev.enc") }
+    nonisolated static func pagesDirectory(in root: URL) -> URL {
+        root.appending(path: "pages", directoryHint: .isDirectory)
+    }
     func pageURL(_ id: PageID) -> URL { pagesDirectory.appending(path: "\(id.string).enc") }
 
     /// Nil only when the file doesn't exist. Any other read error, like a file iOS keeps
@@ -181,7 +219,7 @@ public actor VaultStore {
             header = try readHeader(at: headerURL)
             vaultKey = try await readExistingVaultKey(header.vaultID)
         } else {
-            guard try !vaultFilesExist() else { throw VaultError.vaultHeaderMissing }
+            guard try !Self.vaultFilesExist(in: root) else { throw VaultError.vaultHeaderMissing }
             let vaultID = VaultID()
             vaultKey = try await readOrCreateNewVaultKey(vaultID)
             header = VaultHeader(vaultID: vaultID, keySlots: [KeySlot(kind: .device, createdAt: now())])

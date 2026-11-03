@@ -32,10 +32,11 @@ ENTRY_POINTS = {
     'RecentlyDeletedView': None,
     'LibraryModel': None,
     'ScanFlowView': None,
-    'DocumentCamera': r'\bDocumentCamera\.isSupported\b',
+    'DocumentCamera': r'\bDocumentCamera\.(isSupported|isAvailable)\b',
     'DocumentCameraCache': r'\bDocumentCameraCache\.clear\(\)',
     'SettingsView': None,
     'LockCoverView': None,
+    'WelcomeView': None,
     'DocumentDetailView': None,
 }
 

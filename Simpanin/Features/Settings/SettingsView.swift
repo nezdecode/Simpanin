@@ -91,7 +91,7 @@ struct SettingsView: View {
             Section {
             } footer: {
                 VStack(alignment: .leading, spacing: 16) {
-                    Text("settings.deviceOnly")
+                    Text("privacy.deviceOnly")
                     Label {
                         Text("settings.noAccount \(Bundle.main.shortVersion)")
                     } icon: {

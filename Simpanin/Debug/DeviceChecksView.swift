@@ -20,6 +20,7 @@
         let lock: LockController
         @State private var lines: [DeviceCheckLine] = []
         @State private var running = false
+        @State private var confirmingStartOver = false
 
         private var accessGroup: String? { AppConfiguration.keychainAccessGroup }
 
@@ -94,6 +95,19 @@
                             + "and copy the report. The lock lines show what came back."
                     )
                 }
+                Section {
+                    Button("Start over", role: .destructive) { confirmingStartOver = true }
+                        // UI tests use a throwaway vault but the real access group, so the real keys would go.
+                        .disabled(vault == nil || accessGroup == nil || UITestSetup.isActive)
+                } header: {
+                    Text("First launch")
+                } footer: {
+                    Text(
+                        "Deletes every document, Data lama and the vault keys, then closes Simpanin. "
+                            + "Open it again to see the welcome. If something stays, the keys are kept and "
+                            + "the report below says what happened."
+                    )
+                }
                 Section("Report") {
                     Text(report).font(.caption.monospaced()).textSelection(.enabled)
                     Button("Copy report") { UIPasteboard.general.string = report }
@@ -102,6 +116,9 @@
             }
             .navigationTitle("Device checks")
             .disabled(running)
+            .confirmationDialog("Delete every document on this phone?", isPresented: $confirmingStartOver) {
+                Button("Start over", role: .destructive) { startOver() }
+            }
         }
 
         /// Runs on after the vault locks and this screen disappears, through the real controller.
@@ -111,6 +128,26 @@
                 await lock.lock()
                 try? await Task.sleep(for: .seconds(5))
                 await lock.unlock()
+            }
+        }
+
+        /// Locked first, so the store writes nothing while its folder goes. Closed after, so the next launch
+        /// is a real first launch.
+        private func startOver() {
+            guard let vault, let accessGroup else { return }
+            let lock = lock
+            Task {
+                await lock.lock()
+                let results = await Task.detached {
+                    StartOver.run(locations: vault.locations, accessGroup: accessGroup)
+                }.value
+                // The lock has closed this screen, so a step that failed goes to the lock's log, which the
+                // report shows; the app only closes when everything went.
+                guard StartOver.succeeded(results) else {
+                    for line in results { lock.log("start over, \(line.label): \(line.result)") }
+                    return
+                }
+                exit(0)
             }
         }
 

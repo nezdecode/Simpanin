@@ -11,10 +11,19 @@
 
 import SwiftUI
 
-/// The dark cover with the app's name and the "Buka" button.
+/// The dark cover with the app's name, and "Buka" when locked. While the vault is open it never says
+/// "Terkunci": only the name, or why it's hidden while the screen is recorded.
 struct LockedView: View {
     let lock: LockController
     private let method = UnlockMethod.current()
+
+    private var subtitle: LocalizedStringResource? {
+        switch CoverContent(lock) {
+        case .recording: "cover.recording"
+        case .nameOnly: nil
+        default: "lock.subtitle"
+        }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -25,9 +34,12 @@ struct LockedView: View {
                     background: Color(.lockIconBackground), outline: .roundedRectangle(cornerRadius: 22))
                 Text("lock.title").font(.title.bold())
                     .accessibilityIdentifier("lock.title")
-                Text("lock.subtitle")
-                    .foregroundStyle(Color(.lockSecondaryText))
-                    .multilineTextAlignment(.center)
+                if let subtitle {
+                    Text(subtitle)
+                        .foregroundStyle(Color(.lockSecondaryText))
+                        .multilineTextAlignment(.center)
+                        .accessibilityIdentifier("lock.subtitle")
+                }
             }
             .padding(.horizontal, 32)
             Spacer()
