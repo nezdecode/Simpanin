@@ -97,7 +97,8 @@
                 }
                 Section {
                     Button("Start over", role: .destructive) { confirmingStartOver = true }
-                        .disabled(vault == nil || accessGroup == nil)
+                        // UI tests use a throwaway vault but the real access group, so the real keys would go.
+                        .disabled(vault == nil || accessGroup == nil || UITestSetup.isActive)
                 } header: {
                     Text("First launch")
                 } footer: {
@@ -136,7 +137,14 @@
             let lock = lock
             Task {
                 await lock.lock()
-                _ = await Task.detached { StartOver.run(locations: vault.locations, accessGroup: accessGroup) }.value
+                let results = await Task.detached {
+                    StartOver.run(locations: vault.locations, accessGroup: accessGroup)
+                }.value
+                // A step that failed stays on screen to copy; the app only closes when everything went.
+                guard results.allSatisfy({ ["removed", "not there", "done"].contains($0.result) }) else {
+                    lines += results
+                    return
+                }
                 exit(0)
             }
         }

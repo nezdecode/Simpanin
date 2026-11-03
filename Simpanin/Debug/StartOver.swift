@@ -32,6 +32,11 @@
                 }
                 return DeviceCheckLine(label: "remove \(url.lastPathComponent)", result: result)
             }
+            // Keys without their files would leave a vault that can't open, so they only go once the files have.
+            guard lines.allSatisfy({ ["removed", "not there"].contains($0.result) }) else {
+                lines.append(DeviceCheckLine(label: "delete vault keys", result: "skipped, a folder stayed"))
+                return lines
+            }
             // No account, so the keys of old vaults go too; their folders were removed above.
             let status = SecItemDelete(
                 [
