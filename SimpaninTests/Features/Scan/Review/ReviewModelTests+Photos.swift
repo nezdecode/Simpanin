@@ -92,7 +92,7 @@ extension ReviewModelTests {
     }
 
     /// Locking the vault removes Periksa data and cancels its save. A vault opened again before the decode
-    /// ends must not get the document the notice says was dropped.
+    /// ends must not get the document the notice says was dropped, and the lock isn't a page that failed.
     @Test func lockDuringStoredDecodeSavesNothing() async throws {
         let store = FakeDocuments()
         let started = Mutex(false)
@@ -104,7 +104,8 @@ extension ReviewModelTests {
             storePhotos: { photos in
                 started.withLock { $0 = true }
                 for await _ in released { break }
-                return photos.map { _ in Data([1]) }
+                // As the real decode does once cancelled.
+                return Task.isCancelled ? nil : photos.map { _ in Data([1]) }
             })
         try loadPhotos(try photoFiles([(200, 100)]), into: review)
         let saving = Task { await review.save() }
@@ -117,5 +118,6 @@ extension ReviewModelTests {
         release.yield()
         #expect(await !saving.value)
         #expect(await store.createdPages.isEmpty)
+        #expect(review.saveError == nil)
     }
 }

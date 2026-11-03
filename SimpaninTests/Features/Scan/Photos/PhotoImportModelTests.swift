@@ -104,6 +104,8 @@ struct PhotoImportModelTests {
         let loading = Task { await model.loadAdded() }
         try await waitUntilHolding(photos)
         #expect(model.screen == .loading)
+        #expect(model.loadingNumber == 1)
+        #expect(model.loadingCount == 1)
         photos.release.yield()
         #expect(await loading.value != nil)
         #expect(model.screen == .review)
@@ -165,8 +167,8 @@ struct PhotoImportModelTests {
         #expect(model.screen == .ended)
     }
 
-    /// A lock while a second pick loads keeps the first pick's pages in Periksa data.
-    @Test func lockDuringRePickKeepsPages() async throws {
+    /// A lock while a second pick loads goes back to Periksa data, as Batal does, not to the end.
+    @Test func lockDuringRePickGoesBackToReview() async throws {
         let photos = ScriptedPhotos(["a": .photo(try photo(width: 300)), "b": .cancellable])
         let model = PhotoImportModel(loader: photos)
         model.selection = items("a")
