@@ -71,6 +71,47 @@ struct StartNewVaultTests {
         #expect(await vault.openCount == 2)
     }
 
+    /// The user already chose a new vault, so the recovery screen stays while it's created, never the welcome.
+    @Test func startingANewVaultNeverShowsTheWelcomeWhileCreating() async {
+        let conditions = LaunchConditions()
+        conditions.vaultCreated()
+        let vault = FakeVault([.failure(.vaultKeyMissing), .success(OpenReport())])
+        let lock = LockController(
+            vault: vault, clock: FixedClock(), passcode: { conditions.passcode },
+            vaultExists: { conditions.headerExists }, vaultIsEmpty: { try conditions.isEmpty() },
+            protectedDataAvailable: { true })
+        await lock.unlock()
+        let model = StartNewVaultModel(store: FakeQuarantine(), quarantineFolder: quarantineFolder, lock: lock)
+        model.typed = "MULAI BARU"
+        conditions.headerExists = false
+        conditions.empty = true
+        await vault.gateNextOpen()
+        let confirming = Task { await model.confirm() }
+        #expect(await vault.waitUntilOpening())
+        #expect(CoverContent(lock) != .welcome)
+        await vault.release()
+        await confirming.value
+        #expect(lock.state == .unlocked)
+    }
+
+    @Test func aFirstFailureAfterStartingANewVaultShowsItsScreen() async {
+        let conditions = LaunchConditions()
+        conditions.vaultCreated()
+        let vault = FakeVault([.failure(.vaultKeyMissing), .failure(.vaultKeyUnavailable(status: -50))])
+        let lock = LockController(
+            vault: vault, clock: FixedClock(), passcode: { conditions.passcode },
+            vaultExists: { conditions.headerExists }, vaultIsEmpty: { try conditions.isEmpty() },
+            protectedDataAvailable: { true })
+        await lock.unlock()
+        let model = StartNewVaultModel(store: FakeQuarantine(), quarantineFolder: quarantineFolder, lock: lock)
+        model.typed = "MULAI BARU"
+        conditions.headerExists = false
+        conditions.empty = true
+        await model.confirm()
+        #expect(lock.state == .recovery(.cannotOpenNow))
+        #expect(await vault.openCount == 2)
+    }
+
     @Test func nothingHappensWithoutTheWord() async {
         let quarantine = FakeQuarantine()
         let vault = FakeVault([.failure(.vaultUnreadable)])

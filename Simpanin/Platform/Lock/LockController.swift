@@ -183,8 +183,9 @@ final class LockController {
             return
         }
         pendingScan = scan
-        isCreatingVault = true
-        await open()
+        // Only from the welcome: after "Mulai vault baru" the recovery screen stays while the vault is made.
+        isCreatingVault = state == .noVault
+        await open(creating: true)
         isCreatingVault = false
         if state != .unlocked { pendingScan = nil }
     }
@@ -197,7 +198,13 @@ final class LockController {
 
     private var isKnownEmpty: Bool { (try? vaultIsEmpty()) == true }
 
-    private func open() async {
+    /// Nothing was open, so a lock on the welcome, or during a create that wrote nothing yet, keeps the
+    /// welcome rather than drawing the lock screen on a phone with no vault.
+    private var welcomeAfterLock: Bool { (state == .noVault || isCreatingVault) && isKnownEmpty }
+
+    /// `creating`: making a vault shows no prompt, so a retry would only land back on the welcome and hide the
+    /// error; the first failure counts as the last.
+    private func open(creating: Bool = false) async {
         state = .unlocking
         leftForegroundDuringPrompt = false
         let lockCountAtStart = lockCount
@@ -215,11 +222,12 @@ final class LockController {
                 attemptLog.append("open: \(Self.describe(result)) -> dropped, locked meanwhile")
             #endif
             await vault.lock()
-            state = .locked
+            state = welcomeAfterLock ? .noVault : .locked
             return
         }
         let outcome = RecoveryMapping.outcome(
-            of: result, passcode: passcode(), failuresInARow: failuresInARow,
+            of: result, passcode: passcode(),
+            failuresInARow: creating ? RecoveryMapping.failuresBeforeGivingUp - 1 : failuresInARow,
             leftForegroundDuringPrompt: leftForegroundDuringPrompt)
         #if DEBUG
             attemptLog.append("open: \(Self.describe(result)) -> \(outcome)")
@@ -240,13 +248,12 @@ final class LockController {
     func lock() async {
         lockCount += 1
         await vault.lock()
-        state = .locked
+        state = welcomeAfterLock ? .noVault : .locked
         notices = []
         // Locking removes every screen, a scan in progress with it; say so after unlocking.
         if let scanInProgress { scanDroppedByLock = scanInProgress }
         scanInProgress = nil
         pendingScan = nil
-        holdsLockScreen = false
         failuresInARow = 0
     }
 
