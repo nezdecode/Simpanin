@@ -211,6 +211,7 @@
                 vault: opener, autoLock: AutoLock.stored(in: settings), settings: settings,
                 passcode: { turnedOff && opened.lock?.state == .unlocked ? .notSet : passcode },
                 vaultExists: { VaultStore.vaultExists(in: vault.locations.root) },
+                vaultIsEmpty: { false },
                 protectedDataAvailable: { true })
             opened.lock = lock
             return lock

@@ -25,6 +25,7 @@ actor FakeVault {
     private var gate: CheckedContinuation<Void, Never>?
     private let gated: Bool
     private let onlyFirstGated: Bool
+    private var nextGated = false
 
     /// - Parameter onlyFirstGated: later opens answer at once, so a retry the test doesn't
     ///   expect fails the test instead of hanging it.
@@ -34,9 +35,15 @@ actor FakeVault {
         self.onlyFirstGated = onlyFirstGated
     }
 
+    /// Gates only the next open, for a test that reaches a state through opens that must not wait.
+    func gateNextOpen() { nextGated = true }
+
     func open() async throws -> OpenReport {
         openCount += 1
-        if gated, !onlyFirstGated || openCount == 1 { await withCheckedContinuation { gate = $0 } }
+        if gated && (!onlyFirstGated || openCount == 1) || nextGated {
+            nextGated = false
+            await withCheckedContinuation { gate = $0 }
+        }
         let result = results.isEmpty ? .success(OpenReport()) : results.removeFirst()
         return try result.get()
     }
@@ -52,7 +59,9 @@ actor FakeVault {
         return gate != nil
     }
 
+    /// Also withdraws a gate no open has reached, so a later open can't wait forever.
     func release() {
+        nextGated = false
         gate?.resume()
         gate = nil
     }

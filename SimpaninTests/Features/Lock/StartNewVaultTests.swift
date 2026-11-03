@@ -22,7 +22,7 @@ struct StartNewVaultTests {
 
     func makeLock(_ vault: FakeVault) -> LockController {
         LockController(
-            vault: vault, clock: FixedClock(), passcode: { .set }, vaultExists: { true },
+            vault: vault, clock: FixedClock(), passcode: { .set }, vaultExists: { true }, vaultIsEmpty: { false },
             protectedDataAvailable: { true })
     }
 
@@ -48,6 +48,27 @@ struct StartNewVaultTests {
         await model.confirm()
         #expect(await quarantine.quarantinedTo == [quarantineFolder])
         #expect(lock.state == .unlocked)
+    }
+
+    /// The move leaves an empty folder, which on its own would show the welcome.
+    @Test func startingANewVaultOpensWithoutTheWelcome() async {
+        let conditions = LaunchConditions()
+        conditions.vaultCreated()
+        let vault = FakeVault([.failure(.vaultKeyMissing), .success(OpenReport())])
+        let lock = LockController(
+            vault: vault, clock: FixedClock(), passcode: { conditions.passcode },
+            vaultExists: { conditions.headerExists }, vaultIsEmpty: { try conditions.isEmpty() },
+            protectedDataAvailable: { true })
+        await lock.unlock()
+        #expect(lock.state == .recovery(.keyMissing))
+
+        let model = StartNewVaultModel(store: FakeQuarantine(), quarantineFolder: quarantineFolder, lock: lock)
+        model.typed = "MULAI BARU"
+        conditions.headerExists = false
+        conditions.empty = true
+        await model.confirm()
+        #expect(lock.state == .unlocked)
+        #expect(await vault.openCount == 2)
     }
 
     @Test func nothingHappensWithoutTheWord() async {

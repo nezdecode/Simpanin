@@ -68,6 +68,7 @@ struct AutoLockTests {
         let defaults = defaults()
         let controller = LockController(
             vault: FakeVault([]), clock: FixedClock(), settings: defaults, passcode: { .set }, vaultExists: { true },
+            vaultIsEmpty: { false },
             protectedDataAvailable: { true })
         controller.setAutoLock(.fiveMinutes)
         #expect(controller.autoLock == .fiveMinutes)
@@ -84,6 +85,7 @@ struct AutoLockTests {
         let vault = FakeVault([])
         let controller = LockController(
             vault: vault, clock: clock, settings: defaults(), passcode: { .set }, vaultExists: { true },
+            vaultIsEmpty: { false },
             protectedDataAvailable: { true })
         await controller.sceneDidBecomeActive()
         controller.setAutoLock(.immediately)

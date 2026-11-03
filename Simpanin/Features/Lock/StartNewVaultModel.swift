@@ -46,6 +46,7 @@ final class StartNewVaultModel {
             return
         }
         failed = false
-        await lock.unlock()
+        // The folder is empty now; the user has already chosen, so no welcome.
+        await lock.createVault(then: nil)
     }
 }
