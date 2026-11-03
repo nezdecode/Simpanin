@@ -78,6 +78,37 @@ final class PhotoImportUITests: UITestCase {
         screenshot("70 pilih foto lain after typing")
     }
 
+    /// Only Simpan saves: after Kembali on the duplicate question, Pilih foto lain and Batal neither ask again
+    /// nor save the photo.
+    @MainActor
+    func testPickAgainAfterKembaliSavesNothing() throws {
+        let app = openPicker("ktp")
+        app.buttons["photos.add"].tap()
+        XCTAssertTrue(app.buttons["review.save"].waitForExistence(timeout: 10))
+        app.buttons["review.save"].tap()
+        XCTAssertTrue(rows(app).firstMatch.waitForExistence(timeout: 15))
+
+        app.buttons["list.scan"].tap()
+        app.buttons["list.scan.photos"].tap()
+        XCTAssertTrue(app.buttons["photos.add"].waitForExistence(timeout: 10))
+        app.buttons["photos.add"].tap()
+        XCTAssertTrue(app.buttons["review.save"].waitForExistence(timeout: 10))
+        app.buttons["review.save"].tap()
+        let alert = app.alerts["Kamu sudah punya KTP dengan NIK ini."]
+        XCTAssertTrue(alert.waitForExistence(timeout: 5))
+        alert.buttons["Kembali"].tap()
+
+        app.navigationBars.buttons["review.rescan"].tap()
+        XCTAssertTrue(app.buttons["photos.cancel"].waitForExistence(timeout: 5))
+        app.buttons["photos.cancel"].tap()
+        XCTAssertTrue(app.textFields["review.field.name"].waitForExistence(timeout: 5))
+        XCTAssertFalse(alert.waitForExistence(timeout: 3))
+        app.buttons["review.cancel"].tap()
+        app.buttons["Buang"].tap()
+        XCTAssertTrue(rows(app).firstMatch.waitForExistence(timeout: 15))
+        XCTAssertEqual(rows(app).count, 1)
+    }
+
     /// Batal asks before throwing the photo away and says the original stays in Photos; Buang adds nothing.
     @MainActor
     func testBatalAsksWithPhotosWording() throws {
