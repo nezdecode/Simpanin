@@ -20,6 +20,7 @@
         let lock: LockController
         @State private var lines: [DeviceCheckLine] = []
         @State private var running = false
+        @State private var confirmingStartOver = false
 
         private var accessGroup: String? { AppConfiguration.keychainAccessGroup }
 
@@ -94,6 +95,17 @@
                             + "and copy the report. The lock lines show what came back."
                     )
                 }
+                Section {
+                    Button("Start over", role: .destructive) { confirmingStartOver = true }
+                        .disabled(vault == nil || accessGroup == nil)
+                } header: {
+                    Text("First launch")
+                } footer: {
+                    Text(
+                        "Deletes every document, Data lama and the vault keys, then closes Simpanin. "
+                            + "Open it again to see the welcome."
+                    )
+                }
                 Section("Report") {
                     Text(report).font(.caption.monospaced()).textSelection(.enabled)
                     Button("Copy report") { UIPasteboard.general.string = report }
@@ -102,6 +114,9 @@
             }
             .navigationTitle("Device checks")
             .disabled(running)
+            .confirmationDialog("Delete every document on this phone?", isPresented: $confirmingStartOver) {
+                Button("Start over", role: .destructive) { startOver() }
+            }
         }
 
         /// Runs on after the vault locks and this screen disappears, through the real controller.
@@ -111,6 +126,18 @@
                 await lock.lock()
                 try? await Task.sleep(for: .seconds(5))
                 await lock.unlock()
+            }
+        }
+
+        /// Locked first, so the store writes nothing while its folder goes. Closed after, so the next launch
+        /// is a real first launch.
+        private func startOver() {
+            guard let vault, let accessGroup else { return }
+            let lock = lock
+            Task {
+                await lock.lock()
+                _ = await Task.detached { StartOver.run(locations: vault.locations, accessGroup: accessGroup) }.value
+                exit(0)
             }
         }
 
