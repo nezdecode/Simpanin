@@ -131,6 +131,62 @@ struct NoVaultGuardTests {
         #expect(await vault.keyStore.createCount == 2)
     }
 
+    /// A vault that turns up while the key is being made, like a folder readable again, is moved
+    /// back into place by the key store's create hook. The new header must not replace its own.
+    func makeVaultThatReturnsDuringCreate() async throws -> (vault: TestVault, id: DocumentID, files: [String: Data]) {
+        let (vault, id, _) = try await makeVault()
+        let files = try TestVault.files(in: vault.root)
+        let away = vault.base.appending(path: "Away", directoryHint: .isDirectory)
+        try FileManager.default.moveItem(at: vault.root, to: away)
+        let root = vault.root
+        await vault.keyStore.setCreateHook { try FileManager.default.moveItem(at: away, to: root) }
+        return (vault, id, files)
+    }
+
+    @Test func creatingNeverReplacesAnExistingHeader() async throws {
+        let (vault, _, files) = try await makeVaultThatReturnsDuringCreate()
+
+        await #expect(throws: VaultError.fileUnavailable) { try await vault.makeStore().open() }
+        #expect(try TestVault.files(in: vault.root) == files)
+    }
+
+    @Test func aHeaderWrittenDuringCreateOpensOnRetry() async throws {
+        let (vault, id, _) = try await makeVaultThatReturnsDuringCreate()
+        let store = vault.makeStore()
+        await #expect(throws: VaultError.fileUnavailable) { try await store.open() }
+
+        await vault.keyStore.setCreateHook(nil)
+        let report = try await store.open()
+        #expect(!report.createdVault)
+        #expect(try await store.document(id).type == .ktp)
+    }
+
+    @Test func theNewHeaderKeepsItsProtectionClass() async throws {
+        let vault = try TestVault()
+        let protector = RecordingProtector()
+        let store = VaultStore(
+            rootDirectory: vault.root, projectionURL: vault.projectionURL, keyStore: vault.keyStore,
+            clock: vault.clock, fileProtector: protector, crashHook: nil)
+        try await store.open()
+        let temp = VaultStore.tempURL(for: vault.headerURL).standardizedFileURL
+        #expect(protector.calls.contains { $0.url.standardizedFileURL == temp && $0.protection == .complete })
+        #expect(FileManager.default.fileExists(atPath: vault.headerURL.path))
+        #expect(!FileManager.default.fileExists(atPath: temp.path))
+    }
+
+    @Test func aFullDiskWhileCreatingLeavesNoHeader() async throws {
+        let vault = try TestVault()
+        let protector = FailingProtector(failingOn: "vault.json", with: CocoaError(.fileWriteOutOfSpace))
+        protector.arm(true)
+        let store = VaultStore(
+            rootDirectory: vault.root, projectionURL: vault.projectionURL, keyStore: vault.keyStore,
+            clock: vault.clock, fileProtector: protector, crashHook: nil)
+
+        await #expect(throws: VaultError.storageFull) { try await store.open() }
+        #expect(!FileManager.default.fileExists(atPath: vault.headerURL.path))
+        #expect(!FileManager.default.fileExists(atPath: VaultStore.tempURL(for: vault.headerURL).path))
+    }
+
     /// Recovery from pages must never go on from a listing it couldn't read: it would write an
     /// index without those pages.
     @Test func anUnreadablePagesFolderDuringRecoveryWritesNothing() async throws {

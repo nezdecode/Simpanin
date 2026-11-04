@@ -109,19 +109,43 @@ extension VaultStore {
     /// Writes a temp file, sets its class, then renames it over `url`, which keeps the class.
     /// If any step fails, `url` is left as it was.
     func write(_ data: Data, to url: URL, protection: FileProtectionClass) throws {
+        try writeThroughTemp(data, to: url, protection: protection) { temp in
+            guard rename(temp.path, url.path) == 0 else {
+                throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO)
+            }
+        }
+    }
+
+    /// Like `write`, for a file that must not exist yet. Linking the temp into place fails rather
+    /// than replace a file that appeared meanwhile, and that throws `fileUnavailable`. Only a new
+    /// vault's header uses it, so a wrong "no vault" can never put a new vault over an old one.
+    func writeNew(_ data: Data, to url: URL, protection: FileProtectionClass) throws {
+        try writeThroughTemp(data, to: url, protection: protection) { temp in
+            guard link(temp.path, url.path) == 0 else {
+                let code = errno
+                throw code == EEXIST ? VaultError.fileUnavailable : POSIXError(POSIXErrorCode(rawValue: code) ?? .EIO)
+            }
+        }
+        // The temp name stays as a second name until an open removes leftovers, usually this one;
+        // `write` never writes through it.
+    }
+
+    /// Writes `data` to a fresh temp file beside `url`, sets its class, then lets `place` put it at
+    /// `url`. On any failure the temp file is removed and `url` is left as it was.
+    private func writeThroughTemp(
+        _ data: Data, to url: URL, protection: FileProtectionClass, place: (_ temp: URL) throws -> Void
+    ) throws {
         let temp = Self.tempURL(for: url)
         do {
-            // Not optional cleanup: a leftover temp can be a hard link to `url` (a new vault's header
-            // is linked into place), and writing through it would change `url` before the rename.
+            // Not optional cleanup: a leftover temp can be a hard link to `url` (from `writeNew`), and
+            // writing through it would change `url` before it's placed.
             do {
                 try FileManager.default.removeItem(at: temp)
             } catch CocoaError.fileNoSuchFile {
             }
             try data.write(to: temp)
             try fileProtector.protect(temp, as: protection)
-            guard rename(temp.path, url.path) == 0 else {
-                throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO)
-            }
+            try place(temp)
         } catch {
             try? FileManager.default.removeItem(at: temp)
             throw Self.isOutOfSpace(error) ? VaultError.storageFull : error

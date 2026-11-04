@@ -219,7 +219,7 @@ public actor VaultStore {
             header = VaultHeader(vaultID: vaultID, keySlots: [KeySlot(kind: .device, createdAt: now())])
             try createFolder(root, protection: .complete)
             try createFolder(pagesDirectory, protection: .complete)
-            try write(VaultJSON.encoder.encode(header), to: headerURL, protection: .complete)
+            try writeNew(VaultJSON.encoder.encode(header), to: headerURL, protection: .complete)
             report.createdVault = true
         }
         // lock() may have run while we waited for the key, and the files may have been
