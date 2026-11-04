@@ -174,6 +174,16 @@ struct NoVaultGuardTests {
         #expect(!FileManager.default.fileExists(atPath: temp.path))
     }
 
+    /// The header is linked into place, so its temp name is a second name for it until the same open
+    /// removes leftovers. Once open returns, vault.json must have only its own name.
+    @Test func aCreateLeavesNoTempBehindWhenOpenReturns() async throws {
+        let vault = try TestVault()
+        try await vault.makeStore().open()
+        let attributes = try FileManager.default.attributesOfItem(atPath: vault.headerURL.path)
+        #expect(attributes[.referenceCount] as? Int == 1)
+        #expect(!FileManager.default.fileExists(atPath: VaultStore.tempURL(for: vault.headerURL).path))
+    }
+
     @Test func aFullDiskWhileCreatingLeavesNoHeader() async throws {
         let vault = try TestVault()
         let protector = FailingProtector(failingOn: "vault.json", with: CocoaError(.fileWriteOutOfSpace))
