@@ -46,12 +46,15 @@ actor InMemoryKeyStore: KeyStore {
     /// Makes `deleteVaultKey` fail with this status.
     var deleteFailureStatus: Int32?
     var createFailure: CreateFailure?
+    /// Runs after a new key is made, like another writer touching the vault folder while the Keychain is busy.
+    private var createHook: (@Sendable () throws -> Void)?
 
     init(keys: [VaultID: SymmetricKey] = [:]) { self.keys = keys }
 
     func setReadFailure(_ failure: ReadFailure?) { readFailure = failure }
     func setDeleteFailure(status: Int32?) { deleteFailureStatus = status }
     func setCreateFailure(_ failure: CreateFailure?) { createFailure = failure }
+    func setCreateHook(_ hook: (@Sendable () throws -> Void)?) { createHook = hook }
     func setKey(_ key: SymmetricKey?, for vaultID: VaultID) { keys[vaultID] = key }
     func key(for vaultID: VaultID) -> SymmetricKey? { keys[vaultID] }
 
@@ -77,6 +80,7 @@ actor InMemoryKeyStore: KeyStore {
         guard keys[vaultID] == nil else { throw KeyStoreError.itemAlreadyExists }
         let key = VaultCrypto.newKey()
         keys[vaultID] = key
+        try createHook?()
         return key
     }
 
