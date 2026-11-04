@@ -159,8 +159,10 @@
         /// Notes a lock while the sheet is up, and whether the sheet is still on screen then.
         private func watch(_ activity: UIActivityViewController, outcome: Outcome, share number: Int) {
             let lock = lock
+            let started = Date.now
             Task { [weak activity] in
                 var lockSeen = false
+                var lastState = ""
                 while !outcome.finished, let shown = activity, !Task.isCancelled {
                     if !lockSeen, lock.state != .unlocked {
                         lockSeen = true
@@ -168,7 +170,13 @@
                             number,
                             "vault locked with the sheet up; sheet on screen: \(shown.viewIfLoaded?.window != nil)")
                     }
-                    try? await Task.sleep(for: .milliseconds(500))
+                    // Whether iOS says the app left the foreground late, or the cover follows it late.
+                    let state = Self.activationState(hidden: lock.contentHidden)
+                    if state != lastState {
+                        lastState = state
+                        log(number, "\(Int(Date.now.timeIntervalSince(started) * 1000)) ms: \(state)")
+                    }
+                    try? await Task.sleep(for: .milliseconds(100))
                 }
                 if !outcome.finished { log(number, "sheet gone without a completion") }
             }
@@ -262,10 +270,32 @@
             top.present(controller, animated: true)
             return true
         }
+    }
+
+    extension ShareTryView {
+        fileprivate static func activationState(hidden: Bool) -> String {
+            let app =
+                switch UIApplication.shared.applicationState {
+                case .active: "active"
+                case .inactive: "inactive"
+                case .background: "background"
+                @unknown default: "unknown"
+                }
+            let scene =
+                switch UIApplication.shared.connectedScenes.first?.activationState {
+                case .foregroundActive: "foregroundActive"
+                case .foregroundInactive: "foregroundInactive"
+                case .background: "background"
+                case .unattached: "unattached"
+                case nil: "none"
+                @unknown default: "unknown"
+                }
+            return "app \(app), scene \(scene), cover \(hidden ? "up" : "down")"
+        }
 
         /// Synthetic: a grey card, CONTOH and a test NIK that starts with 00. The large one adds blocks of
         /// colour so the JPEG is several MB and a transfer takes long enough to lock the phone during it.
-        private static func samplePage(large: Bool) -> UIImage {
+        fileprivate static func samplePage(large: Bool) -> UIImage {
             let size = large ? CGSize(width: 6000, height: 3780) : CGSize(width: 1712, height: 1080)
             let format = UIGraphicsImageRendererFormat()
             format.scale = 1
