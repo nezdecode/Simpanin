@@ -20,4 +20,5 @@ extension Logger {
     nonisolated static let launch = Logger(subsystem: subsystem, category: "launch")
     nonisolated static let library = Logger(subsystem: subsystem, category: "library")
     nonisolated static let scan = Logger(subsystem: subsystem, category: "scan")
+    nonisolated static let share = Logger(subsystem: subsystem, category: "share")
 }
