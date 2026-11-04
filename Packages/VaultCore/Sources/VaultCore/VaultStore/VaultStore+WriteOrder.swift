@@ -111,6 +111,12 @@ extension VaultStore {
     func write(_ data: Data, to url: URL, protection: FileProtectionClass) throws {
         let temp = Self.tempURL(for: url)
         do {
+            // Not optional cleanup: a leftover temp can be a hard link to `url` (a new vault's header
+            // is linked into place), and writing through it would change `url` before the rename.
+            do {
+                try FileManager.default.removeItem(at: temp)
+            } catch CocoaError.fileNoSuchFile {
+            }
             try data.write(to: temp)
             try fileProtector.protect(temp, as: protection)
             guard rename(temp.path, url.path) == 0 else {
