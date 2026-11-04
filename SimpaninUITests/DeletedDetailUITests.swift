@@ -38,15 +38,6 @@ final class DeletedDetailUITests: UITestCase {
         XCTAssertTrue(pages(app).waitForExistence(timeout: 5))
     }
 
-    /// Pulihkan and Hapus permanen sit below the fields; the list builds them only once scrolled to.
-    @MainActor
-    func scrolledTo(_ app: XCUIApplication, _ identifier: String) -> XCUIElement {
-        let button = app.buttons[identifier]
-        for _ in 0..<6 where !button.isHittable { app.swipeUp() }
-        XCTAssertTrue(button.isHittable)
-        return button
-    }
-
     @MainActor
     func testOpenFromRecentlyDeleted() throws {
         let app = deletedSample()

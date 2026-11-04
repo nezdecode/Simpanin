@@ -41,6 +41,15 @@ extension UITestCase {
         app.descendants(matching: .any)["detail.pages"]
     }
 
+    /// The buttons below the fields, like Pulihkan and Bagikan salinan; the list builds them only once scrolled to.
+    @MainActor
+    func scrolledTo(_ app: XCUIApplication, _ identifier: String) -> XCUIElement {
+        let button = app.buttons[identifier]
+        for _ in 0..<6 where !button.isHittable { app.swipeUp() }
+        XCTAssertTrue(button.isHittable)
+        return button
+    }
+
     @MainActor
     func field(_ app: XCUIApplication, _ key: String) -> XCUIElement {
         app.descendants(matching: .any)["detail.field.\(key)"]
