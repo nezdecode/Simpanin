@@ -91,6 +91,8 @@ struct ShareView: View {
                 .submitLabel(.done)
                 .onSubmit { typing = false }
                 .disabled(isPreparing)
+                // A Form's text field shows no label of its own, and VoiceOver would read only the placeholder.
+                .accessibilityLabel(Text("share.purpose"))
                 .accessibilityIdentifier("share.purpose")
             } header: {
                 Text("share.purpose")

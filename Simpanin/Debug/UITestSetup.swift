@@ -71,17 +71,21 @@
         /// The store the document list reads. `-SimpaninUITestLoadError <n>` fails its first n loads;
         /// `-SimpaninUITestDeleteError` fails every Hapus; `-SimpaninUITestBinError` every Pulihkan and
         /// Hapus permanen; `-SimpaninUITestSlowRestore` makes each Pulihkan take eight seconds, and
-        /// `-SimpaninUITestSlowSave` each Simpan.
+        /// `-SimpaninUITestSlowSave` each Simpan; `-SimpaninUITestLaterPagesFail` fails every page after the
+        /// first, so page 1 still shows and a share stops at page 2.
         static func documentStore(for vault: AppVault) -> any DocumentStoring & PageReading {
             let count = value(after: "-SimpaninUITestLoadError").flatMap(Int.init)
             let failsDeletes = ProcessInfo.processInfo.arguments.contains("-SimpaninUITestDeleteError")
             let failsBin = ProcessInfo.processInfo.arguments.contains("-SimpaninUITestBinError")
             let slowRestore = ProcessInfo.processInfo.arguments.contains("-SimpaninUITestSlowRestore")
             let slowSave = ProcessInfo.processInfo.arguments.contains("-SimpaninUITestSlowSave")
-            guard count != nil || failsDeletes || failsBin || slowRestore || slowSave else { return vault.store }
+            let failsLaterPages = ProcessInfo.processInfo.arguments.contains("-SimpaninUITestLaterPagesFail")
+            guard count != nil || failsDeletes || failsBin || slowRestore || slowSave || failsLaterPages else {
+                return vault.store
+            }
             return ScriptedDocuments(
                 store: vault.store, failingLoads: count ?? 0, failsDeletes: failsDeletes, failsBin: failsBin,
-                slowRestore: slowRestore, slowSave: slowSave)
+                slowRestore: slowRestore, slowSave: slowSave, failsLaterPages: failsLaterPages)
         }
 
         /// `-SimpaninUITestRecordingAfterLock`: Kunci also acts as if a recording started, and it never stops.
@@ -244,10 +248,11 @@
         private let failsBin: Bool
         private let slowRestore: Bool
         private let slowSave: Bool
+        private let failsLaterPages: Bool
 
         init(
             store: VaultStore, failingLoads: Int, failsDeletes: Bool = false, failsBin: Bool = false,
-            slowRestore: Bool = false, slowSave: Bool = false
+            slowRestore: Bool = false, slowSave: Bool = false, failsLaterPages: Bool = false
         ) {
             self.store = store
             self.failingLoads = failingLoads
@@ -255,6 +260,7 @@
             self.failsBin = failsBin
             self.slowRestore = slowRestore
             self.slowSave = slowSave
+            self.failsLaterPages = failsLaterPages
         }
 
         func documents() async throws -> [VaultCore.Document] {
@@ -292,7 +298,10 @@
             try await store.deletePermanently(id)
         }
         func pageData(_ pageID: PageID, of id: DocumentID) async throws -> Data {
-            try await store.pageData(pageID, of: id)
+            if failsLaterPages, try await store.documents().first(where: { $0.id == id })?.pageIDs.first != pageID {
+                throw VaultError.authenticationFailed
+            }
+            return try await store.pageData(pageID, of: id)
         }
     }
 
