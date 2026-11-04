@@ -115,11 +115,14 @@ final class ShareModel {
             preview = .failed
             return
         }
+        // Read after the screen went: nothing decrypted is kept.
+        guard phase != .closed else { return }
         guard let page = await CGImage.reduced(from: data, to: Self.previewPixelSize) else {
             Logger.share.error("Preview not decoded")
             preview = .failed
             return
         }
+        guard phase != .closed else { return }
         previewPage = page
         preview = .shown(page)
         await redrawPreview()
@@ -130,7 +133,7 @@ final class ShareModel {
         let text = mark
         let marked = await Self.marked(previewPage, text: text)
         // A draw for older text can finish after a newer one; the preview always matches the field.
-        guard !Task.isCancelled, text == mark else { return }
+        guard !Task.isCancelled, text == mark, phase != .closed else { return }
         markedPreview = marked
     }
 
@@ -185,6 +188,10 @@ final class ShareModel {
     /// The sheet is gone, by Batal, a closed document or a lock: its copies go with it.
     func screenLeft() {
         removeCopies()
+        // Decrypted page 1 goes with the screen, however long SwiftUI keeps the model.
+        previewPage = nil
+        markedPreview = nil
+        preview = .loading
         if phase == .shareSheetUp { onShareSheetEnded() }
         phase = .closed
     }

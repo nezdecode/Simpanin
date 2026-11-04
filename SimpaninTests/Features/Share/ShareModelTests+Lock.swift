@@ -116,6 +116,29 @@ extension ShareModelTests {
         #expect(share.problem == nil)
     }
 
+    /// The decrypted page 1 and its marked copy go with the screen, not when SwiftUI frees the model.
+    @Test func aScreenLeftLetsThePreviewGo() async throws {
+        let share = try await model()
+        await share.loadPreview()
+        #expect(share.markedPreview != nil)
+        share.screenLeft()
+        #expect(share.markedPreview == nil)
+        if case .shown = share.preview { Issue.record("The decrypted preview is still held") }
+    }
+
+    /// Page 1 read just after the screen went is dropped, not kept.
+    @Test func aPreviewReadAfterTheScreenLeftIsDropped() async throws {
+        let share = try await model()
+        await store.gateNextPageRead()
+        let loading = Task { await share.loadPreview() }
+        #expect(await store.waitUntilReadingPage())
+        share.screenLeft()
+        await store.releasePageRead()
+        await loading.value
+        #expect(share.markedPreview == nil)
+        if case .shown = share.preview { Issue.record("A preview was kept after the screen left") }
+    }
+
     @Test func closingTheDocumentWhileSharingLeavesNoFile() async throws {
         let share = try await model()
         await share.share()
