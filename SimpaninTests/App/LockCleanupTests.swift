@@ -16,12 +16,22 @@ import Testing
 @MainActor
 @Suite("Lock cleanup")
 struct LockCleanupTests {
+    /// UIKit removes a presented screen a moment after dismiss returns, so the clears wait for it.
     @Test func theLockHandlerDismissesBeforeClearing() {
         var steps: [String] = []
+        var finishDismiss: (() -> Void)?
         let cleanup = LockCleanup(
-            dismissPresented: { steps.append("dismiss") },
+            dismissPresented: { done in
+                steps.append("dismiss")
+                finishDismiss = done
+            },
             clear: [{ steps.append("camera") }, { steps.append("shared copies") }])
         cleanup.run()
+        #expect(steps == ["dismiss"])
+        finishDismiss?()
+        #expect(steps == ["dismiss", "camera", "shared copies"])
+        // A late second call, like the fallback after a refused dismiss, clears nothing twice.
+        finishDismiss?()
         #expect(steps == ["dismiss", "camera", "shared copies"])
     }
 }

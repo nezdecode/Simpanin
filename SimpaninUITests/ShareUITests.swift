@@ -124,6 +124,29 @@ final class ShareUITests: UITestCase {
         waitForExpectations(timeout: 5)
     }
 
+    /// The lock closes the share sheet before its copies go, and says so after unlocking.
+    @MainActor
+    func testALockWithTheShareSheetUpClosesItAndSaysSo() throws {
+        let app = launch()
+        addSamples(app, 1)
+        lockImmediately(app)
+        tile(app, "Saya").tap()
+        XCTAssertTrue(pages(app).waitForExistence(timeout: 5))
+        scrolledTo(app, "detail.share").tap()
+        type(app, "Sewa kos")
+        app.buttons["share.share"].tap()
+        XCTAssertTrue(shareSheet(app).waitForExistence(timeout: 15))
+        XCUIDevice.shared.press(.home)
+        // Coming back locks the vault; in UI tests the unlock prompt that follows succeeds by itself.
+        app.activate()
+        let notice = app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH 'Berbagi dihentikan'"))
+        XCTAssertTrue(notice.firstMatch.waitForExistence(timeout: 10))
+        // The dismiss finishes a moment after the lock.
+        XCTAssertTrue(shareSheet(app).waitForNonExistence(timeout: 5))
+        XCTAssertFalse(app.textFields["share.purpose"].exists)
+        screenshot("90 a share stopped by the lock")
+    }
+
     @MainActor
     func testAClosedSheetForgetsThePurpose() throws {
         let app = launch()

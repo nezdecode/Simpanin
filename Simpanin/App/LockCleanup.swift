@@ -14,21 +14,37 @@ import UIKit
 /// What a lock tidies up after the screens it removes: the share sheet and anything else the main window
 /// presents goes first, so no target is still reading a copy when the copies are deleted.
 struct LockCleanup {
-    let dismissPresented: () -> Void
+    /// Calls its argument once nothing is presented any more.
+    let dismissPresented: (@escaping () -> Void) -> Void
     let clear: [() -> Void]
 
     func run() {
-        dismissPresented()
-        for clear in clear { clear() }
+        var cleared = false
+        dismissPresented {
+            // Once only: the fallback below can come after the dismiss has finished.
+            guard !cleared else { return }
+            cleared = true
+            for clear in clear { clear() }
+        }
     }
 
+    /// UIKit removes a presented screen a moment after `dismiss` returns, so the clears run in its completion.
+    /// A dismiss refused mid-animation never completes; the fallback still clears, so no copy waits for launch.
     static func live(in scene: UIWindowScene?) -> LockCleanup {
         LockCleanup(
-            dismissPresented: {
+            dismissPresented: { done in
                 // The cover has its own window above the app's; only the app's windows present anything.
-                for window in scene?.windows ?? [] where window.windowLevel == .normal {
-                    window.rootViewController?.presentedViewController?.dismiss(animated: false)
+                let presented = (scene?.windows ?? []).filter { $0.windowLevel == .normal }
+                    .compactMap { $0.rootViewController?.presentedViewController }
+                guard !presented.isEmpty else { return done() }
+                var left = presented.count
+                for controller in presented {
+                    controller.dismiss(animated: false) {
+                        left -= 1
+                        if left == 0 { done() }
+                    }
                 }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2) { done() }
             },
             clear: [{ DocumentCameraCache.clear() }, { SharedCopies.clear() }])
     }
