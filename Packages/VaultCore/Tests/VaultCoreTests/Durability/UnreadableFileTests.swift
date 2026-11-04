@@ -94,6 +94,48 @@ struct UnreadableFileTests {
         #expect(FileManager.default.fileExists(atPath: copy.path))
     }
 
+    /// The same with the whole vault folder unreadable: vault.json can't even be looked for.
+    @Test func anUnreadableLiveFolderKeepsTheVaultInUseSafe() async throws {
+        let (vault, _) = try await makeEditedKTP()
+        let liveID = try vault.header().vaultID
+        let copy = vault.quarantineURL.appending(path: "20261013-090000", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: vault.quarantineURL, withIntermediateDirectories: true)
+        try FileManager.default.copyItem(at: vault.root, to: copy)
+        let store = vault.makeStore()
+        let entry = try #require(try await store.quarantinedVaults(in: vault.quarantineURL).vaults.first)
+        try FileManager.default.setAttributes([.posixPermissions: 0], ofItemAtPath: vault.root.path)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: vault.root.path) }
+
+        await #expect(throws: VaultError.fileUnavailable) { try await store.deleteQuarantinedVault(entry) }
+        #expect(await vault.keyStore.key(for: liveID) != nil)
+        #expect(FileManager.default.fileExists(atPath: copy.path))
+    }
+
+    /// A folder above the vault that can't be read hides the vault, so "nothing to quarantine" would
+    /// send the app on to create a new one.
+    @Test func quarantiningAnUnreadableVaultFolderThrows() async throws {
+        let (vault, _) = try await makeEditedKTP()
+        let before = try TestVault.files(in: vault.root)
+        try FileManager.default.setAttributes([.posixPermissions: 0], ofItemAtPath: vault.base.path)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: vault.base.path) }
+
+        await #expect(throws: VaultError.fileUnavailable) {
+            try await vault.makeStore().quarantineVault(to: vault.quarantineURL)
+        }
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: vault.base.path)
+        #expect(try TestVault.files(in: vault.root) == before)
+    }
+
+    @Test func anUnreadableQuarantineFolderThrows() async throws {
+        let (vault, _) = try await makeEditedKTP()
+        let store = vault.makeStore()
+        try await store.quarantineVault(to: vault.quarantineURL)
+        try FileManager.default.setAttributes([.posixPermissions: 0], ofItemAtPath: vault.base.path)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: vault.base.path) }
+
+        await #expect(throws: VaultError.fileUnavailable) { try await store.quarantinedVaults(in: vault.quarantineURL) }
+    }
+
     @Test func unreadableOrphanStopsOpen() async throws {
         // An unreferenced page file that can't be read might still be someone's data.
         let (vault, _) = try await makeEditedKTP()
