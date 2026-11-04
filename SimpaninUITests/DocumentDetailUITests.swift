@@ -158,7 +158,7 @@ final class DocumentDetailUITests: UITestCase {
     func testDeleteReturnsToList() throws {
         let app = launch()
         open(app, samples: 2, tile: "Saya")
-        app.buttons["detail.delete"].tap()
+        scrolledTo(app, "detail.delete").tap()
         XCTAssertTrue(app.navigationBars["Dokumen"].waitForExistence(timeout: 5))
         XCTAssertFalse(field(app, "nik").exists)
         XCTAssertEqual(rows(app).count, 1)
@@ -169,7 +169,7 @@ final class DocumentDetailUITests: UITestCase {
     func testDeleteSaysWhereItWent() throws {
         let app = launch()
         open(app, samples: 1, tile: "Saya")
-        app.buttons["detail.delete"].tap()
+        scrolledTo(app, "detail.delete").tap()
         let toast = app.descendants(matching: .any)["toast"]
         XCTAssertTrue(toast.waitForExistence(timeout: 5))
         XCTAssertEqual(toast.label, "Dipindahkan ke Baru dihapus.")
@@ -181,7 +181,7 @@ final class DocumentDetailUITests: UITestCase {
     func testFailedDeleteStaysOnTheDocumentWithTheAlert() throws {
         let app = launch(["-SimpaninUITestDeleteError"])
         open(app, samples: 1, tile: "Saya")
-        app.buttons["detail.delete"].tap()
+        scrolledTo(app, "detail.delete").tap()
         let alert = app.alerts["Perubahan belum tersimpan. Coba lagi."]
         XCTAssertTrue(alert.waitForExistence(timeout: 5))
         screenshot("49 delete failed")

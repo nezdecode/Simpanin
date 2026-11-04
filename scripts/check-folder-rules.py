@@ -38,6 +38,7 @@ ENTRY_POINTS = {
     'LockCoverView': None,
     'WelcomeView': None,
     'DocumentDetailView': None,
+    'ShareView': None,
 }
 
 DECLARATION = re.compile(

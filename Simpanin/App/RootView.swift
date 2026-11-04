@@ -59,10 +59,10 @@ struct RootView: View {
             if let scene { cover.watchCapture(in: scene) { lock.screenCaptured = $0 } }
             showCover(lock.contentHidden)
         }
-        // Locking removes every screen at once, a scan in progress included, before it can tidy up; the
-        // page images VisionKit keeps in Caches are removed here, which outlives them.
+        // Locking removes every screen at once, a scan or a share in progress included, before it can tidy
+        // up; the page images VisionKit keeps in Caches and the shared copies in tmp are removed here.
         .onChange(of: lock.state) { _, state in
-            if state != .unlocked { DocumentCameraCache.clear() }
+            if state != .unlocked { LockCleanup.live(in: windowScene).run() }
         }
         .onChange(of: scenePhase, initial: true) { _, phase in
             switch phase {

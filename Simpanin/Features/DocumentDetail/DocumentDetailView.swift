@@ -23,6 +23,9 @@ struct DocumentDetailView: View {
     /// a restore from Baru dihapus's row lands after the row was tapped, and closes instead of showing a live
     /// document as deleted. The screen under it doesn't hear changes while this one covers it.
     let isListed: () -> Bool
+    private let pageReader: any PageReading
+    private let onShareSheetShown: () -> Void
+    private let onShareSheetEnded: () -> Void
     @State private var model: DocumentDetailModel
     @State private var page = 0
     @State private var viewerShown = false
@@ -31,6 +34,7 @@ struct DocumentDetailView: View {
     /// Coba lagi bumps it, so SwiftUI owns every load and cancels it when the screen goes.
     @State private var attempt = 0
     @State private var purgeAsked = false
+    @State private var shareShown = false
     @Namespace private var transition
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
@@ -39,9 +43,13 @@ struct DocumentDetailView: View {
         document: VaultCore.Document, store: any DocumentStoring & PageReading, today: CalendarDate,
         hiddenFromBanner: Bool, isListed: @escaping () -> Bool,
         onShowInBanner: @escaping () -> Void, onDelete: @escaping (DocumentID) async -> Bool,
-        onRestore: @escaping (DocumentID) async -> Bool, onDeletePermanently: @escaping (DocumentID) async -> Bool
+        onRestore: @escaping (DocumentID) async -> Bool, onDeletePermanently: @escaping (DocumentID) async -> Bool,
+        onShareSheetShown: @escaping () -> Void, onShareSheetEnded: @escaping () -> Void
     ) {
         self.today = today
+        pageReader = store
+        self.onShareSheetShown = onShareSheetShown
+        self.onShareSheetEnded = onShareSheetEnded
         self.hiddenFromBanner = hiddenFromBanner
         self.onShowInBanner = onShowInBanner
         self.isListed = isListed
@@ -85,6 +93,28 @@ struct DocumentDetailView: View {
                 }
             } message: {
                 Text("detail.deletePermanentlyMessage")
+            }
+            .toolbar {
+                if model.phase == .loaded, model.canShare {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button {
+                            model.shareOpened()
+                            shareShown = true
+                        } label: {
+                            Label {
+                                Text("detail.share")
+                            } icon: {
+                                Image(systemName: "square.and.arrow.up")
+                            }
+                        }
+                        .accessibilityIdentifier("detail.share")
+                    }
+                }
+            }
+            .sheet(isPresented: $shareShown) {
+                ShareView(
+                    document: document, pageReader: pageReader, onShareSheetShown: onShareSheetShown,
+                    onShareSheetEnded: onShareSheetEnded)
             }
             .fullScreenCover(isPresented: $viewerShown) {
                 PageViewer(

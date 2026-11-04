@@ -26,8 +26,9 @@ struct SimpaninApp: App {
     }()
 
     init() {
-        // The app may have been stopped during a scan, before VisionKit's copies were removed.
+        // The app may have been stopped during a scan or a share, before their copies were removed.
         DocumentCameraCache.clear()
+        SharedCopies.clear()
     }
 
     var body: some Scene {

@@ -66,6 +66,9 @@ final class LockController {
     private var scanInProgress: ScanSource?
     /// A lock dropped a scan; told once, after the next unlock.
     private var scanDroppedByLock: ScanSource?
+    private var shareSheetUp = false
+    /// A lock came while the share sheet was up; told once, after the next unlock.
+    private var shareStoppedByLock = false
     /// The vault opened while the app was inactive, as after a Face ID prompt: the cover keeps its lock
     /// screen until the app is active, so an unlock never flashes the open cover.
     private(set) var holdsLockScreen = false
@@ -254,6 +257,11 @@ final class LockController {
 
     func scanEnded() { scanInProgress = nil }
 
+    /// While the share sheet is up its copies can still be on their way, so a lock then is told.
+    func shareSheetShown() { shareSheetUp = true }
+
+    func shareSheetEnded() { shareSheetUp = false }
+
     func lock() async {
         lockCount += 1
         await vault.lock()
@@ -262,6 +270,8 @@ final class LockController {
         // Locking removes every screen, a scan in progress with it; say so after unlocking.
         if let scanInProgress { scanDroppedByLock = scanInProgress }
         scanInProgress = nil
+        if shareSheetUp { shareStoppedByLock = true }
+        shareSheetUp = false
         pendingScan = nil
         failuresInARow = 0
     }
@@ -285,7 +295,9 @@ final class LockController {
             case .photos: self.notices = notices.union([.photosDropped])
             case nil: self.notices = notices
             }
+            if shareStoppedByLock { self.notices.insert(.shareStopped) }
             scanDroppedByLock = nil
+            shareStoppedByLock = false
             // Only while inactive, which always ends with an activation. Recording covers an active app,
             // so a hold set then would never be cleared.
             holdsLockScreen = coverShown
