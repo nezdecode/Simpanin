@@ -17,8 +17,16 @@ final class ShareUITests: UITestCase {
     @MainActor
     func openShare(_ app: XCUIApplication, samples: Int = 1, tile text: String = "Saya") {
         open(app, samples: samples, tile: text)
-        scrolledTo(app, "detail.share").tap()
+        shareButton(app).tap()
         XCTAssertTrue(app.textFields["share.purpose"].waitForExistence(timeout: 5))
+    }
+
+    /// In the document screen's navigation bar, as share is in Apple's apps.
+    @MainActor
+    func shareButton(_ app: XCUIApplication) -> XCUIElement {
+        let button = app.navigationBars.buttons["detail.share"]
+        XCTAssertTrue(button.waitForExistence(timeout: 5))
+        return button
     }
 
     @MainActor
@@ -39,7 +47,7 @@ final class ShareUITests: UITestCase {
     func testBagikanShowsOnlyOnALiveDocumentWithPages() throws {
         let app = launch()
         open(app, samples: 1, tile: "Saya")
-        XCTAssertEqual(scrolledTo(app, "detail.share").label, "Bagikan salinan")
+        XCTAssertEqual(shareButton(app).label, "Bagikan salinan")
         screenshot("85 the document screen with Bagikan salinan")
 
         // From Baru dihapus it's read-only, so there's nothing to share.
@@ -63,7 +71,13 @@ final class ShareUITests: UITestCase {
         XCTAssertFalse(share.isEnabled)
         type(app, "Sewa kos")
         XCTAssertTrue(share.isEnabled)
+        XCTAssertEqual(app.staticTexts["share.count"].label, "11 dari 40 karakter")
         screenshot("86 the share screen with a purpose")
+
+        // The field stops at forty characters, and shows it.
+        type(app, String(repeating: "x", count: 32))
+        XCTAssertEqual((app.textFields["share.purpose"].value as? String)?.count, 40)
+        XCTAssertEqual(app.staticTexts["share.count"].label, "40 dari 40 karakter")
     }
 
     @MainActor
@@ -101,7 +115,7 @@ final class ShareUITests: UITestCase {
         let app = launch(["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"])
         addSamples(app, 1)
         tile(app, "Saya").tap()
-        scrolledTo(app, "detail.share").tap()
+        shareButton(app).tap()
         let field = app.textFields["share.purpose"]
         for _ in 0..<6 where !field.isHittable { app.swipeUp() }
         type(app, "Sewa kos")
@@ -132,7 +146,7 @@ final class ShareUITests: UITestCase {
         lockImmediately(app)
         tile(app, "Saya").tap()
         XCTAssertTrue(pages(app).waitForExistence(timeout: 5))
-        scrolledTo(app, "detail.share").tap()
+        shareButton(app).tap()
         type(app, "Sewa kos")
         app.buttons["share.share"].tap()
         XCTAssertTrue(shareSheet(app).waitForExistence(timeout: 15))
@@ -153,7 +167,7 @@ final class ShareUITests: UITestCase {
         openShare(app)
         type(app, "Sewa kos")
         app.buttons["share.cancel"].tap()
-        scrolledTo(app, "detail.share").tap()
+        shareButton(app).tap()
         let field = app.textFields["share.purpose"]
         XCTAssertTrue(field.waitForExistence(timeout: 5))
         XCTAssertNotEqual(field.value as? String, "Sewa kos")

@@ -46,10 +46,26 @@ nonisolated struct SharedCopies: Sendable {
         self.writeFile = writeFile
     }
 
-    /// "Simpanin 4 Nov 2026 halaman 1.jpg": never a number, a name or a label.
-    static func fileName(page: Int, date: Date, timeZone: TimeZone) -> String {
-        "Simpanin \(date.formatted(.indonesianDate(timeZone: timeZone))) halaman \(page).jpg"
+    // swiftlint:disable function_parameter_count - each is a part of the name
+    /// "KTP - Sewa kos - Simpanin 4 Nov 2026 - hal 1.jpg": never a number, a name or a label.
+    static func fileName(type: String, purpose: String, page: Int, of count: Int, date: Date, timeZone: TimeZone)
+        -> String
+    {
+        // Characters a target or a file system can refuse in a name.
+        let refused = CharacterSet(charactersIn: "/\\:*?\"<>|").union(.controlCharacters)
+        let words = purpose.components(separatedBy: refused).joined(separator: " ")
+            .split(separator: " ").joined(separator: " ")
+        let shortPurpose = String(words.prefix(purposeLength)).trimmingCharacters(in: .whitespaces)
+        var parts = [type]
+        if !shortPurpose.isEmpty { parts.append(shortPurpose) }
+        parts.append("Simpanin \(date.formatted(.indonesianDate(timeZone: timeZone)))")
+        if count > 1 { parts.append("hal \(page)") }
+        return parts.joined(separator: " - ") + ".jpg"
     }
+    // swiftlint:enable function_parameter_count
+
+    /// A file list shows about this much of a name before cutting it.
+    static let purposeLength = 30
 
     private var root: URL { temporary.appending(path: Self.folderName, directoryHint: .isDirectory) }
 

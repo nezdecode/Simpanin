@@ -159,7 +159,9 @@ final class ShareModel {
                 phase = .preparing(page: index + 1, count: pageIDs.count)
                 let data = try await pageReader.pageData(pageID, of: document.id)
                 try Task.checkCancellation()
-                let name = SharedCopies.fileName(page: index + 1, date: day, timeZone: timeZone)
+                let name = SharedCopies.fileName(
+                    type: String(localized: DocumentStyle.name(document.type)), purpose: SharePurpose.cleaned(purpose),
+                    page: index + 1, of: pageIDs.count, date: day, timeZone: timeZone)
                 files.append(try await Self.markedCopy(of: data, text: text, named: name, in: folder, copies: copies))
                 try Task.checkCancellation()
             }

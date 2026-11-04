@@ -40,11 +40,21 @@ struct SharedCopiesTests {
         try FileManager.default.contentsOfDirectory(atPath: url.path).sorted()
     }
 
+    /// The type, the purpose and the day; never the label or the number, which the file list would show.
     @Test func aSharedFileNameHasNoLabelOrNumber() throws {
         let date = try #require(ISO8601DateFormatter().date(from: "2026-11-04T09:00:00Z"))
         let utc = try #require(TimeZone(identifier: "UTC"))
-        #expect(SharedCopies.fileName(page: 1, date: date, timeZone: utc) == "Simpanin 4 Nov 2026 halaman 1.jpg")
-        #expect(SharedCopies.fileName(page: 3, date: date, timeZone: utc) == "Simpanin 4 Nov 2026 halaman 3.jpg")
+        func name(_ purpose: String, page: Int = 1, of count: Int = 1) -> String {
+            SharedCopies.fileName(type: "KTP", purpose: purpose, page: page, of: count, date: date, timeZone: utc)
+        }
+        #expect(name("Sewa kos") == "KTP - Sewa kos - Simpanin 4 Nov 2026.jpg")
+        #expect(name("Sewa kos", page: 3, of: 3) == "KTP - Sewa kos - Simpanin 4 Nov 2026 - hal 3.jpg")
+        // Characters a target can refuse in a name go, and a long purpose is shortened.
+        #expect(name("Bank/BCA: rekening") == "KTP - Bank BCA rekening - Simpanin 4 Nov 2026.jpg")
+        #expect(
+            name(String(repeating: "a", count: 40))
+                == "KTP - \(String(repeating: "a", count: 30)) - Simpanin 4 Nov 2026.jpg")
+        #expect(name("///") == "KTP - Simpanin 4 Nov 2026.jpg")
     }
 
     /// The class is the folder's before the first byte lands, so a copy is never at tmp's default.

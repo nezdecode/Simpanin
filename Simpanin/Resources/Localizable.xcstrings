@@ -2674,6 +2674,17 @@
         }
       }
     },
+    "share.count %lld %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld dari %2$lld karakter"
+          }
+        }
+      }
+    },
     "share.footer" : {
       "extractionState" : "manual",
       "localizations" : {

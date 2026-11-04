@@ -39,15 +39,23 @@ nonisolated final class SharedPageSource: NSObject, UIActivityItemSource, Sendab
     func activityViewControllerLinkMetadata(_ controller: UIActivityViewController) -> LPLinkMetadata? {
         let metadata = LPLinkMetadata()
         metadata.title = String(localized: "share.sheetTitle \(pageCount)")
-        if let icon = Self.appIcon { metadata.iconProvider = NSItemProvider(object: icon) }
+        metadata.iconProvider = NSItemProvider(object: Self.icon)
         return metadata
     }
 
-    /// The home screen icon, as the build lists it.
-    private static var appIcon: UIImage? {
-        let icons = Bundle.main.object(forInfoDictionaryKey: "CFBundleIcons") as? [String: Any]
-        let primary = icons?["CFBundlePrimaryIcon"] as? [String: Any]
-        let name = (primary?["CFBundleIconFiles"] as? [String])?.last ?? primary?["CFBundleIconName"] as? String
-        return name.flatMap { UIImage(named: $0) }
+    /// The lock cover's shield, drawn here: the home screen icon can't be read from the bundle on a device.
+    private static var icon: UIImage {
+        let size = CGSize(width: 120, height: 120)
+        return UIGraphicsImageRenderer(size: size).image { _ in
+            UIColor(resource: .lockIconBackground).setFill()
+            UIBezierPath(roundedRect: CGRect(origin: .zero, size: size), cornerRadius: 30).fill()
+            let configuration = UIImage.SymbolConfiguration(pointSize: 60, weight: .regular)
+            guard
+                let shield = UIImage(systemName: "lock.shield", withConfiguration: configuration)?
+                    .withTintColor(UIColor(resource: .lockIcon), renderingMode: .alwaysOriginal)
+            else { return }
+            shield.draw(
+                at: CGPoint(x: (size.width - shield.size.width) / 2, y: (size.height - shield.size.height) / 2))
+        }
     }
 }

@@ -18,6 +18,8 @@ struct ShareView: View {
     @State private var model: ShareModel
     /// Set by Bagikan. The share runs in `.task(id:)`, so Batal and closing the sheet cancel it.
     @State private var request: UUID?
+    /// The field's own text, cut at the limit as it's typed, so the field always shows what the mark will say.
+    @State private var draft = ""
     @FocusState private var typing: Bool
     @Environment(\.dismiss) private var dismiss
 
@@ -84,16 +86,28 @@ struct ShareView: View {
                 Text(model.pageCount == 1 ? "share.markOnePage" : "share.markAllPages \(model.pageCount)")
             }
             Section {
-                TextField(text: $model.purpose, prompt: Text("share.purposePlaceholder")) {
-                    Text("share.purpose")
+                HStack {
+                    TextField(text: $draft, prompt: Text("share.purposePlaceholder")) {
+                        Text("share.purpose")
+                    }
+                    .focused($typing)
+                    .submitLabel(.done)
+                    .onSubmit { typing = false }
+                    .disabled(isPreparing)
+                    // A Form's text field shows no label of its own, and VoiceOver would read only the placeholder.
+                    .accessibilityLabel(Text("share.purpose"))
+                    .accessibilityIdentifier("share.purpose")
+                    Text(verbatim: "\(draft.count)/\(SharePurpose.maxLength)")
+                        .font(.footnote.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                        .accessibilityLabel(Text("share.count \(draft.count) \(SharePurpose.maxLength)"))
+                        .accessibilityIdentifier("share.count")
                 }
-                .focused($typing)
-                .submitLabel(.done)
-                .onSubmit { typing = false }
-                .disabled(isPreparing)
-                // A Form's text field shows no label of its own, and VoiceOver would read only the placeholder.
-                .accessibilityLabel(Text("share.purpose"))
-                .accessibilityIdentifier("share.purpose")
+                .onChange(of: draft) { _, typed in
+                    let kept = SharePurpose.limited(typed)
+                    if kept != typed { draft = kept }
+                    model.purpose = kept
+                }
             } header: {
                 Text("share.purpose")
             } footer: {

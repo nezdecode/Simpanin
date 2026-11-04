@@ -94,6 +94,23 @@ struct DocumentDetailView: View {
             } message: {
                 Text("detail.deletePermanentlyMessage")
             }
+            .toolbar {
+                if model.phase == .loaded, model.canShare {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button {
+                            model.shareOpened()
+                            shareShown = true
+                        } label: {
+                            Label {
+                                Text("detail.share")
+                            } icon: {
+                                Image(systemName: "square.and.arrow.up")
+                            }
+                        }
+                        .accessibilityIdentifier("detail.share")
+                    }
+                }
+            }
             .sheet(isPresented: $shareShown) {
                 ShareView(
                     document: document, pageReader: pageReader, onShareSheetShown: onShareSheetShown,
@@ -161,17 +178,6 @@ struct DocumentDetailView: View {
             if model.isDeleted {
                 deletedActions
             } else {
-                if model.canShare {
-                    Section {
-                        Button {
-                            model.shareOpened()
-                            shareShown = true
-                        } label: {
-                            Text("detail.share")
-                        }
-                        .accessibilityIdentifier("detail.share")
-                    }
-                }
                 Section {
                     Button(role: .destructive) {
                         Task { await model.delete() }

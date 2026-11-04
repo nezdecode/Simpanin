@@ -195,7 +195,7 @@ struct ShareModelTests {
     @Test func aFullDiskSharesNothingAndLeavesNoFile() async throws {
         let full: SharedCopies.Write = { data, url in
             // The first page is written; the disk fills on the second.
-            if url.lastPathComponent.contains("halaman 2") { throw CocoaError(.fileWriteOutOfSpace) }
+            if url.lastPathComponent.contains("hal 2") { throw CocoaError(.fileWriteOutOfSpace) }
             try SharedCopies.writeComplete(data, url)
         }
         let share = try await model(writeFile: full)

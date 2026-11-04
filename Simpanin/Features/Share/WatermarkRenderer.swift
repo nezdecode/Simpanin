@@ -16,10 +16,11 @@ import Foundation
 /// Draws the mark into the page's own pixels: a new image, never a layer over the old one. Red with a thin
 /// white outline, so it shows on a KTP's blue and on a dark page alike.
 nonisolated enum WatermarkRenderer {
-    static let fill = CGColor(srgbRed: 0.78, green: 0.06, blue: 0.1, alpha: 0.4)
-    static let outline = CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 0.55)
+    static let fill = CGColor(srgbRed: 0.78, green: 0.06, blue: 0.1, alpha: 0.5)
+    /// Faint, so it doesn't blur the page's text under it, yet enough to carry the mark on a dark page.
+    static let outline = CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 0.35)
     /// The outline's width, as a percentage of the font size (Core Text's unit).
-    static let outlineWidth = 14
+    static let outlineWidth = 8
 
     static func marked(_ page: CGImage, text: String) -> CGImage? {
         let size = CGSize(width: page.width, height: page.height)

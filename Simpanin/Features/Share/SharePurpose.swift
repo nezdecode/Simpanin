@@ -13,7 +13,8 @@ import Foundation
 
 /// What the user types as Keperluan, and the mark made from it.
 nonisolated enum SharePurpose {
-    static let maxLength = 60
+    /// Short enough that the mark mostly fits on one line, so it covers less of the page.
+    static let maxLength = 40
 
     /// On one line: control characters gone, any run of spaces or line breaks one space, trimmed, and at
     /// most `maxLength` characters.
@@ -38,6 +39,9 @@ nonisolated enum SharePurpose {
         }
         return String(String(result).prefix(maxLength)).trimmingCharacters(in: .whitespaces)
     }
+
+    /// What the field keeps while typing.
+    static func limited(_ text: String) -> String { String(text.prefix(maxLength)) }
 
     /// A copy always carries a purpose.
     static func canShare(_ text: String) -> Bool {

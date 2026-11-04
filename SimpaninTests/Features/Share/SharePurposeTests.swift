@@ -31,11 +31,14 @@ struct SharePurposeTests {
         #expect(SharePurpose.cleaned("   Sewa    kos  ") == "Sewa kos")
     }
 
-    @Test func aPurposeStopsAtSixtyCharacters() {
-        #expect(SharePurpose.cleaned(String(repeating: "a", count: 70)).count == 60)
+    @Test func aPurposeStopsAtFortyCharacters() {
+        #expect(SharePurpose.cleaned(String(repeating: "a", count: 70)).count == 40)
         // A character as the user sees it, so an emoji is never cut in half.
-        let emoji = String(repeating: "🏠", count: 61)
-        #expect(SharePurpose.cleaned(emoji) == String(repeating: "🏠", count: 60))
+        let emoji = String(repeating: "🏠", count: 41)
+        #expect(SharePurpose.cleaned(emoji) == String(repeating: "🏠", count: 40))
+        // What the field keeps while typing: the first forty characters as typed.
+        #expect(SharePurpose.limited(String(repeating: "b", count: 45)) == String(repeating: "b", count: 40))
+        #expect(SharePurpose.limited("Sewa kos") == "Sewa kos")
         // The cut comes after collapsing, so spaces typed in a row don't use up the length.
         #expect(SharePurpose.cleaned("a" + String(repeating: " ", count: 80) + "b") == "a b")
     }

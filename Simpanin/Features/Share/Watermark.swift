@@ -12,6 +12,7 @@
 import CoreGraphics
 import CoreText
 import Foundation
+import UIKit
 
 /// Where the mark goes on a page: one block of at most two lines, repeated in offset rows across the whole
 /// page at an angle, over the NIK and the photo too, so cropping can't leave either clean. Every length is a
@@ -22,7 +23,8 @@ import Foundation
 nonisolated struct Watermark: Equatable {
     /// Rising to the right, in a frame whose y axis points up, as Core Graphics draws.
     static let angle = 22 * CGFloat.pi / 180
-    static let fontShare: CGFloat = 0.028
+    /// Small and spread out, so the page's own text stays readable between the rows (chosen on a KTP).
+    static let fontShare: CGFloat = 0.02
     static let widthShare: CGFloat = 0.5
     static let referenceLongSide: CGFloat = 3000
 
@@ -67,8 +69,8 @@ nonisolated struct Watermark: Equatable {
     private static func tile(block: CGSize, fontSize: CGFloat, pageSize: CGSize) -> [CGPoint] {
         guard block.width > 0 else { return [] }
         let radius = hypot(pageSize.width, pageSize.height) / 2
-        let across = block.width + fontSize * 2
-        let down = block.height + fontSize * 2.2
+        let across = block.width + fontSize * 4
+        let down = block.height + fontSize * 5.5
         var origins: [CGPoint] = []
         var row = 0
         var rowY = -radius
@@ -115,7 +117,6 @@ nonisolated struct Watermark: Equatable {
     }
 
     static func font(size: CGFloat) -> CTFont {
-        CTFontCreateUIFontForLanguage(.emphasizedSystem, size, nil)
-            ?? CTFontCreateWithName("Helvetica-Bold" as CFString, size, nil)
+        UIFont.systemFont(ofSize: size, weight: .semibold) as CTFont
     }
 }
