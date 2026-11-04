@@ -217,6 +217,12 @@ final class DocumentDetailModel {
     /// The viewer covers the screen, so the number shouldn't be left showing behind it.
     func viewerOpened() { numberShown = false }
 
+    /// A live document with pages; the share marks its pages, so one without has nothing to share.
+    var canShare: Bool { !isDeleted && hasPages }
+
+    /// The share screen covers this one, as the viewer does.
+    func shareOpened() { numberShown = false }
+
     /// The number as digits only, the name as stored. Copying never shows the number.
     func copy(_ key: String) {
         guard let row = rows.first(where: { $0.key == key }), row.canCopy, let stored = fields?.values[key] else {

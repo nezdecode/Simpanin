@@ -185,7 +185,8 @@ struct LibraryView: View {
                 (document.deletedAt == nil ? library.documents : library.deleted).contains { $0.id == document.id }
             },
             onShowInBanner: { library.showInBanner(document.id) }, onDelete: library.delete,
-            onRestore: library.restore, onDeletePermanently: library.deletePermanently)
+            onRestore: library.restore, onDeletePermanently: library.deletePermanently,
+            onShareSheetShown: lock.shareSheetShown, onShareSheetEnded: lock.shareSheetEnded)
     }
 
     /// Two columns, or one at the accessibility text sizes, where two would not fit.

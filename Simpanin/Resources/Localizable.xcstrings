@@ -221,6 +221,17 @@
         }
       }
     },
+    "button.share" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bagikan"
+          }
+        }
+      }
+    },
     "button.startNewVault" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -536,6 +547,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Halaman"
+          }
+        }
+      }
+    },
+    "detail.share" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bagikan salinan"
           }
         }
       }
@@ -2648,6 +2670,149 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Simpanin tidak bisa disiapkan"
+          }
+        }
+      }
+    },
+    "share.footer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ditulis di setiap halaman bersama tanggal hari ini. Dokumen yang tersimpan tidak berubah."
+          }
+        }
+      }
+    },
+    "share.markAllPages %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tanda ada di semua %lld halaman."
+          }
+        }
+      }
+    },
+    "share.markOnePage" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tanda ada di halaman ini."
+          }
+        }
+      }
+    },
+    "share.notMade" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Salinan belum dibuat. Coba lagi."
+          }
+        }
+      }
+    },
+    "share.pageUnavailable" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ada halaman yang tidak bisa dibuka, jadi tidak ada yang dibagikan."
+          }
+        }
+      }
+    },
+    "share.preparing %lld %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menyiapkan halaman %1$lld dari %2$lld…"
+          }
+        }
+      }
+    },
+    "share.previewLabel %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pratinjau halaman 1 dengan tanda: %@"
+          }
+        }
+      }
+    },
+    "share.purpose" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keperluan"
+          }
+        }
+      }
+    },
+    "share.purposePlaceholder" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hanya untuk sewa kos Jl. Perintis"
+          }
+        }
+      }
+    },
+    "share.sheetTitle %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Simpanin · %lld halaman"
+          }
+        }
+      }
+    },
+    "share.storageFullMessage" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Salinan belum dibuat. Kosongkan ruang di Pengaturan › Umum › Penyimpanan iPhone, lalu coba lagi."
+          }
+        }
+      }
+    },
+    "share.storageFullTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Penyimpanan HP penuh"
+          }
+        }
+      }
+    },
+    "share.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bagikan salinan"
           }
         }
       }

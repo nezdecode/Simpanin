@@ -93,7 +93,10 @@ final class ShareModel {
 
     var pageCount: Int { document.pageIDs.count }
     var mark: String { SharePurpose.mark(purpose: purpose, date: day, timeZone: timeZone) }
-    var canShare: Bool { SharePurpose.canShare(purpose) && !isPreparing }
+    var canShare: Bool {
+        guard case .failed = preview else { return SharePurpose.canShare(purpose) && !isPreparing }
+        return false
+    }
 
     private var isPreparing: Bool {
         if case .preparing = phase { true } else { false }

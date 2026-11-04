@@ -139,6 +139,8 @@ struct ShareModelTests {
             return
         }
         #expect(broken.markedPreview == nil)
+        // Page 1 can't be shared either, so Bagikan says so at once instead of after a tap.
+        #expect(!broken.canShare)
     }
 
     // MARK: - Pages and copies
