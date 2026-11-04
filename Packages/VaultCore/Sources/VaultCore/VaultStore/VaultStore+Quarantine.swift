@@ -31,11 +31,10 @@ extension VaultStore {
     public func quarantineVault(to quarantineDirectory: URL) async throws -> URL? {
         if let openTask { _ = try? await openTask.value }
         lock()
-        let fileManager = FileManager.default
-        guard fileManager.fileExists(atPath: root.path) else { return nil }
+        guard try Self.itemExists(root) else { return nil }
         try createFolder(quarantineDirectory, protection: .complete)
         let destination = quarantineDestination(in: quarantineDirectory)
-        try fileManager.moveItem(at: root, to: destination)
+        try FileManager.default.moveItem(at: root, to: destination)
         return destination
     }
 
@@ -43,7 +42,7 @@ extension VaultStore {
     public func quarantinedVaults(in quarantineDirectory: URL) throws -> QuarantineListing {
         var listing = QuarantineListing(vaults: [], unreadableFolders: [])
         let fileManager = FileManager.default
-        guard fileManager.fileExists(atPath: quarantineDirectory.path) else { return listing }
+        guard try Self.itemExists(quarantineDirectory) else { return listing }
         let folders = try fileManager.contentsOfDirectory(
             at: quarantineDirectory, includingPropertiesForKeys: [.isDirectoryKey],
             options: [.skipsHiddenFiles]
@@ -72,8 +71,8 @@ extension VaultStore {
             throw VaultError.quarantineUnreadable
         }
         var liveID = state?.header.vaultID
-        if liveID == nil, FileManager.default.fileExists(atPath: headerURL.path) {
-            // Throws if the live vault.json can't be read, rather than guess it's another vault.
+        if liveID == nil, try Self.itemExists(headerURL) {
+            // Throws if the live vault.json can't be read or looked for, rather than guess it's another vault.
             liveID = try readHeader(at: headerURL).vaultID
         }
         guard liveID != vault.vaultID,

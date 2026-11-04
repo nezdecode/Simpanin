@@ -57,6 +57,22 @@ struct LockControllerCreateTests {
         #expect(controller.state == .recovery(.unlockPhoneAndRetry))
     }
 
+    /// VaultCore refuses to create in a folder it can't read. The retry must open what's there, never go
+    /// back to the welcome, because the folder may hold a vault.
+    @Test func anUnreadableFolderWhileCreatingShowsUnlockPhoneAndDropsTheScan() async {
+        let vault = FakeVault([.failure(.fileUnavailable)])
+        let controller = await welcome(vault)
+        conditions.emptyCheckFails = true
+        await controller.createVault(then: .camera)
+        #expect(controller.state == .recovery(.unlockPhoneAndRetry))
+        #expect(controller.takePendingScan() == nil)
+
+        await controller.unlock()
+        #expect(controller.state == .unlocked)
+        #expect(await vault.openCount == 2)
+        #expect(controller.takePendingScan() == nil)
+    }
+
     @Test func creatingTheVaultChecksThePasscodeAgain() async {
         let vault = FakeVault([])
         let controller = await welcome(vault)

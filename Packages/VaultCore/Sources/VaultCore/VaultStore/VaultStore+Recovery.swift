@@ -98,10 +98,14 @@ extension VaultStore {
     }
 
     private nonisolated static func listPageFiles(in pagesDirectory: URL) throws -> [PageFileInfo] {
-        let fileManager = FileManager.default
-        guard fileManager.fileExists(atPath: pagesDirectory.path) else { return [] }
-        let urls = try fileManager.contentsOfDirectory(
-            at: pagesDirectory, includingPropertiesForKeys: [.contentModificationDateKey])
+        guard try itemExists(pagesDirectory) else { return [] }
+        let urls: [URL]
+        do {
+            urls = try FileManager.default.contentsOfDirectory(
+                at: pagesDirectory, includingPropertiesForKeys: [.contentModificationDateKey])
+        } catch {
+            throw VaultError.fileUnavailable
+        }
         return urls.compactMap { url in
             guard url.pathExtension == "enc",
                 let id = PageID(string: url.deletingPathExtension().lastPathComponent)
@@ -197,16 +201,5 @@ extension VaultStore {
             removed += 1
         }
         return removed
-    }
-
-    /// An index or a page file, with or without a header. Temp files don't count.
-    nonisolated static func vaultFilesExist(in root: URL) throws -> Bool {
-        let fileManager = FileManager.default
-        if fileManager.fileExists(atPath: indexURL(in: root).path)
-            || fileManager.fileExists(atPath: previousIndexURL(in: root).path)
-        {
-            return true
-        }
-        return try !listPageFiles(in: pagesDirectory(in: root)).isEmpty
     }
 }
