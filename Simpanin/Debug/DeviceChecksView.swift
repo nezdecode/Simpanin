@@ -55,6 +55,11 @@
                 } footer: {
                     Text("Scan a document and see what Vision and the parsers read. Saves nothing.")
                 }
+                Section {
+                    NavigationLink("Coba bagikan") { ShareTryView(lock: lock) }
+                } footer: {
+                    Text("Share a sample page and see what the targets leave on disk.")
+                }
                 Section("1–3. Data Protection") {
                     Button("Check protection classes") { run(checkFiles) }
                 }
