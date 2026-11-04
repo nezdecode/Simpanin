@@ -82,6 +82,8 @@
                 Section {
                     Button("List files changed since the last share") { logChanges(shares, "now", snapshot) }
                     Button("Delete the share folder", role: .destructive) { removeFolder(shares) }
+                    Button("List the share sheet's own copies") { logSheetCopies(shares, "now") }
+                    Button("Delete the share sheet's own copies", role: .destructive) { removeSheetCopies(shares) }
                 }
                 Section("Lines (also in the report)") {
                     Text(shownLines.isEmpty ? "None yet." : shownLines.joined(separator: "\n"))
@@ -119,10 +121,12 @@
                 log(number, line)
                 if mode.protection != nil { logClasses(number) }
                 logChanges(number, "at completion", before)
+                logSheetCopies(number, "at completion")
                 if deleteAtCompletion { removeFolder(number) }
                 Task {
                     try? await Task.sleep(for: .seconds(60))
                     logChanges(number, "60 s later", before)
+                    logSheetCopies(number, "60 s later")
                 }
             }
             guard present(activity) else {
@@ -216,6 +220,36 @@
         }
 
         private func log(_ number: Int, _ line: String) { lock.log("share \(number): \(line)") }
+
+        /// The share sheet copies what it's given into a dot folder in our tmp and leaves it there.
+        private static func sheetCopies() -> [URL] {
+            let items =
+                (try? FileManager.default.contentsOfDirectory(
+                    at: .temporaryDirectory, includingPropertiesForKeys: nil, options: [])) ?? []
+            return items.filter { $0.lastPathComponent.hasPrefix(".com.apple.ShareSheet") }
+        }
+
+        private func logSheetCopies(_ number: Int, _ moment: String) {
+            let folders = Self.sheetCopies()
+            log(number, "\(moment): \(folders.count) share sheet folders")
+            for folder in folders {
+                for (path, protection) in FileChanges.protectionClasses(in: folder).sorted(by: { $0.key < $1.key }) {
+                    log(number, "  sheet \(path): \(protection)")
+                }
+            }
+        }
+
+        private func removeSheetCopies(_ number: Int) {
+            for folder in Self.sheetCopies() {
+                do {
+                    try FileManager.default.removeItem(at: folder)
+                    log(number, "share sheet folder deleted")
+                } catch {
+                    let error = error as NSError
+                    log(number, "share sheet folder not deleted: \(error.domain) \(error.code)")
+                }
+            }
+        }
 
         /// The sheet goes on the topmost screen of the app's own window, never the cover's.
         private func present(_ controller: UIViewController) -> Bool {
