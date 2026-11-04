@@ -135,18 +135,12 @@ public actor VaultStore {
             previousIndexURL(in: rootDirectory),
         ]
         for file in files where try itemExists(file) { return false }
-        let pages = pagesDirectory(in: rootDirectory)
-        guard try itemExists(pages) else { return true }
-        do {
-            return try !pageFilesExist(in: pages)
-        } catch {
-            throw VaultError.fileUnavailable
-        }
+        return try !pageFilesExist(in: pagesDirectory(in: rootDirectory))
     }
 
     /// Only "no such file" means missing, as in `readFile(at:)`; `fileExists` would also say false for a
     /// folder it isn't allowed to look in.
-    private nonisolated static func itemExists(_ url: URL) throws -> Bool {
+    nonisolated static func itemExists(_ url: URL) throws -> Bool {
         do {
             _ = try FileManager.default.attributesOfItem(atPath: url.path)
             return true
@@ -190,7 +184,7 @@ public actor VaultStore {
     // MARK: - Open and lock
 
     /// Unlocks the vault, then repairs the index if needed, removes orphan pages and purges.
-    /// Creates a vault only when no vault file exists at all.
+    /// Creates a vault only when the vault folder can be read and holds no vault file.
     @discardableResult
     public func open() async throws -> OpenReport {
         if let openTask { return try await openTask.value }
@@ -211,15 +205,15 @@ public actor VaultStore {
         if state != nil, let lastReport { return lastReport }
         let lockCountAtStart = lockCount
         var report = OpenReport()
-        let fileManager = FileManager.default
 
         let header: VaultHeader
         let vaultKey: SymmetricKey
-        if fileManager.fileExists(atPath: headerURL.path) {
+        if try Self.itemExists(headerURL) {
             header = try readHeader(at: headerURL)
             vaultKey = try await readExistingVaultKey(header.vaultID)
         } else {
-            guard try !Self.vaultFilesExist(in: root) else { throw VaultError.vaultHeaderMissing }
+            // A folder that can't be read throws here, before any key is made.
+            guard try Self.isEmpty(in: root) else { throw VaultError.vaultHeaderMissing }
             let vaultID = VaultID()
             vaultKey = try await readOrCreateNewVaultKey(vaultID)
             header = VaultHeader(vaultID: vaultID, keySlots: [KeySlot(kind: .device, createdAt: now())])
