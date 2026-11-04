@@ -152,8 +152,9 @@ extension VaultStore {
         }
     }
 
-    /// Foundation reports a full disk as CocoaError 640 with ENOSPC underneath; rename gives ENOSPC.
-    static func isOutOfSpace(_ error: any Error) -> Bool {
+    /// Foundation reports a full disk as CocoaError 640 with ENOSPC underneath; rename gives ENOSPC. Public, so
+    /// the app's own writes (shared copies) call a full disk what the vault calls one.
+    public static func isOutOfSpace(_ error: any Error) -> Bool {
         let error = error as NSError
         let underlying = error.userInfo[NSUnderlyingErrorKey] as? NSError
         return (error.domain == NSCocoaErrorDomain && error.code == CocoaError.fileWriteOutOfSpace.rawValue)
