@@ -120,7 +120,8 @@ public actor VaultStore {
     public static let headerFileName = "vault.json"
 
     /// Whether `rootDirectory` holds a vault, judged by its header. Reads no file contents and
-    /// needs no key, so the app can ask before unlocking.
+    /// needs no key, so the app can ask before unlocking. An unreadable folder reads as no vault here,
+    /// which only picks the no-passcode screen's text; `open()` itself never creates there.
     public nonisolated static func vaultExists(in rootDirectory: URL) -> Bool {
         FileManager.default.fileExists(atPath: rootDirectory.appending(path: headerFileName).path)
     }
