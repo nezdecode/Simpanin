@@ -288,6 +288,30 @@ struct NoticeTests {
         #expect(!controller.notices.contains(.scanDropped))
     }
 
+    @Test func aLockAfterTheShareSheetAppearedLeavesANotice() async {
+        let controller = await unlocked()
+        controller.shareSheetShown()
+        await controller.lock()
+        await controller.unlock()
+        #expect(controller.notices.contains(.shareStopped))
+        controller.dismiss(.shareStopped)
+        await controller.lock()
+        await controller.unlock()
+        #expect(!controller.notices.contains(.shareStopped))
+    }
+
+    /// Before the share sheet nothing has left the app, and after it closes nothing is on its way.
+    @Test func aLockWhileTypingLeavesNoNotice() async {
+        let controller = await unlocked()
+        await controller.lock()
+        await controller.unlock()
+        controller.shareSheetShown()
+        controller.shareSheetEnded()
+        await controller.lock()
+        await controller.unlock()
+        #expect(!controller.notices.contains(.shareStopped))
+    }
+
     @Test func aScanThatEndedBeforeTheLockIsntMentioned() async {
         let controller = await unlocked()
         controller.scanStarted(.photos)

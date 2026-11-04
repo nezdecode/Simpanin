@@ -991,6 +991,17 @@
         }
       }
     },
+    "notice.shareStopped" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Berbagi dihentikan karena Simpanin terkunci. Salinannya mungkin belum terkirim, jadi bagikan lagi kalau perlu."
+          }
+        }
+      }
+    },
     "oldVaults.deleteConfirm" : {
       "extractionState" : "manual",
       "localizations" : {
