@@ -66,12 +66,12 @@ struct ShareModelTests {
 
     func model(
         pages: [Data] = [page(), page()], writeFile: @escaping SharedCopies.Write = SharedCopies.writeComplete,
-        counts: Counts = Counts()
+        protector: any FileProtector = RecordingProtector(), counts: Counts = Counts()
     ) async throws -> ShareModel {
         let id = try await store.createDocument(
             type: .ktp, label: nil, expiry: nil, pinned: false, fields: DocumentFields([:]), pages: pages)
         let document = try #require(await store.documents().first { $0.id == id })
-        let copies = SharedCopies(temporary: temporary, protector: RecordingProtector(), writeFile: writeFile)
+        let copies = SharedCopies(temporary: temporary, protector: protector, writeFile: writeFile)
         let share = ShareModel(
             document: document, pageReader: store, copies: copies, presenter: presenter, clock: clock, timeZone: utc,
             onShareSheetShown: { counts.shown += 1 }, onShareSheetEnded: { counts.ended += 1 })
@@ -214,6 +214,32 @@ struct ShareModelTests {
         #expect(leftFiles().isEmpty)
         #expect(share.phase == .closed)
         #expect(counts.ended == 1)
+    }
+
+    /// A target the share sheet copies for leaves its copy in tmp; it goes once the sheet has closed.
+    @Test func theShareSheetsOwnCopiesAreDeletedOnCompletion() async throws {
+        let share = try await model()
+        await share.share()
+        let sheetCopy = temporary.appending(path: "\(SharedCopies.shareSheetPrefix)-test", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: sheetCopy, withIntermediateDirectories: true)
+        try Data("page".utf8).write(to: sheetCopy.appending(path: "page.jpg"))
+        let other = temporary.appending(path: "com.apple.Other")
+        try Data().write(to: other)
+        presenter.close(taken: true)
+        #expect(!FileManager.default.fileExists(atPath: sheetCopy.path))
+        #expect(FileManager.default.fileExists(atPath: other.path))
+    }
+
+    @Test func aFullDiskWhileMakingTheFolderIsStorageFull() async throws {
+        final class FullDisk: FileProtector {
+            func protect(_ url: URL, as protection: FileProtectionClass) throws {
+                throw CocoaError(.fileWriteOutOfSpace)
+            }
+        }
+        let share = try await model(protector: FullDisk())
+        await share.share()
+        #expect(share.problem == .storageFull)
+        #expect(presenter.presented.isEmpty)
     }
 
     @Test func theFolderIsEmptiedOnCancel() async throws {

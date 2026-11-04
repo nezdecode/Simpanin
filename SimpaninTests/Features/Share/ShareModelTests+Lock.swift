@@ -10,6 +10,7 @@
 //
 
 import Foundation
+import Synchronization
 import Testing
 import VaultCore
 
@@ -44,6 +45,22 @@ extension ShareModelTests {
         #expect(leftFiles().isEmpty)
     }
 
+    /// The screen goes between the last write and the share sheet, without its task being cancelled first.
+    @Test func aScreenLeftAfterTheLastWritePresentsNothing() async throws {
+        let leave = Mutex<(@MainActor @Sendable () -> Void)?>(nil)
+        let writeThenLeave: SharedCopies.Write = { data, url in
+            try SharedCopies.writeComplete(data, url)
+            let action = leave.withLock { $0 }
+            DispatchQueue.main.sync { MainActor.assumeIsolated { action?() } }
+        }
+        let share = try await model(pages: [Self.page()], writeFile: writeThenLeave)
+        leave.withLock { $0 = { share.screenLeft() } }
+        await share.share()
+        #expect(presenter.presented.isEmpty)
+        #expect(leftFiles().isEmpty)
+        #expect(share.phase == .closed)
+    }
+
     @Test func batalWhileRenderingLeavesNoFile() async throws {
         let share = try await model(pages: [Self.page(), Self.page(), Self.page()])
         await share.share()
@@ -73,12 +90,16 @@ extension ShareModelTests {
     }
 
     @Test func aShareDismissedWithoutCompletionDoesNotBlockTheNext() async throws {
-        let share = try await model()
+        let counts = Counts()
+        let share = try await model(counts: counts)
         await share.share()
         let first = try #require(presenter.presented.first)
         // No completion ever comes for the first sheet.
         await share.share()
         #expect(presenter.presented.count == 2)
+        // The first sheet is over, so a lock now isn't told as a stopped share of it.
+        #expect(counts.ended == 1)
+        #expect(counts.shown == 2)
         #expect(!first.contains { FileManager.default.fileExists(atPath: $0.path) })
         #expect(leftFiles().count == 2)
     }

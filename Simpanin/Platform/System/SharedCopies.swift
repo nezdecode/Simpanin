@@ -90,10 +90,18 @@ nonisolated struct SharedCopies: Sendable {
     /// Every shared copy, ours and the share sheet's own. At launch and on a lock, when no share can be open.
     /// Every item is tried even when one fails; the first error is thrown at the end.
     func clear() throws {
+        try removeItems { $0 == Self.folderName || $0.hasPrefix(Self.shareSheetPrefix) }
+    }
+
+    /// The copies a share target had the share sheet make. Once a sheet has closed, nothing still reads them.
+    func clearShareSheetCopies() throws {
+        try removeItems { $0.hasPrefix(Self.shareSheetPrefix) }
+    }
+
+    private func removeItems(named matches: (String) -> Bool) throws {
         var firstError: (any Error)?
         let items = try FileManager.default.contentsOfDirectory(at: temporary, includingPropertiesForKeys: nil)
-        for item in items
-        where item.lastPathComponent == Self.folderName || item.lastPathComponent.hasPrefix(Self.shareSheetPrefix) {
+        for item in items where matches(item.lastPathComponent) {
             do { try remove(item) } catch { firstError = firstError ?? error }
         }
         if let firstError { throw firstError }

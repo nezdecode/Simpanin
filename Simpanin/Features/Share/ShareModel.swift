@@ -103,10 +103,20 @@ final class ShareModel {
     }
 
     func loadPreview() async {
-        guard let pageID = document.pageIDs.first,
-            let data = try? await pageReader.pageData(pageID, of: document.id),
-            let page = await CGImage.reduced(from: data, to: Self.previewPixelSize)
-        else {
+        guard let pageID = document.pageIDs.first else {
+            preview = .failed
+            return
+        }
+        let data: Data
+        do {
+            data = try await pageReader.pageData(pageID, of: document.id)
+        } catch {
+            Logger.share.error("Preview not opened: \(ErrorSummary.describe(error), privacy: .public)")
+            preview = .failed
+            return
+        }
+        guard let page = await CGImage.reduced(from: data, to: Self.previewPixelSize) else {
+            Logger.share.error("Preview not decoded")
             preview = .failed
             return
         }
@@ -117,7 +127,11 @@ final class ShareModel {
 
     func redrawPreview() async {
         guard let previewPage else { return }
-        markedPreview = await Self.marked(previewPage, text: mark)
+        let text = mark
+        let marked = await Self.marked(previewPage, text: text)
+        // A draw for older text can finish after a newer one; the preview always matches the field.
+        guard !Task.isCancelled, text == mark else { return }
+        markedPreview = marked
     }
 
     /// After midnight, or a change of time zone or clock.
@@ -127,14 +141,18 @@ final class ShareModel {
 
     func share() async {
         guard canShare else { return }
+        // A sheet that closed without telling is over too, so a lock now isn't told as a stopped share.
+        if phase == .shareSheetUp { onShareSheetEnded() }
         removeCopies()
         problem = nil
         day = clock.now
         let text = mark
         let pageIDs = document.pageIDs
         phase = .preparing(page: 1, count: pageIDs.count)
+        var made: URL?
         do {
             let folder = try copies.makeFolder()
+            made = folder
             self.folder = folder
             var files: [URL] = []
             for (index, pageID) in pageIDs.enumerated() {
@@ -153,6 +171,8 @@ final class ShareModel {
             onShareSheetShown()
         } catch {
             removeCopies()
+            // The screen may have gone while a page was still being written; this runs after the write.
+            if let made { remove(made) }
             // A sheet that has gone shows nothing.
             guard phase != .closed else { return }
             phase = .editing
@@ -171,6 +191,11 @@ final class ShareModel {
         // A sheet the lock took away can still report later; its copies are gone by then.
         guard self.folder == folder, phase == .shareSheetUp else { return }
         removeCopies()
+        do {
+            try copies.clearShareSheetCopies()
+        } catch {
+            Logger.share.error("Share sheet copies weren't removed: \(ErrorSummary.describe(error), privacy: .public)")
+        }
         onShareSheetEnded()
         phase = taken ? .closed : .editing
     }
@@ -178,6 +203,10 @@ final class ShareModel {
     private func removeCopies() {
         guard let folder else { return }
         self.folder = nil
+        remove(folder)
+    }
+
+    private func remove(_ folder: URL) {
         do {
             try copies.remove(folder)
         } catch {
@@ -187,7 +216,8 @@ final class ShareModel {
     }
 
     private static func problem(for error: any Error) -> Problem? {
-        switch error {
+        if VaultStore.isOutOfSpace(error) { return .storageFull }
+        return switch error {
         case is CancellationError, VaultError.locked: nil
         case VaultError.storageFull: .storageFull
         case ShareError.pageUnreadable, VaultError.pageNotFound, VaultError.authenticationFailed: .pageUnavailable
