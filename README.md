@@ -17,7 +17,7 @@ A privacy-first iOS app for keeping identity documents such as KTP and SIM. Docu
 In Indonesia, a photo of your KTP is asked for everywhere: renting a room, opening an account, starting a job. Those photos pile up in the camera roll, sync to the cloud and get forwarded in chats, where they can be reused for loans in your name. Simpanin keeps the documents encrypted on the phone and, when one has to be sent, shares a copy marked with what it's for and the date.
 
 ## What works today
-
+ 
 - **An encrypted vault**, locked with Face ID or the device passcode, with auto-lock and a cover that hides documents in the app switcher and during screen recording.
 - **Adding documents**: scan a KTP or SIM with the document camera, or pick a photo from Photos. Text is read on the phone with Apple's Vision framework, and the user checks every field before saving.
 - **Checks while saving**: fields that may be misread are marked with a reason, a document already in the vault is flagged, and pages from different documents in one scan are pointed out.
@@ -25,10 +25,16 @@ In Indonesia, a photo of your KTP is asked for everywhere: renting a room, openi
 - **Sharing a marked copy**: every page carries the purpose and date across it; the stored document never changes, and the copies are deleted once shared.
 - **Recently deleted**: documents are kept for 30 days before they're purged.
 
-**Planned:** editing saved fields, expiry reminders, import from Files, and parsers for STNK and passport.
+## Roadmap
+ 
+The order can change; nothing below is promised by a date.
+ 
+- **In progress:** editing a saved document's fields, to fill in or correct what the scan missed.
+- **Before the first release** (App Store, Indonesia): saying plainly in the app that documents stay on this phone, and final checks on a device.
+- **After the first release, as updates:** full editing (type and pages), expiry reminders, reading passports and STNK, English, an accessibility pass, more options for the shared copy's mark, and import from Files.
 
 ## How documents are protected
-
+ 
 - Each document has its own key. Its pages and fields are sealed with AES-256-GCM.
 - The document keys are wrapped by a vault key in the Keychain, usable only on this device, only while it's unlocked, and only after Face ID or the passcode.
 - Every file uses iOS Data Protection (class Complete), so nothing can be read while the phone is locked.
@@ -36,7 +42,7 @@ In Indonesia, a photo of your KTP is asked for everywhere: renting a room, openi
 - There is no sync and no backup of the vault key: a document stays on the phone it was saved on.
 
 ## Engineering
-
+ 
 ```mermaid
 flowchart LR
     subgraph App["App (SwiftUI)"]
@@ -60,8 +66,8 @@ flowchart LR
 - **Every change** is planned with its edge cases first, built test first, checked with deliberate mutations, reviewed, and tried on a real iPhone before it's merged. Pull requests run the commit checks, swift-format, SwiftLint and the VaultCore tests on Linux.
 
 ## Privacy
-
-- No network calls, no analytics, no crash reporting, no third-party SDKs. The only dependency is Apple's [swift-crypto](https://github.com/apple/swift-crypto).
+ 
+- No network calls, no analytics, no crash reporting, no third-party SDKs. A document leaves the phone only as a marked copy you share yourself through the share sheet. The only dependency is Apple's [swift-crypto](https://github.com/apple/swift-crypto).
 - Real document scans are never part of this repository. Tests use synthetic data only, with test NIKs starting with 00.
 
 ## Development
