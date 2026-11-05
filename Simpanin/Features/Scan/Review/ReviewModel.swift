@@ -23,17 +23,20 @@ final class ReviewModel {
     private(set) var pages: [CGImage] = []
     /// The pages made small once after the scan, for the strip, so it never draws a full-size scan.
     private(set) var thumbnails: [PageThumbnail] = []
-    /// Set by the type sheet; picking one is the user's decision, so the parser's doubt goes. `load` sets
-    /// the reasons again after setting the type.
-    var type = DocumentType.other {
-        didSet { typeReasons = [] }
+    /// The fields as read and corrected, with their marks and refusals.
+    private(set) var form = DocumentForm()
+    /// Set by the type sheet; picking one is the user's decision, so the parser's doubt goes.
+    var type: DocumentType {
+        get { form.type }
+        set {
+            form.type = newValue
+            typeReasons = []
+        }
     }
     var label = ""
-    /// The text of each field, by `FieldKey`, as read or as typed.
-    private(set) var values: [String: String] = [:]
-    /// Why each field is marked "Periksa lagi". Every reason is kept, so fixing one never hides another;
-    /// the first is the one shown.
-    private(set) var marked: [String: Set<CheckReason>] = [:]
+    var values: [String: String] { form.values }
+    var marked: [String: Set<CheckReason>] { form.marked }
+    var problems: [String: DocumentForm.FieldProblem] { form.problems }
     private(set) var typeReasons: Set<CheckReason> = []
     private(set) var expiry: CalendarDate?
     private(set) var expiryReasons: Set<CheckReason> = []
@@ -45,8 +48,6 @@ final class ReviewModel {
     private var birthDateConfirmed = false
     /// How the scan's pages relate; reasons only, no values from another person's card.
     private var reading: ScanReading?
-    /// Why Simpan refused a field, shown under it until the field is edited.
-    private(set) var problems: [String: FieldProblem] = [:]
     var saveError: RecoveryScreen?
     private(set) var saving = false
     /// An alert from Simpan is up, or about to follow another.
@@ -59,9 +60,8 @@ final class ReviewModel {
     private var acceptedDuplicate: DuplicateCheck.Candidate?
     /// What the pages alert said when it was answered; while the notes say the same, it isn't asked again.
     private var answeredPages: PageNotes?
-    /// What the scan read, to tell what the user changed.
+    /// What the scan read, to tell what the user changed. The type it read is the form's `loadedType`.
     private var scanned: [String: String] = [:]
-    private var scannedType = DocumentType.other
     private var scannedExpiry: CalendarDate?
 
     private let store: any DocumentStoring
@@ -81,8 +81,7 @@ final class ReviewModel {
     /// Worked out each time from the reading and the type chosen now, never stored.
     var pageNotes: PageNotes { PageNotes(reading: reading, pageCount: pages.count, chosen: type) }
 
-    /// The fields the chosen type has, in the order the screen shows them.
-    var fieldKeys: [String] { DocumentFieldStyle.keys(for: type) }
+    var fieldKeys: [String] { form.fieldKeys }
 
     /// SIM, Paspor and STNK have a printed expiry to show and edit here; a KTP is valid for life.
     var hasExpiry: Bool { ExpiryText.hasPrintedExpiry(type) }
@@ -94,12 +93,11 @@ final class ReviewModel {
     /// isn't a misread and gets no "Periksa lagi".
     var marksMissingExpiry: Bool { expiryMissing && type.isSIM }
 
-    /// A label shows in the list without opening the document, so it must not hold a number.
-    var labelLooksLikeANumber: Bool { label.filter(\.isNumber).count >= 8 }
+    var labelLooksLikeANumber: Bool { DocumentForm.looksLikeANumber(label) }
 
     /// The user changed something the scan read, a field, the type or the expiry; a new scan would
     /// replace it.
-    var hasUserChanges: Bool { values != scanned || type != scannedType || expiry != scannedExpiry }
+    var hasUserChanges: Bool { values != scanned || type != form.loadedType || expiry != scannedExpiry }
 
     /// After a scan or a rescan: every field comes from the new pages. The label stays. The pages and where
     /// their saved copies come from are set together, so a new pick never saves the old photos.
@@ -117,68 +115,27 @@ final class ReviewModel {
         duplicate = nil
         acceptedDuplicate = nil
         answeredPages = nil
-        type = result?.type ?? .other
-        values = (result?.fields.values ?? [:]).reduce(into: [:]) { shown, field in
+        let values = (result?.fields.values ?? [:]).reduce(into: [:]) { shown, field in
             shown[field.key] =
                 FieldDates.dateKeys.contains(field.key) ? DocumentFieldStyle.dayFirst(field.value) : field.value
         }
+        form = DocumentForm(type: result?.type ?? .other, values: values, marked: result?.reasons ?? [:])
         scanned = values
-        scannedType = type
         scannedExpiry = result?.expiry
-        marked = result?.reasons ?? [:]
         typeReasons = result?.typeReasons ?? [.noDocumentRecognized]
         expiry = result?.expiry
         expiryType = type
         expiryReasons = result?.expiryReasons ?? []
         birthDateConfirmed = result?.birthDateConfirmed ?? false
         edited = []
-        problems = [:]
         // A wrong value the scan read shows its reason at once, not only when Simpan is tapped.
         _ = firstProblem()
         saveError = nil
     }
 
     func setValue(_ text: String, for key: String) {
-        let text = FieldDates.dateKeys.contains(key) ? FieldDates.typedDate(text) : text
-        // A field writes its value back when it takes focus; that isn't an edit, and its reason stays.
-        guard text != values[key] ?? "" else { return }
-        values[key] = text
+        guard form.setValue(text, for: key) else { return }
         edited.insert(key)
-        // The user looked at it and decided, so it's no longer the parser's guess.
-        marked[key] = nil
-        problems[key] = nil
-        // A complete date is judged at once; a half-typed one only when Simpan is tapped.
-        if FieldDates.dateKeys.contains(key), let typed = values[key], typed.count == "dd-mm-yyyy".count {
-            problems[key] = Self.problem(with: typed, for: key)
-        }
-        if key == numberKey || key == FieldKey.birthDate { checkNumberAgainstBirthDate() }
-    }
-
-    /// The parsers' cross-check, again after an edit: a NIK, or a new SIM's number, holds the birth date,
-    /// and when they disagree either could be wrong. Only that reason changes; any other stays.
-    private func checkNumberAgainstBirthDate() {
-        guard let number = numberKey,
-            let birth = FieldDates.yearFirst(values[FieldKey.birthDate] ?? "").flatMap(CalendarDate.init),
-            // Dashes and spaces are only for display. An old SIM's 14 digits hold no date, so they give nil.
-            let agrees = NIK.agrees(
-                values[number, default: ""].filter(\.isASCIIDigit), withBirthDate: birth)
-        else {
-            // One of them can't be compared any more, so the other no longer disagrees with anything.
-            for key in [numberKey, FieldKey.birthDate].compactMap(\.self) { drop(.disagreesWithBirthDate, from: key) }
-            return
-        }
-        for key in [number, FieldKey.birthDate] {
-            if agrees {
-                drop(.disagreesWithBirthDate, from: key)
-            } else {
-                marked[key, default: []].insert(.disagreesWithBirthDate)
-            }
-        }
-    }
-
-    private func drop(_ reason: CheckReason, from key: String) {
-        marked[key]?.remove(reason)
-        if marked[key]?.isEmpty == true { marked[key] = nil }
     }
 
     func setExpiry(_ date: CalendarDate?) {
@@ -203,7 +160,7 @@ final class ReviewModel {
         // A value that can't be stored is never saved; its field shows why.
         guard firstProblem() == nil else { return false }
         for key in fieldKeys {
-            let text = Self.trimmed(values[key])
+            let text = DocumentForm.trimmed(values[key])
             guard !text.isEmpty else { continue }
             fields[key] = FieldDates.dateKeys.contains(key) ? FieldDates.yearFirst(text) : text
         }
@@ -248,55 +205,17 @@ final class ReviewModel {
 }
 
 extension ReviewModel {
-    enum FieldProblem: Equatable {
-        case notADate
-        case birthDateInFuture
-        case nikLength
-    }
+    func fieldLeft(_ key: String) { form.fieldLeft(key) }
 
-    /// The field lost focus, so typing is done: a filled one is judged now.
-    func fieldLeft(_ key: String) {
-        let text = Self.trimmed(values[key])
-        guard !text.isEmpty else { return }
-        problems[key] = Self.problem(with: text, for: key)
-    }
+    func firstProblem() -> String? { form.firstProblem() }
 
-    /// Judges every filled field, shows each one's reason, and returns the first wrong one in screen order.
-    func firstProblem() -> String? {
-        var first: String?
-        for key in fieldKeys {
-            let text = Self.trimmed(values[key])
-            guard !text.isEmpty, let problem = Self.problem(with: text, for: key) else { continue }
-            problems[key] = problem
-            first = first ?? key
-        }
-        return first
-    }
+    func note(for key: String) -> DocumentForm.Note? { form.note(for: key) }
 
-    /// What shows under a value. A refusal replaces a mark: it's what has to change before Simpan works.
-    enum Note: Equatable {
-        case refusal(FieldProblem)
-        /// "Periksa lagi", with the first reason when one is known.
-        case mark(CheckReason?)
-        /// The expiry was read or picked for a kind of document whose date means something else.
-        case dateFromAnotherType
-    }
+    var typeNote: DocumentForm.Note? { typeReasons.min().map(DocumentForm.Note.mark) }
 
-    func note(for key: String) -> Note? {
-        if let problem = problems[key] { return .refusal(problem) }
-        var reasons = marked[key] ?? []
-        // These speak of the scanned document's number and layout, which another kind of document doesn't have.
-        if Self.dateKind(type) != Self.dateKind(scannedType) {
-            reasons.subtract([.disagreesWithBirthDate, .mixedLayout])
-        }
-        return reasons.min().map(Note.mark)
-    }
-
-    var typeNote: Note? { typeReasons.min().map(Note.mark) }
-
-    var expiryNote: Note? {
+    var expiryNote: DocumentForm.Note? {
         // What was said of the date belongs to the kind of document it was read or picked for.
-        if Self.dateKind(type) != Self.dateKind(expiryType) {
+        if DocumentForm.dateKind(type) != DocumentForm.dateKind(expiryType) {
             return expiry != nil ? .dateFromAnotherType : marksMissingExpiry ? .mark(nil) : nil
         }
         if let reason = expiryReasons.min() { return .mark(reason) }
@@ -307,16 +226,15 @@ extension ReviewModel {
     /// "Cocok dengan tanggal lahir": only for a scan the parser confirmed, until either value is edited or
     /// gets a mark or a refusal. Two values the user typed say nothing about the card.
     var showsBirthDateMatch: Bool {
-        guard birthDateConfirmed, Self.dateKind(type) == Self.dateKind(scannedType), let number = numberKey
+        guard birthDateConfirmed, DocumentForm.dateKind(type) == DocumentForm.dateKind(form.loadedType),
+            let number = numberKey
         else { return false }
         return [number, FieldKey.birthDate].allSatisfy { !edited.contains($0) && note(for: $0) == nil }
     }
 
-    /// The field whose digits hold the birth date: a KTP's NIK, or a SIM's number.
-    var numberKey: String? { fieldKeys.first { $0 == FieldKey.nik || $0 == FieldKey.simNumber } }
+    var numberKey: String? { form.numberKey }
 
-    /// A KTP saved without its NIK is asked about first, never refused: an old photo can be blurred there.
-    var nikMissing: Bool { fieldKeys.contains(FieldKey.nik) && Self.trimmed(values[FieldKey.nik]).isEmpty }
+    var nikMissing: Bool { form.nikMissing }
 
     /// What Simpan does next.
     enum SaveStep: Equatable {
@@ -365,24 +283,5 @@ extension ReviewModel {
     private func ask(_ step: SaveStep) -> SaveStep {
         asking = step != .save
         return step
-    }
-
-    private static func trimmed(_ text: String?) -> String {
-        text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-    }
-
-    /// What a document's date means: every SIM class shares one meaning, an STNK's is its tax.
-    private static func dateKind(_ type: DocumentType) -> String {
-        type.isSIM ? "sim" : type.rawValue
-    }
-
-    /// Why a value can't be stored, or nil when it can. Only a NIK's length and dates are judged.
-    static func problem(with text: String, for key: String) -> FieldProblem? {
-        if key == FieldKey.nik {
-            return NIK.isWellFormed(text) ? nil : .nikLength
-        }
-        guard FieldDates.dateKeys.contains(key) else { return nil }
-        guard let date = FieldDates.yearFirst(text).flatMap(CalendarDate.init) else { return .notADate }
-        return key == FieldKey.birthDate && date > .today ? .birthDateInFuture : nil
     }
 }

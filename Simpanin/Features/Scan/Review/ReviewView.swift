@@ -67,15 +67,13 @@ struct ReviewView: View {
                     }
                 } else {
                     Section { typeRow }
-                    labelSection
-                    if !review.fieldKeys.isEmpty {
-                        Section {
-                            ForEach(review.fieldKeys, id: \.self) { key in fieldRow(key) }
-                        }
-                    }
+                    DocumentFormSections(
+                        label: $review.label, form: review.form, showsBirthDateMatch: review.showsBirthDateMatch,
+                        focus: $focusedField, voiceOverFocus: $voiceOverField,
+                        onChange: { review.setValue($0, for: $1) })
                     ValiditySection(
                         type: review.type, hasExpiry: review.hasExpiry, expiry: review.expiry,
-                        note: review.expiryNote.map { ReviewText.text(for: $0, numberKey: review.numberKey) },
+                        note: review.expiryNote.map { FormText.text(for: $0, numberKey: review.numberKey) },
                         onChange: { review.setExpiry($0) }, onPick: { expiryPickerShown = true })
                 }
             }
@@ -154,7 +152,7 @@ struct ReviewView: View {
             .alert(Text("review.nikMissing"), isPresented: $nikMissingShown) {
                 Button(role: .cancel) {
                     // Simpan stays visible until the NIK has focus, so asking ends only then.
-                    afterAlertCloses {
+                    UIApplication.shared.afterAlertCloses {
                         review.alertAnswered()
                         focusedField = FieldKey.nik
                     }
@@ -184,7 +182,7 @@ struct ReviewView: View {
             // Initial too: a view rebuilt while a duplicate waits still opens its alert.
             .onChange(of: review.duplicate, initial: true) { _, found in
                 guard found != nil else { return }
-                afterAlertCloses {
+                UIApplication.shared.afterAlertCloses {
                     // Read again: the wait may have outlasted the duplicate.
                     guard let found = review.duplicate else { return }
                     if UIApplication.shared.showsAlert {
@@ -196,7 +194,7 @@ struct ReviewView: View {
                 }
             }
             // Kembali is the default: the likeliest reason is a document saved before and forgotten.
-            .alert(Text(ReviewText.duplicateTitle(duplicateName)), isPresented: $duplicateShown) {
+            .alert(Text(FormText.duplicateTitle(duplicateName)), isPresented: $duplicateShown) {
                 Button(role: .cancel) {
                 } label: {
                     Text("review.goBack")
@@ -233,59 +231,16 @@ struct ReviewView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("review.type").foregroundStyle(Color.primary)
                     if let note = review.typeNote {
-                        WarningText(ReviewText.text(for: note, numberKey: review.numberKey, onType: true))
+                        WarningText(FormText.text(for: note, numberKey: review.numberKey, onType: true))
                     }
                 }
             }
         }
         .accessibilityIdentifier("review.type")
     }
-
-    private var labelSection: some View {
-        Section {
-            TextField(text: $review.label, prompt: Text("review.labelPlaceholder")) {
-                Text("review.label")
-            }
-            .focused($focusedField, equals: Self.labelFocus)
-            .autocorrectionDisabled()
-            .submitLabel(.next)
-            .onSubmit { focusField(after: Self.labelFocus) }
-            .accessibilityIdentifier("review.label")
-        } header: {
-            Text("review.label")
-        } footer: {
-            if review.labelLooksLikeANumber {
-                Label {
-                    Text("review.labelIsNumber")
-                } icon: {
-                    Image(systemName: "exclamationmark.triangle")
-                }
-                .foregroundStyle(Color(.onWarning))
-                .accessibilityIdentifier("review.labelIsNumber")
-            } else {
-                Text("review.labelHint")
-            }
-        }
-    }
-
-    private func fieldRow(_ key: String) -> some View {
-        let note = review.note(for: key)
-        var refusal: LocalizedStringResource?
-        var markReason: LocalizedStringResource?
-        if case .refusal(let problem) = note { refusal = ReviewText.reason(for: problem) }
-        if case .mark(let reason?) = note { markReason = ReviewText.reasonText(reason, numberKey: review.numberKey) }
-        let match = review.showsBirthDateMatch && key == review.numberKey
-        return FieldRow(
-            key: key, value: review.values[key] ?? "", isLast: key == review.fieldKeys.last, refusal: refusal,
-            markReason: markReason, footnote: match ? "review.birthDateMatch" : nil, focus: $focusedField,
-            voiceOverFocus: $voiceOverField, onChange: { review.setValue($0, for: key) },
-            onSubmit: { focusField(after: key) })
-    }
 }
 
 extension ReviewView {
-    private static let labelFocus = "label"
-
     /// Simpan never quietly does nothing: a wrong value takes the user to its field, with a haptic, and
     /// VoiceOver reads the reason; otherwise it asks what `ReviewModel.saveStep` says, or saves.
     private func trySave() {
@@ -304,7 +259,7 @@ extension ReviewView {
 
     private func saveWithoutNIK() {
         if review.saveStepWithoutNIK() == .askPages {
-            afterAlertCloses {
+            UIApplication.shared.afterAlertCloses {
                 // Past the wait's limit the NIK alert can still be up, and this one would never show or
                 // close; the next Simpan asks again instead.
                 if UIApplication.shared.showsAlert { review.alertAnswered() } else { otherPagesShown = true }
@@ -312,28 +267,5 @@ extension ReviewView {
         } else {
             onSave()
         }
-    }
-
-    /// Focus set, or an alert shown, while an alert is still closing can be dropped, so it waits until the
-    /// alert is off the screen, checked rather than guessed with a delay. After two seconds at most it runs
-    /// anyway.
-    private func afterAlertCloses(_ action: @escaping () -> Void) {
-        Task {
-            for _ in 0..<40 where UIApplication.shared.showsAlert {
-                try? await Task.sleep(for: .milliseconds(50))
-            }
-            action()
-        }
-    }
-
-    /// Return moves to the next field, in the order the screen shows them; after the last, the keyboard
-    /// closes.
-    private func focusField(after current: String) {
-        let order = [Self.labelFocus] + review.fieldKeys
-        guard let index = order.firstIndex(of: current), index + 1 < order.count else {
-            focusedField = nil
-            return
-        }
-        focusedField = order[index + 1]
     }
 }

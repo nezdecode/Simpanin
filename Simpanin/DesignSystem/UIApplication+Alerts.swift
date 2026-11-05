@@ -20,4 +20,16 @@ extension UIApplication {
             return top is UIAlertController
         }
     }
+
+    /// Focus set, or an alert shown, while an alert is still closing can be dropped, so this waits until the
+    /// alert is off the screen, checked rather than guessed with a delay. After two seconds at most it runs
+    /// anyway.
+    func afterAlertCloses(_ action: @escaping () -> Void) {
+        Task {
+            for _ in 0..<40 where showsAlert {
+                try? await Task.sleep(for: .milliseconds(50))
+            }
+            action()
+        }
+    }
 }
