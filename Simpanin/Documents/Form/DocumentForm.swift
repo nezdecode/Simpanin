@@ -42,12 +42,57 @@ nonisolated struct DocumentForm: Equatable, Sendable {
     private(set) var marked: [String: Set<CheckReason>]
     /// Why Simpan refused a field, shown under it until the field is edited.
     private(set) var problems: [String: FieldProblem] = [:]
+    /// The values as the form opened with them, as shown: what a change is measured against.
+    let original: [String: String]
+    /// A saved document's fields as stored, for an edit; nil after a scan.
+    private let stored: [String: String]?
 
+    /// After a scan: the values as read, with the parser's marks.
     init(type: DocumentType = .other, values: [String: String] = [:], marked: [String: Set<CheckReason>] = [:]) {
         self.type = type
         loadedType = type
         self.values = values
         self.marked = marked
+        original = values
+        stored = nil
+    }
+
+    /// A saved document, to edit. Nothing is marked: the parser's marks were never stored.
+    init(type: DocumentType, stored: DocumentFields) {
+        let shown = stored.values.reduce(into: [String: String]()) { shown, field in
+            shown[field.key] =
+                FieldDates.dateKeys.contains(field.key) ? DocumentFieldStyle.dayFirst(field.value) : field.value
+        }
+        self.type = type
+        loadedType = type
+        values = shown
+        marked = [:]
+        original = shown
+        self.stored = stored.values
+    }
+
+    /// The fields whose text differs from what the form opened with. An empty field and a missing one are
+    /// the same, so a field typed in and cleared again isn't a change.
+    var changedKeys: Set<String> {
+        Set(values.keys).union(original.keys).filter { (values[$0] ?? "") != (original[$0] ?? "") }
+    }
+
+    /// The NIK was there when the form opened and isn't now; one that was never filled in isn't asked about
+    /// again.
+    var nikEmptied: Bool {
+        nikMissing && !Self.trimmed(original[FieldKey.nik]).isEmpty
+    }
+
+    /// What Simpan stores. After a scan, every filled field, trimmed and with dates year first. In an edit,
+    /// a field nobody changed is stored exactly as it was, even one today's checks would refuse, and a key
+    /// the type doesn't show stays.
+    func savedFields() -> [String: String] {
+        var fields = stored ?? [:]
+        for key in fieldKeys where stored == nil || changedKeys.contains(key) {
+            let text = Self.trimmed(values[key])
+            fields[key] = text.isEmpty ? nil : FieldDates.dateKeys.contains(key) ? FieldDates.yearFirst(text) : text
+        }
+        return fields
     }
 
     /// The fields the chosen type has, in the order the screen shows them.
@@ -86,12 +131,18 @@ nonisolated struct DocumentForm: Equatable, Sendable {
 
     /// Judges every filled field, shows each one's reason, and returns the first wrong one in screen order.
     mutating func firstProblem() -> String? {
+        firstProblem(among: Set(fieldKeys))
+    }
+
+    /// Shows every filled field's reason, but returns only the first wrong one among `keys`: an edit is
+    /// blocked by the fields it changed, never by a value stored before today's checks.
+    mutating func firstProblem(among keys: Set<String>) -> String? {
         var first: String?
         for key in fieldKeys {
             let text = Self.trimmed(values[key])
             guard !text.isEmpty, let problem = Self.problem(with: text, for: key) else { continue }
             problems[key] = problem
-            first = first ?? key
+            if keys.contains(key) { first = first ?? key }
         }
         return first
     }

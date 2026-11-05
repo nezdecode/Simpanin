@@ -60,8 +60,7 @@ final class ReviewModel {
     private var acceptedDuplicate: DuplicateCheck.Candidate?
     /// What the pages alert said when it was answered; while the notes say the same, it isn't asked again.
     private var answeredPages: PageNotes?
-    /// What the scan read, to tell what the user changed. The type it read is the form's `loadedType`.
-    private var scanned: [String: String] = [:]
+    /// The expiry the scan read; the fields and type it read are the form's `original` and `loadedType`.
     private var scannedExpiry: CalendarDate?
 
     private let store: any DocumentStoring
@@ -93,11 +92,9 @@ final class ReviewModel {
     /// isn't a misread and gets no "Periksa lagi".
     var marksMissingExpiry: Bool { expiryMissing && type.isSIM }
 
-    var labelLooksLikeANumber: Bool { DocumentForm.looksLikeANumber(label) }
-
     /// The user changed something the scan read, a field, the type or the expiry; a new scan would
     /// replace it.
-    var hasUserChanges: Bool { values != scanned || type != form.loadedType || expiry != scannedExpiry }
+    var hasUserChanges: Bool { values != form.original || type != form.loadedType || expiry != scannedExpiry }
 
     /// After a scan or a rescan: every field comes from the new pages. The label stays. The pages and where
     /// their saved copies come from are set together, so a new pick never saves the old photos.
@@ -120,7 +117,6 @@ final class ReviewModel {
                 FieldDates.dateKeys.contains(field.key) ? DocumentFieldStyle.dayFirst(field.value) : field.value
         }
         form = DocumentForm(type: result?.type ?? .other, values: values, marked: result?.reasons ?? [:])
-        scanned = values
         scannedExpiry = result?.expiry
         typeReasons = result?.typeReasons ?? [.noDocumentRecognized]
         expiry = result?.expiry
@@ -156,14 +152,9 @@ final class ReviewModel {
         asking = false
         answeredPages = pageNotes
         defer { saving = false }
-        var fields: [String: String] = [:]
         // A value that can't be stored is never saved; its field shows why.
         guard firstProblem() == nil else { return false }
-        for key in fieldKeys {
-            let text = DocumentForm.trimmed(values[key])
-            guard !text.isEmpty else { continue }
-            fields[key] = FieldDates.dateKeys.contains(key) ? FieldDates.yearFirst(text) : text
-        }
+        let fields = form.savedFields()
         // Taken before the encode, which can take a moment: what's saved is what was shown at Simpan.
         let type = type
         let trimmedLabel = label.trimmingCharacters(in: .whitespacesAndNewlines)

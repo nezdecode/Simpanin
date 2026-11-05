@@ -101,6 +101,8 @@ private struct DateField: View {
         }
         .onAppear { draft = value }
         .onChange(of: draft) { _, typed in
+            // The value itself, set on appear, isn't typing: a stored date in another shape stays as stored.
+            guard typed != value else { return }
             let formatted = FieldDates.typedDate(typed)
             if formatted != typed { draft = formatted }
             if formatted != value { onChange(formatted) }
