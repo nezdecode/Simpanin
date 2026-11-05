@@ -30,8 +30,7 @@ In Indonesia, a photo of your KTP is asked for everywhere: renting a room, openi
 The order can change; nothing below is promised by a date.
  
 - **In progress:** editing a saved document's fields, to fill in or correct what the scan missed.
-- **Before the first release** (App Store, Indonesia): saying plainly in the app that documents stay on this phone, and final checks on a device.
-- **After the first release, as updates:** full editing (type and pages), expiry reminders, reading passports and STNK, English, an accessibility pass, more options for the shared copy's mark, and import from Files.
+- **Upcoming soon:** full editing (type and pages), expiry reminders, reading passports and STNK, English, an accessibility pass, more options for the shared copy's mark, and import from Files.
 
 ## How documents are protected
  
