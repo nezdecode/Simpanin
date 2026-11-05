@@ -1,5 +1,5 @@
 //
-//  ReviewModel+Dates.swift
+//  FieldDates.swift
 //  Simpanin
 //
 //  Created by Inez Amanda on 27/10/26.
@@ -13,7 +13,8 @@ import Foundation
 import Parsers
 import VaultCore
 
-extension ReviewModel {
+/// How a date field is typed and stored: day first on screen, as on the card, YYYY-MM-DD in the vault.
+nonisolated enum FieldDates {
     /// Digits as dd-mm-yyyy, for a number pad. A dash only goes before a digit, so backspace can remove it.
     static func typedDate(_ text: String) -> String {
         var result = ""

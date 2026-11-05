@@ -22,7 +22,7 @@ MAY_USE = {
     'App': {'Platform', 'Documents', 'DesignSystem', 'Debug'},
     'Features': {'Platform', 'Documents', 'DesignSystem', 'Debug'},
     'DesignSystem': set(),  # no domain: no Platform, Documents or feature types
-    'Documents': {'Platform'},
+    'Documents': {'Platform', 'DesignSystem'},
     'Platform': set(),  # knows nothing about features
 }
 

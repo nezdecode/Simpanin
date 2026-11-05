@@ -120,7 +120,7 @@ final class ReviewModel {
         type = result?.type ?? .other
         values = (result?.fields.values ?? [:]).reduce(into: [:]) { shown, field in
             shown[field.key] =
-                Self.dateKeys.contains(field.key) ? DocumentFieldStyle.dayFirst(field.value) : field.value
+                FieldDates.dateKeys.contains(field.key) ? DocumentFieldStyle.dayFirst(field.value) : field.value
         }
         scanned = values
         scannedType = type
@@ -139,7 +139,7 @@ final class ReviewModel {
     }
 
     func setValue(_ text: String, for key: String) {
-        let text = Self.dateKeys.contains(key) ? Self.typedDate(text) : text
+        let text = FieldDates.dateKeys.contains(key) ? FieldDates.typedDate(text) : text
         // A field writes its value back when it takes focus; that isn't an edit, and its reason stays.
         guard text != values[key] ?? "" else { return }
         values[key] = text
@@ -148,7 +148,7 @@ final class ReviewModel {
         marked[key] = nil
         problems[key] = nil
         // A complete date is judged at once; a half-typed one only when Simpan is tapped.
-        if Self.dateKeys.contains(key), let typed = values[key], typed.count == "dd-mm-yyyy".count {
+        if FieldDates.dateKeys.contains(key), let typed = values[key], typed.count == "dd-mm-yyyy".count {
             problems[key] = Self.problem(with: typed, for: key)
         }
         if key == numberKey || key == FieldKey.birthDate { checkNumberAgainstBirthDate() }
@@ -158,7 +158,7 @@ final class ReviewModel {
     /// and when they disagree either could be wrong. Only that reason changes; any other stays.
     private func checkNumberAgainstBirthDate() {
         guard let number = numberKey,
-            let birth = Self.yearFirst(values[FieldKey.birthDate] ?? "").flatMap(CalendarDate.init),
+            let birth = FieldDates.yearFirst(values[FieldKey.birthDate] ?? "").flatMap(CalendarDate.init),
             // Dashes and spaces are only for display. An old SIM's 14 digits hold no date, so they give nil.
             let agrees = NIK.agrees(
                 values[number, default: ""].filter(\.isASCIIDigit), withBirthDate: birth)
@@ -205,7 +205,7 @@ final class ReviewModel {
         for key in fieldKeys {
             let text = Self.trimmed(values[key])
             guard !text.isEmpty else { continue }
-            fields[key] = Self.dateKeys.contains(key) ? Self.yearFirst(text) : text
+            fields[key] = FieldDates.dateKeys.contains(key) ? FieldDates.yearFirst(text) : text
         }
         // Taken before the encode, which can take a moment: what's saved is what was shown at Simpan.
         let type = type
@@ -381,8 +381,8 @@ extension ReviewModel {
         if key == FieldKey.nik {
             return NIK.isWellFormed(text) ? nil : .nikLength
         }
-        guard dateKeys.contains(key) else { return nil }
-        guard let date = yearFirst(text).flatMap(CalendarDate.init) else { return .notADate }
+        guard FieldDates.dateKeys.contains(key) else { return nil }
+        guard let date = FieldDates.yearFirst(text).flatMap(CalendarDate.init) else { return .notADate }
         return key == FieldKey.birthDate && date > .today ? .birthDateInFuture : nil
     }
 }

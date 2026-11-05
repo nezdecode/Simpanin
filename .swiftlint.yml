@@ -103,12 +103,12 @@ custom_rules:
     included: "/Simpanin/DesignSystem/.*\\.swift"
     regex: "^\\s*(@\\w+\\s+)*((public|package|internal|fileprivate|private)\\s+)?import\\s+(\\w+\\s+)?(VaultCore|Parsers)\\b"
     severity: error
-  # The duplicate check reads saved fields only. VaultStore also conforms to PageReading, so Scan never
-  # names either, and no cast can reach a saved document's pages from there.
+  # The duplicate check reads saved fields only. VaultStore also conforms to PageReading, so Scan and the
+  # check never name either, and no cast can reach a saved document's pages from there.
   scan_without_pages:
     name: Scan never reads saved pages
-    message: "Features/Scan/ never mentions PageReading or VaultStore: it reads saved fields through DocumentStoring only, never pages."
-    included: "/Simpanin/Features/Scan/.*\\.swift"
+    message: "Features/Scan/ and the duplicate check never mention PageReading or VaultStore: they read saved fields through DocumentStoring only, never pages."
+    included: "/Simpanin/(Features/Scan/.*|Documents/DuplicateCheck)\\.swift"
     regex: "\\b(PageReading|VaultStore)\\b"
     excluded_match_kinds: [comment, doccomment]
     severity: error

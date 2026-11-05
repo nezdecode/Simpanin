@@ -61,11 +61,11 @@ extension ReviewModelTests {
 
     /// Typed on a number pad: the dashes come by themselves, and only before a digit, so deleting one works.
     @Test func typedDatesGetDashes() {
-        #expect(ReviewModel.typedDate("17") == "17")
-        #expect(ReviewModel.typedDate("170") == "17-0")
-        #expect(ReviewModel.typedDate("17081990") == "17-08-1990")
-        #expect(ReviewModel.typedDate("17-08-1990") == "17-08-1990")
-        #expect(ReviewModel.typedDate("17/08/19901") == "17-08-1990")
+        #expect(FieldDates.typedDate("17") == "17")
+        #expect(FieldDates.typedDate("170") == "17-0")
+        #expect(FieldDates.typedDate("17081990") == "17-08-1990")
+        #expect(FieldDates.typedDate("17-08-1990") == "17-08-1990")
+        #expect(FieldDates.typedDate("17/08/19901") == "17-08-1990")
     }
 
     /// An edit that makes the birth date and the NIK disagree marks both: either could be the wrong one.

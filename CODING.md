@@ -16,7 +16,7 @@ Simpanin has two parts: a core that keeps documents safe, and an app around it.
 | --- | --- |
 | `App/` | The entry point and `RootView`, which puts the features together, with `CoverWindow`, the window that covers every screen. |
 | `Features/<Feature>/` | One folder per feature: something the user can name (`Library`, `Scan`, `Settings`, `Lock`, `Onboarding`), with its views and models side by side. |
-| `Documents/` | How a document reads: `DocumentStyle`, `ExpiryText`, dates in Indonesian and on calendar days. |
+| `Documents/` | How a document reads: `DocumentStyle`, `ExpiryText`, dates in Indonesian and on calendar days, and the form a scan and an edit share (`Form/`). |
 | `Platform/` | The app's side of VaultCore and iOS: `Vault/` (`AppVault`, which creates the one `VaultStore`, the Keychain, file protection), `Lock/` (`LockController`, the engine that locks and unlocks, and the recovery table), `Logging/` and `System/` (build settings, system links). |
 | `DesignSystem/` | Views, styles, texts and helpers that know nothing of the domain: no VaultCore, `Documents/` or feature types. |
 | `Resources/` | The asset catalog (colours, icon) and the string catalog. |
@@ -30,7 +30,7 @@ Five rules keep the folders honest:
 4. **There's no folder for extensions.** An extension sits beside its user or in its domain's folder; one that two or more features use goes to `DesignSystem/` (UI) or `Platform/` (system).
 5. **`Platform/` knows nothing about features.** It reports the vault's state and errors; which screen shows is a feature's decision. (For now the recovery table and its texts still live with the lock engine in `Platform/Lock/`, until they're split.)
 
-Below the features, the layers go one way: `Documents/` may use `Platform/`, `Platform/` and `DesignSystem/` use none of the others, and `App/` may use all of them. `Debug/` may reach anything and anything may reach it, inside `#if DEBUG`.
+Below the features, the layers go one way: `Documents/` may use `Platform/` and `DesignSystem/`, `Platform/` and `DesignSystem/` use none of the others, and `App/` may use all of them. `Debug/` may reach anything and anything may reach it, inside `#if DEBUG`.
 
 `scripts/check-folder-rules.py` checks these rules before every commit. It matches type names, so it doesn't see members added in extensions of system types (such as `Calendar.gregorianUTC`) or global functions; review catches those.
 
@@ -152,7 +152,7 @@ Once a format ships, it stays. Don't change a key derivation label, an associate
 
 ## 11. Style
 
-swift-format handles layout (`.swift-format`); SwiftLint handles naming, size, file headers and the rules above that a tool can check (`.swiftlint.yml`): colours by name, VaultCore's file names outside VaultCore, hand-built date formats, `print` and friends, common British spellings in identifiers, `@unchecked Sendable` and `nonisolated(unsafe)` (an agreed one is disabled for its line, with the reason), a doc comment with a blank line under it, VaultCore or Parsers imported into `DesignSystem/`, and `PageReading` or `VaultStore` named in `Features/Scan/`, which reads saved fields but never pages. The hooks check the rest before every commit (CONTRIBUTING.md, Setup). Before you commit:
+swift-format handles layout (`.swift-format`); SwiftLint handles naming, size, file headers and the rules above that a tool can check (`.swiftlint.yml`): colours by name, VaultCore's file names outside VaultCore, hand-built date formats, `print` and friends, common British spellings in identifiers, `@unchecked Sendable` and `nonisolated(unsafe)` (an agreed one is disabled for its line, with the reason), a doc comment with a blank line under it, VaultCore or Parsers imported into `DesignSystem/`, and `PageReading` or `VaultStore` named in `Features/Scan/` or the duplicate check, which read saved fields but never pages. The hooks check the rest before every commit (CONTRIBUTING.md, Setup). Before you commit:
 
 ```sh
 swift format format -i -r Packages/VaultCore Simpanin SimpaninTests SimpaninUITests
