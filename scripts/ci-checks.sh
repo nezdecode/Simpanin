@@ -41,7 +41,8 @@ for commit in $commits; do
     "commit $(git rev-parse --short "$commit")"
 done
 
-# Numbers that might be NIKs, paths into docs/, the private specification by name, unchecked_sendable.
+# Numbers that might be NIKs, paths into docs/, the private specification by name, unchecked_sendable,
+# Release's bundle id and groups.
 python3 scripts/commit-checks.py staged --all || failed=1
 refused_files "$(git ls-files -z | tr '\0' '\n')" "the tree"
 python3 scripts/check-folder-rules.py || failed=1

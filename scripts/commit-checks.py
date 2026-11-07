@@ -109,12 +109,89 @@ def header_problems(all_files):
     return problems
 
 
+PROJECT = 'Simpanin.xcodeproj/project.pbxproj'
+# What the App Store app is known by. Changing one after release orphans every vault, its key or its projection,
+# so Release keeps these whatever Debug uses. The team is in it because its prefix is part of the Keychain group.
+RELEASE_SETTINGS = {
+    'PRODUCT_BUNDLE_IDENTIFIER': 'com.inez.Simpanin',
+    'SIMPANIN_APP_GROUP': 'group.com.inez.Simpanin',
+    'SIMPANIN_KEYCHAIN_GROUP': 'simpanin.vault',
+    'INFOPLIST_KEY_CFBundleDisplayName': 'Simpanin',
+    'CODE_SIGN_ENTITLEMENTS': 'Config/Simpanin.entitlements',
+    'DEVELOPMENT_TEAM': 'NLM7SY7FHH',
+}
+# Every other configuration needs its own of these, or a development build reaches the App Store app's vault.
+OWN_IN_EVERY_BUILD = ['PRODUCT_BUNDLE_IDENTIFIER', 'SIMPANIN_APP_GROUP', 'SIMPANIN_KEYCHAIN_GROUP']
+# KEY = value; or "KEY[sdk=iphoneos*]" = value; with the value quoted or not.
+BUILD_SETTING = re.compile(r'^\s*"?(\w+)(\[[^\]]*\])?"? = "?([^";]*)"?;$', re.M)
+# Both files take the groups from those settings, so they can't drift from each other or from Release.
+READS_THE_GROUPS = {
+    'Config/Info.plist': ['<string>$(SIMPANIN_APP_GROUP)</string>',
+                          '<string>$(AppIdentifierPrefix)$(SIMPANIN_KEYCHAIN_GROUP)</string>'],
+    'Config/Simpanin.entitlements': ['<string>$(SIMPANIN_APP_GROUP)</string>',
+                                     '<string>$(AppIdentifierPrefix)$(SIMPANIN_KEYCHAIN_GROUP)</string>'],
+}
+BUILD_CONFIGURATION = re.compile(
+    r'/\* (\w+) \*/ = \{\s*isa = XCBuildConfiguration;\s*buildSettings = \{(.*?)\n\t\t\t\};\s*name = (\w+);', re.S)
+
+
+def release_identity_problems(all_files):
+    """The app's Release configuration keeps the App Store app's identity, and no other configuration shares it."""
+    def read(path):
+        if not all_files:
+            return git('show', f':{path}', check=False)
+        try:
+            return open(path, encoding='utf-8').read()
+        except FileNotFoundError:
+            return ''
+
+    problems = []
+    # The app's configurations are the ones built from Config/Info.plist; the test targets have none.
+    builds = {}
+    for _, block, name in BUILD_CONFIGURATION.findall(read(PROJECT)):
+        settings = BUILD_SETTING.findall(block)
+        if ('INFOPLIST_FILE', '', 'Config/Info.plist') in settings:
+            builds[name] = settings
+    if 'Release' not in builds:
+        problems.append(f"{PROJECT}: can't find the app's Release configuration (INFOPLIST_FILE = Config/Info.plist)")
+        return problems
+    for name, settings in builds.items():
+        # An SDK or architecture variant would replace the value for some builds only, out of sight of this check.
+        for key, condition, _ in settings:
+            if condition and key in RELEASE_SETTINGS:
+                problems.append(f'{PROJECT}: {name} sets {key}{condition}; give it one value for every build')
+    release = {key: value for key, condition, value in builds['Release'] if not condition}
+    for key, value in RELEASE_SETTINGS.items():
+        if release.get(key) != value:
+            problems.append(f'{PROJECT}: Release must keep {key} = {value}; the App Store app is known by it')
+    for name, settings in builds.items():
+        if name == 'Release':
+            continue
+        values = {key: value for key, condition, value in settings if not condition}
+        if values.get('CODE_SIGN_ENTITLEMENTS') != RELEASE_SETTINGS['CODE_SIGN_ENTITLEMENTS']:
+            problems.append(f'{PROJECT}: {name} must sign with Config/Simpanin.entitlements, which reads the groups')
+        for key in OWN_IN_EVERY_BUILD:
+            if not values.get(key):
+                problems.append(f'{PROJECT}: {name} needs its own {key}')
+            elif values[key] == RELEASE_SETTINGS[key]:
+                problems.append(f"{PROJECT}: {name} has Release's {key}, so it would reach the App Store app's vault")
+    for path, needed in READS_THE_GROUPS.items():
+        text = read(path)
+        for line in needed:
+            if line not in text:
+                problems.append(f'{path}: must read {line}, so Debug and Release each get their own group')
+        if re.search(r'group\.com\.inez|simpanin\.vault', text):
+            problems.append(f'{path}: names a group itself; take it from SIMPANIN_APP_GROUP or SIMPANIN_KEYCHAIN_GROUP')
+    return problems
+
+
 def staged(all_files):
     problems = []
     if not all_files and git('symbolic-ref', '--short', '-q', 'HEAD', check=False).strip() == 'main':
         problems.append('this is main: commit on a branch, and merge through a pull request (CONTRIBUTING.md)')
     problems += line_problems(changed_lines(all_files))
     problems += header_problems(all_files)
+    problems += release_identity_problems(all_files)
     return problems
 
 
