@@ -146,6 +146,7 @@ struct EditDocumentView: View {
         }
         // Nothing in the form changes while a save is being written.
         .disabled(model.saving)
+        .keepsFieldCopiesLocal(model.form.shownValues, whileEditing: focusedField != nil)
         // The number pad has no Return: Selesai in the bar, or a swipe down the form, closes it.
         .scrollDismissesKeyboard(.interactively)
     }

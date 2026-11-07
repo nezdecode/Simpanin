@@ -79,6 +79,7 @@ struct ReviewView: View {
             }
             // Nothing in the form changes while a save is being written.
             .disabled(review.saving)
+            .keepsFieldCopiesLocal(review.form.shownValues, whileEditing: focusedField != nil)
             // The number pad has no Return: Selesai in the bar, or a swipe down the form, closes it.
             .scrollDismissesKeyboard(.interactively)
             .navigationTitle(Text("review.title"))

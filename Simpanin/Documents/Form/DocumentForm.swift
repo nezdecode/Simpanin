@@ -98,6 +98,9 @@ nonisolated struct DocumentForm: Equatable, Sendable {
     /// The fields the chosen type has, in the order the screen shows them.
     var fieldKeys: [String] { DocumentFieldStyle.keys(for: type) }
 
+    /// The text of each field the screen shows.
+    var shownValues: [String] { fieldKeys.compactMap { values[$0] } }
+
     /// The field whose digits hold the birth date: a KTP's NIK, or a SIM's number.
     var numberKey: String? { fieldKeys.first { $0 == FieldKey.nik || $0 == FieldKey.simNumber } }
 
