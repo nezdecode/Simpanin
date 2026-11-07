@@ -20,6 +20,7 @@ Before every commit, the hooks in `scripts/hooks` refuse:
 - a new Swift file whose header doesn't name you, as Xcode does, or is dated after today (headers use d/M/yy);
 - a path into the private notes folder, or a reference to the private specification by name, in a public file or a commit message;
 - `unchecked_sendable` switched off for more than one line, or without ` - <reason>`;
+- a Release configuration with another bundle id, App Group, Keychain group, name or team, a Debug configuration that shares one of Release's, or an Info.plist or entitlements file that names a group instead of reading the build settings;
 - a message that isn't `type(scope): subject` (below), runs past 100 characters, or credits an AI.
 
 Never skip them with `--no-verify`; if one is wrong, fix the check.
@@ -32,7 +33,7 @@ scripts/test.sh --only SimpaninTests # one target, or Target/Class; repeat --onl
 scripts/install-device.sh            # build, and install on your iPhone only if the build succeeded
 ```
 
-`test.sh` fails when no test ran, which `xcodebuild` reports as a success. Without the iOS 27 iPhone 17 simulator, name another with `SIMPANIN_SIMULATOR=<id>`. `install-device.sh` lets Xcode renew a provisioning profile or register your iPhone in your developer account; with several iPhones, name one with `SIMPANIN_DEVICE=<udid>`. Piping a script into `tail` hides its exit status, so check the last lines it prints.
+`test.sh` fails when no test ran, which `xcodebuild` reports as a success. Without the iOS 27 iPhone 17 simulator, name another with `SIMPANIN_SIMULATOR=<id>`. `install-device.sh` installs the Debug build, Simpanin Dev, which sits beside the App Store app with a vault of its own. It lets Xcode renew a provisioning profile or register your iPhone in your developer account; with several iPhones, name one with `SIMPANIN_DEVICE=<udid>`. Piping a script into `tail` hides its exit status, so check the last lines it prints.
 
 ## Privacy
 
