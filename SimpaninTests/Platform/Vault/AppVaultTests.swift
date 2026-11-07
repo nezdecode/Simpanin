@@ -43,6 +43,13 @@ struct AppVaultTests {
         #expect(faceID == "Simpanin memakai Face ID untuk membuka vault dokumenmu.")
     }
 
+    @Test func infoPlistNamesTheAppAndItsCategory() {
+        #expect(Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String == "Simpanin")
+        #expect(
+            Bundle.main.object(forInfoDictionaryKey: "LSApplicationCategoryType") as? String
+                == "public.app-category.utilities")
+    }
+
     @Test func appGroupContainerIsAvailable() throws {
         let group = try #require(AppConfiguration.appGroup)
         #expect(FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: group) != nil)
