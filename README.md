@@ -22,7 +22,7 @@ In Indonesia, a photo of your KTP is asked for everywhere: renting a room, openi
 - **Adding documents**: scan a KTP or SIM with the document camera, or pick a photo from Photos. Text is read on the phone with Apple's Vision framework, and the user checks every field before saving.
 - **Checks while saving**: fields that may be misread are marked with a reason, a document already in the vault is flagged, and pages from different documents in one scan are pointed out.
 - **The document screen**: the number stays masked until tapped, a copied number leaves the clipboard after 60 seconds and never syncs to other devices, and pages open full screen.
-- **Editing a document**: fill in or correct a saved document's label, fields and expiry, with the same checks as a new scan.
+- **Editing a document**: fill in or correct a saved document's label, fields and expiry. A wrong value is refused, and a changed number is checked against the documents already in the vault.
 - **Sharing a marked copy**: every page carries the purpose and date across it; the stored document never changes, and the copies are deleted once shared.
 - **Recently deleted**: documents are kept for 30 days before they're purged.
 
