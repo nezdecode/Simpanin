@@ -16,14 +16,17 @@ import VaultCore
 /// it's read-only, with Pulihkan and Hapus permanen.
 struct DocumentDetailView: View {
     let today: CalendarDate
-    /// The user hid it from the expiry banner, so the screen offers "Tampilkan lagi".
-    let hiddenFromBanner: Bool
+    /// The user hid it from the expiry banner, so the screen offers "Tampilkan lagi". Read in `body`, so it
+    /// goes once an edit gives the document another expiry.
+    let hiddenFromBanner: () -> Bool
     let onShowInBanner: () -> Void
     /// Whether the document is still in the list it was opened from. Read in `body`, so the screen hears when
     /// a restore from Baru dihapus's row lands after the row was tapped, and closes instead of showing a live
     /// document as deleted. The screen under it doesn't hear changes while this one covers it.
     let isListed: () -> Bool
+    private let store: any DocumentStoring
     private let pageReader: any PageReading
+    private let onEdited: () async -> Void
     private let onShareSheetShown: () -> Void
     private let onShareSheetEnded: () -> Void
     @State private var model: DocumentDetailModel
@@ -35,19 +38,27 @@ struct DocumentDetailView: View {
     @State private var attempt = 0
     @State private var purgeAsked = false
     @State private var shareShown = false
+    @State private var editShown = false
+    /// The vault has the edit; the screen reads it again once the sheet has closed.
+    @State private var editSaved = false
+    /// Bumped when a saved edit's sheet has closed, so SwiftUI owns the reread and cancels it with the screen.
+    @State private var edits = 0
     @Namespace private var transition
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
 
     init(
         document: VaultCore.Document, store: any DocumentStoring & PageReading, today: CalendarDate,
-        hiddenFromBanner: Bool, isListed: @escaping () -> Bool,
+        hiddenFromBanner: @escaping () -> Bool, isListed: @escaping () -> Bool,
         onShowInBanner: @escaping () -> Void, onDelete: @escaping (DocumentID) async -> Bool,
         onRestore: @escaping (DocumentID) async -> Bool, onDeletePermanently: @escaping (DocumentID) async -> Bool,
-        onShareSheetShown: @escaping () -> Void, onShareSheetEnded: @escaping () -> Void
+        onEdited: @escaping () async -> Void, onShareSheetShown: @escaping () -> Void,
+        onShareSheetEnded: @escaping () -> Void
     ) {
         self.today = today
+        self.store = store
         pageReader = store
+        self.onEdited = onEdited
         self.onShareSheetShown = onShareSheetShown
         self.onShareSheetEnded = onShareSheetEnded
         self.hiddenFromBanner = hiddenFromBanner
@@ -67,6 +78,11 @@ struct DocumentDetailView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toast($model.toast)
             .task(id: attempt) { await model.load() }
+            .task(id: edits) {
+                guard edits > 0 else { return }
+                await model.edited()
+                await onEdited()
+            }
             .onDisappear { model.screenLeft() }
             .onChange(of: scenePhase) { _, phase in
                 if phase == .background { model.appLeftForeground() }
@@ -109,6 +125,31 @@ struct DocumentDetailView: View {
                         }
                         .accessibilityIdentifier("detail.share")
                     }
+                }
+                if model.canEdit {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button {
+                            model.editOpened()
+                            editShown = true
+                        } label: {
+                            Text("detail.edit")
+                        }
+                        .accessibilityIdentifier("detail.edit")
+                    }
+                }
+            }
+            // Not while it closes: the reread clears the fields the sheet is still drawing.
+            .sheet(isPresented: $editShown) {
+                if editSaved {
+                    editSaved = false
+                    edits += 1
+                }
+            } content: {
+                if let fields = model.fieldsToEdit {
+                    EditDocumentView(
+                        document: document, fields: fields, store: store, pages: model.pages,
+                        thumbnail: model.thumbnail, fullPage: model.fullPage,
+                        onSaved: { editSaved = true })
                 }
             }
             .sheet(isPresented: $shareShown) {
@@ -173,7 +214,7 @@ struct DocumentDetailView: View {
             Section {
                 validity
             } footer: {
-                if hiddenFromBanner, !model.isDeleted { bannerLine }
+                if hiddenFromBanner(), !model.isDeleted { bannerLine }
             }
             if model.isDeleted {
                 deletedActions

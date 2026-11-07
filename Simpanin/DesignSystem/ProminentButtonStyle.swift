@@ -22,6 +22,7 @@ struct ProminentButtonStyle: PrimitiveButtonStyle {
 
     var emphasis: Emphasis = .primary
     var fillsWidth = true
+    @Environment(\.isEnabled) private var isEnabled
 
     func makeBody(configuration: Configuration) -> some View {
         Button(role: configuration.role, action: configuration.trigger) {
@@ -33,7 +34,19 @@ struct ProminentButtonStyle: PrimitiveButtonStyle {
         .buttonStyle(.borderedProminent)
         .buttonBorderShape(.roundedRectangle(radius: 14))
         .tint(emphasis == .primary ? .accentColor : Color(.accentSoft))
-        .foregroundStyle(emphasis == .primary ? Color(.onAccent) : Color(.onAccentSoft))
+        .foregroundStyle(foreground)
+        // Disabled, the system's fill is see-through, and a form scrolling under a bottom bar showed through it.
+        .background {
+            if !isEnabled {
+                RoundedRectangle(cornerRadius: 14).fill(Color(.systemBackground))
+            }
+        }
+    }
+
+    /// Disabled, the title is grey like the system's, not the accent's text colour on a grey fill.
+    private var foreground: Color {
+        guard isEnabled else { return .secondary }
+        return emphasis == .primary ? Color(.onAccent) : Color(.onAccentSoft)
     }
 }
 

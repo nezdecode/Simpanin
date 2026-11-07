@@ -136,7 +136,7 @@ struct ReviewView: View {
             // over the keyboard.
             .safeAreaInset(edge: .bottom) {
                 if focusedField == nil {
-                    SaveBar(saving: review.saving, isDisabled: reading, onSave: trySave)
+                    SaveBar(title: "review.save", saving: review.saving, isDisabled: reading, onSave: trySave)
                 }
             }
             .sheet(isPresented: $typePickerShown) {

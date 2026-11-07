@@ -430,6 +430,28 @@
         }
       }
     },
+    "detail.edit" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edit"
+          }
+        }
+      }
+    },
+    "detail.editSaved" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Perubahan disimpan"
+          }
+        }
+      }
+    },
     "detail.hidden" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -602,6 +624,61 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nomor SIM disalin"
+          }
+        }
+      }
+    },
+    "edit.discardMessage" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Perubahan yang belum disimpan akan hilang."
+          }
+        }
+      }
+    },
+    "edit.discardTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buang perubahan?"
+          }
+        }
+      }
+    },
+    "edit.keepEditing" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lanjut edit"
+          }
+        }
+      }
+    },
+    "edit.save" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Simpan"
+          }
+        }
+      }
+    },
+    "edit.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edit dokumen"
           }
         }
       }

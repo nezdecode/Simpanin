@@ -11,9 +11,10 @@
 
 import SwiftUI
 
-/// "Simpan ke vault" under Periksa data. Preparing photos for the vault takes a few seconds, so while a
-/// save runs it says "Menyimpan…".
+/// The save button at the bottom of a form, like "Simpan ke vault" under Periksa data. Preparing photos for
+/// the vault takes a few seconds, so while a save runs it says "Menyimpan…".
 struct SaveBar: View {
+    let title: LocalizedStringResource
     let saving: Bool
     let isDisabled: Bool
     let onSave: () -> Void
@@ -26,7 +27,7 @@ struct SaveBar: View {
                     Text("review.saving")
                 }
             } else {
-                Text("review.save")
+                Text(title)
             }
         }
         .buttonStyle(.prominent)
