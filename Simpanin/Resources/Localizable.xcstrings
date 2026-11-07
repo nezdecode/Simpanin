@@ -1035,6 +1035,17 @@
         }
       }
     },
+    "notice.editDropped" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Perubahan yang belum disimpan dibuang karena Simpanin terkunci. Edit lagi kalau perlu."
+          }
+        }
+      }
+    },
     "notice.newestChangeMayBeLost" : {
       "extractionState" : "manual",
       "localizations" : {

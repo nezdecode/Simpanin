@@ -186,6 +186,7 @@ struct LibraryView: View {
             },
             onShowInBanner: { library.showInBanner(document.id) }, onDelete: library.delete,
             onRestore: library.restore, onDeletePermanently: library.deletePermanently, onEdited: library.reload,
+            onEditUnsaved: lock.editChanged,
             onShareSheetShown: lock.shareSheetShown, onShareSheetEnded: lock.shareSheetEnded)
     }
 

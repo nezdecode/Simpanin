@@ -22,6 +22,7 @@ struct EditDocumentView: View {
     private let thumbnail: (Int) -> CGImage?
     private let fullPage: (Int) async -> CGImage?
     private let onSaved: () -> Void
+    private let onUnsavedChange: (Bool) -> Void
     @State private var page = 0
     @State private var viewerShown = false
     @State private var viewerPage = 0
@@ -40,17 +41,21 @@ struct EditDocumentView: View {
     @Namespace private var transition
     @Environment(\.dismiss) private var dismiss
 
-    /// - Parameter onSaved: runs the moment the vault has the edit, before the sheet closes.
+    /// - Parameters:
+    ///   - onSaved: runs the moment the vault has the edit, before the sheet closes.
+    ///   - onUnsavedChange: whether the sheet holds changes a lock would drop.
     init(
         document: VaultCore.Document, fields: DocumentFields, store: any DocumentStoring,
         pages: [DocumentDetailModel.PageState], thumbnail: @escaping (Int) -> CGImage?,
-        fullPage: @escaping (Int) async -> CGImage?, onSaved: @escaping () -> Void
+        fullPage: @escaping (Int) async -> CGImage?, onSaved: @escaping () -> Void,
+        onUnsavedChange: @escaping (Bool) -> Void
     ) {
         _model = State(initialValue: EditDocumentModel(document: document, fields: fields, store: store))
         self.pages = pages
         self.thumbnail = thumbnail
         self.fullPage = fullPage
         self.onSaved = onSaved
+        self.onUnsavedChange = onUnsavedChange
     }
 
     var body: some View {
@@ -72,14 +77,23 @@ struct EditDocumentView: View {
                 }
                 .task(id: saves) {
                     guard saves > 0 else { return }
-                    if await model.save(onSaved: onSaved) { dismiss() }
+                    let saved = await model.save {
+                        // Before anything else runs, so a lock right after never calls the edit dropped.
+                        onUnsavedChange(false)
+                        onSaved()
+                    }
+                    if saved { dismiss() }
                 }
+                .onChange(of: model.hasChanges, initial: true) { _, changed in onUnsavedChange(changed) }
                 .sensoryFeedback(.error, trigger: refusals)
                 // A field is judged once it's left, as typing is done.
                 .onChange(of: focusedField) { left, _ in
                     if let left { model.fieldLeft(left) }
                 }
-                .discardAlert(isPresented: $discardConfirmShown) { dismiss() }
+                .discardAlert(isPresented: $discardConfirmShown) {
+                    onUnsavedChange(false)
+                    dismiss()
+                }
                 .nikMissingAlert(isPresented: $nikMissingShown, onFill: fillNIK, onSave: saveWithoutNIK)
                 .duplicateAlert(model: model, isPresented: $duplicateShown, name: $duplicateName) { saves += 1 }
                 .saveErrorAlert(error: $model.saveError)

@@ -332,6 +332,40 @@ struct NoticeTests {
         #expect(!controller.notices.contains(.scanDropped))
     }
 
+    /// The lock takes Edit dokumen away with its changes; after unlocking the user is told, once.
+    @Test func aLockDuringAChangedEditSaysSoAfterUnlock() async {
+        let controller = await unlocked()
+        controller.editChanged(true)
+        await controller.lock()
+        await controller.unlock()
+        #expect(controller.notices.contains(.editDropped))
+        controller.dismiss(.editDropped)
+        await controller.lock()
+        await controller.unlock()
+        #expect(!controller.notices.contains(.editDropped))
+    }
+
+    /// An edit with nothing changed, or changed back, loses nothing.
+    @Test func anUnchangedEditDropsNothing() async {
+        let controller = await unlocked()
+        controller.editChanged(true)
+        controller.editChanged(false)
+        await controller.lock()
+        await controller.unlock()
+        #expect(!controller.notices.contains(.editDropped))
+    }
+
+    /// The sheet reports the edit saved the moment the vault has it, so a lock right after says nothing.
+    @Test func aLockAfterTheEditSavedSaysNothing() async {
+        let controller = await unlocked()
+        controller.editChanged(true)
+        // What the sheet's onSaved reports.
+        controller.editChanged(false)
+        await controller.lock()
+        await controller.unlock()
+        #expect(controller.notices.isEmpty)
+    }
+
     /// NoticeList only shows what's in its order, so a notice missing there would never appear.
     @Test func everyNoticeIsListed() {
         #expect(Set(NoticeList.order) == Set(VaultNotice.allCases))

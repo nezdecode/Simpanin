@@ -168,6 +168,59 @@ final class EditDocumentUITests: UITestCase {
         XCTAssertEqual(app.textFields["review.label"].value as? String, "Kantor")
     }
 
+    /// A lock takes the sheet away with its change, and after unlocking the list says so.
+    @MainActor
+    func testALockDuringAChangedEditDropsItAndSaysSo() throws {
+        let app = launch()
+        lockImmediately(app)
+        open(app, samples: 1, tile: "Saya")
+        openEdit(app)
+        replace(app.textFields["review.label"], with: "Kantor")
+        app.navigationBars.buttons["edit.done"].tap()
+        XCUIDevice.shared.press(.home)
+        // Coming back locks the vault; in UI tests the unlock prompt that follows succeeds by itself.
+        app.activate()
+        let notice = app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH 'Perubahan yang belum disimpan'"))
+        XCTAssertTrue(notice.firstMatch.waitForExistence(timeout: 10))
+        XCTAssertTrue(tile(app, "Saya").exists)
+    }
+
+    /// Enlarging a page covers the sheet for a moment, but its changes are still there, so a lock after says so.
+    @MainActor
+    func testALockAfterTheViewerStillSaysTheEditWasDropped() throws {
+        let app = launch()
+        lockImmediately(app)
+        open(app, samples: 1, tile: "Saya")
+        openEdit(app)
+        replace(app.textFields["review.label"], with: "Kantor")
+        app.navigationBars.buttons["edit.done"].tap()
+        let all = app.descendants(matching: .any).matching(identifier: "detail.pages")
+        XCTAssertTrue(all.element(boundBy: 1).waitForExistence(timeout: 5))
+        try XCTUnwrap(all.allElementsBoundByIndex.last { $0.isHittable }).tap()
+        let close = app.buttons["viewer.close"]
+        XCTAssertTrue(close.waitForExistence(timeout: 5))
+        close.tap()
+        XCTAssertTrue(app.navigationBars["Edit dokumen"].waitForExistence(timeout: 5))
+        XCUIDevice.shared.press(.home)
+        app.activate()
+        let notice = app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH 'Perubahan yang belum disimpan'"))
+        XCTAssertTrue(notice.firstMatch.waitForExistence(timeout: 10))
+    }
+
+    /// An edit with nothing changed loses nothing, so the lock says nothing about it.
+    @MainActor
+    func testALockDuringAnUnchangedEditSaysNothing() throws {
+        let app = launch()
+        lockImmediately(app)
+        open(app, samples: 1, tile: "Saya")
+        openEdit(app)
+        XCUIDevice.shared.press(.home)
+        app.activate()
+        XCTAssertTrue(tile(app, "Saya").waitForExistence(timeout: 10))
+        let notice = app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH 'Perubahan yang belum disimpan'"))
+        XCTAssertFalse(notice.firstMatch.exists)
+    }
+
     /// At the largest text size the sheet opens, and its rows further down are reached by scrolling.
     @MainActor
     func testEditAtTheLargestTextSize() throws {

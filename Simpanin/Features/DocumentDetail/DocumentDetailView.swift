@@ -27,6 +27,7 @@ struct DocumentDetailView: View {
     private let store: any DocumentStoring
     private let pageReader: any PageReading
     private let onEdited: () async -> Void
+    private let onEditUnsaved: (Bool) -> Void
     private let onShareSheetShown: () -> Void
     private let onShareSheetEnded: () -> Void
     @State private var model: DocumentDetailModel
@@ -51,13 +52,15 @@ struct DocumentDetailView: View {
         hiddenFromBanner: @escaping () -> Bool, isListed: @escaping () -> Bool,
         onShowInBanner: @escaping () -> Void, onDelete: @escaping (DocumentID) async -> Bool,
         onRestore: @escaping (DocumentID) async -> Bool, onDeletePermanently: @escaping (DocumentID) async -> Bool,
-        onEdited: @escaping () async -> Void, onShareSheetShown: @escaping () -> Void,
+        onEdited: @escaping () async -> Void, onEditUnsaved: @escaping (Bool) -> Void,
+        onShareSheetShown: @escaping () -> Void,
         onShareSheetEnded: @escaping () -> Void
     ) {
         self.today = today
         self.store = store
         pageReader = store
         self.onEdited = onEdited
+        self.onEditUnsaved = onEditUnsaved
         self.onShareSheetShown = onShareSheetShown
         self.onShareSheetEnded = onShareSheetEnded
         self.hiddenFromBanner = hiddenFromBanner
@@ -135,7 +138,7 @@ struct DocumentDetailView: View {
                     EditDocumentView(
                         document: document, fields: fields, store: store, pages: model.pages,
                         thumbnail: model.thumbnail, fullPage: model.fullPage,
-                        onSaved: { editSaved = true })
+                        onSaved: { editSaved = true }, onUnsavedChange: onEditUnsaved)
                 }
             }
             .sheet(isPresented: $shareShown) {

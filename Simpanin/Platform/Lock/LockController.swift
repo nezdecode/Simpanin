@@ -69,6 +69,10 @@ final class LockController {
     private var shareSheetUp = false
     /// A lock came while the share sheet was up; told once, after the next unlock.
     private var shareStoppedByLock = false
+    /// Edit dokumen holds changes not saved yet.
+    private var editUnsaved = false
+    /// A lock dropped them; told once, after the next unlock.
+    private var editDroppedByLock = false
     /// The vault opened while the app was inactive, as after a Face ID prompt: the cover keeps its lock
     /// screen until the app is active, so an unlock never flashes the open cover.
     private(set) var holdsLockScreen = false
@@ -262,6 +266,9 @@ final class LockController {
 
     func shareSheetEnded() { shareSheetUp = false }
 
+    /// Edit dokumen says whether it holds changes not saved yet, so a lock then can be told after unlocking.
+    func editChanged(_ unsaved: Bool) { editUnsaved = unsaved }
+
     func lock() async {
         lockCount += 1
         await vault.lock()
@@ -272,6 +279,8 @@ final class LockController {
         scanInProgress = nil
         if shareSheetUp { shareStoppedByLock = true }
         shareSheetUp = false
+        if editUnsaved { editDroppedByLock = true }
+        editUnsaved = false
         pendingScan = nil
         failuresInARow = 0
     }
@@ -296,8 +305,10 @@ final class LockController {
             case nil: self.notices = notices
             }
             if shareStoppedByLock { self.notices.insert(.shareStopped) }
+            if editDroppedByLock { self.notices.insert(.editDropped) }
             scanDroppedByLock = nil
             shareStoppedByLock = false
+            editDroppedByLock = false
             // Only while inactive, which always ends with an activation. Recording covers an active app,
             // so a hold set then would never be cleared.
             holdsLockScreen = coverShown
