@@ -36,7 +36,6 @@ struct DocumentDetailView: View {
     @State private var viewerPage = 0
     /// Coba lagi bumps it, so SwiftUI owns every load and cancels it when the screen goes.
     @State private var attempt = 0
-    @State private var purgeAsked = false
     @State private var shareShown = false
     @State private var editShown = false
     /// The vault has the edit; the screen reads it again once the sheet has closed.
@@ -96,19 +95,6 @@ struct DocumentDetailView: View {
             // Initial too: the restore can land between the tap and this screen's first look.
             .onChange(of: isListed(), initial: true) { _, listed in
                 if !listed { dismiss() }
-            }
-            .alert(Text("detail.deletePermanentlyTitle"), isPresented: $purgeAsked) {
-                Button(role: .destructive) {
-                    Task { await model.deletePermanently() }
-                } label: {
-                    Text("button.deletePermanently")
-                }
-                Button(role: .cancel) {
-                } label: {
-                    Text(ScreenText.cancel)
-                }
-            } message: {
-                Text("detail.deletePermanentlyMessage")
             }
             .toolbar {
                 if model.phase == .loaded, model.canShare {
@@ -217,7 +203,9 @@ struct DocumentDetailView: View {
                 if hiddenFromBanner(), !model.isDeleted { bannerLine }
             }
             if model.isDeleted {
-                deletedActions
+                DeletedDocumentActions(
+                    onRestore: { Task { await model.restore() } },
+                    onDeletePermanently: { Task { await model.deletePermanently() } })
             } else {
                 Section {
                     Button(role: .destructive) {
@@ -230,28 +218,6 @@ struct DocumentDetailView: View {
             }
         }
         .listStyle(.insetGrouped)
-    }
-
-    @ViewBuilder private var deletedActions: some View {
-        Section {
-            Button {
-                Task { await model.restore() }
-            } label: {
-                Text("button.restore")
-            }
-            .buttonStyle(.prominent)
-            .accessibilityIdentifier("detail.restore")
-            .listRowInsets(EdgeInsets())
-            .listRowBackground(Color.clear)
-        }
-        Section {
-            Button(role: .destructive) {
-                purgeAsked = true
-            } label: {
-                Text("button.deletePermanently")
-            }
-            .accessibilityIdentifier("detail.deletePermanently")
-        }
     }
 
     /// "Saya · ditambahkan 12 Okt 2026", or without a label "Ditambahkan …"; from Baru dihapus, when it was
