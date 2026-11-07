@@ -45,7 +45,7 @@ nonisolated struct DocumentForm: Equatable, Sendable {
     /// The values as the form opened with them, as shown: what a change is measured against.
     let original: [String: String]
     /// A saved document's fields as stored, for an edit; nil after a scan.
-    private let stored: [String: String]?
+    let stored: [String: String]?
 
     /// After a scan: the values as read, with the parser's marks.
     init(type: DocumentType = .other, values: [String: String] = [:], marked: [String: Set<CheckReason>] = [:]) {

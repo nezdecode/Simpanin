@@ -23,6 +23,11 @@ nonisolated protocol DocumentStoring: Sendable {
         type: DocumentType, label: String?, expiry: CalendarDate?, pinned: Bool, fields: DocumentFields,
         pages: [Data]
     ) async throws -> DocumentID
+    /// Refuses a document in Baru dihapus with `documentDeleted`. The fields replace the stored ones whole.
+    func editDocument(  // swiftlint:disable:this function_parameter_count - mirrors VaultStore.editDocument
+        _ id: DocumentID, type: DocumentType, label: String?, expiry: CalendarDate?, pinned: Bool,
+        fields: DocumentFields
+    ) async throws
     func delete(_ id: DocumentID) async throws
     func restore(_ id: DocumentID) async throws
     func deletePermanently(_ id: DocumentID) async throws

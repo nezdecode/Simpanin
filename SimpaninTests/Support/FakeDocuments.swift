@@ -20,6 +20,10 @@ actor FakeDocuments {
     private var bin: [Document] = []
     private(set) var created: [DocumentFields] = []
     private(set) var createdPages: [[Data]] = []
+    /// Every edit's fields, in order.
+    private(set) var edited: [DocumentFields] = []
+    private var editGated = false
+    private var editGate: CheckedContinuation<Void, Never>?
     private var failure: VaultError?
     private var loadFailure: VaultError?
     private var binFailure: VaultError?
@@ -100,6 +104,24 @@ actor FakeDocuments {
         createGate = nil
     }
 
+    /// The next editDocument waits until the test releases it, like a save still being written.
+    func gateNextEdit() { editGated = true }
+
+    /// False if no gated edit started within two seconds, so a test fails instead of hanging.
+    func waitUntilEditing() async -> Bool {
+        for _ in 0..<2_000 where editGate == nil {
+            try? await Task.sleep(for: .milliseconds(1))
+        }
+        return editGate != nil
+    }
+
+    func releaseEdit() {
+        editGate?.resume()
+        editGate = nil
+    }
+
+    func document(_ id: DocumentID) -> Document? { (live + bin).first { $0.id == id } }
+
     /// The next reload sees the document in neither list, like a restore landing between its two reads.
     func missFromNextReload(_ id: DocumentID) { missingOnce.insert(id) }
 
@@ -147,6 +169,26 @@ actor FakeDocuments {
                 id: id, type: type, label: label, createdAt: .now, updatedAt: .now, expiry: expiry, pinned: pinned,
                 deletedAt: nil, pageIDs: pageIDs))
         return id
+    }
+
+    // swiftlint:disable:next function_parameter_count - mirrors VaultStore.editDocument
+    func editDocument(
+        _ id: DocumentID, type: DocumentType, label: String?, expiry: CalendarDate?, pinned: Bool,
+        fields: DocumentFields
+    ) async throws {
+        if editGated {
+            editGated = false
+            await withCheckedContinuation { editGate = $0 }
+        }
+        if let failure { throw failure }
+        if bin.contains(where: { $0.id == id }) { throw VaultError.documentDeleted }
+        guard let index = live.firstIndex(where: { $0.id == id }) else { throw VaultError.documentNotFound }
+        edited.append(fields)
+        fieldsByID[id] = fields
+        live[index].type = type
+        live[index].label = label
+        live[index].expiry = expiry
+        live[index].pinned = pinned
     }
 
     func delete(_ id: DocumentID) async throws {

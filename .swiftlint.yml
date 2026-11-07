@@ -107,8 +107,8 @@ custom_rules:
   # check never name either, and no cast can reach a saved document's pages from there.
   scan_without_pages:
     name: Scan never reads saved pages
-    message: "Features/Scan/ and the duplicate check never mention PageReading or VaultStore: they read saved fields through DocumentStoring only, never pages."
-    included: "/Simpanin/(Features/Scan/.*|Documents/DuplicateCheck)\\.swift"
+    message: "Features/Scan/, the duplicate check and the edit model never mention PageReading or VaultStore: they read saved fields through DocumentStoring only, never pages."
+    included: "/Simpanin/(Features/Scan/.*|Documents/DuplicateCheck|Features/DocumentDetail/EditDocumentModel)\\.swift"
     regex: "\\b(PageReading|VaultStore)\\b"
     excluded_match_kinds: [comment, doccomment]
     severity: error
