@@ -422,7 +422,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Config/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = Simpanin;
+				INFOPLIST_KEY_CFBundleDisplayName = "Simpanin Dev";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Simpanin memakai kamera untuk memindai dokumenmu. Hasil pindaian tidak masuk ke Foto, dan hanya disimpan di vault kalau kamu menyimpannya.";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "Simpanin memakai Face ID untuk membuka vault dokumenmu.";
@@ -436,8 +436,10 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 0.1;
-				PRODUCT_BUNDLE_IDENTIFIER = com.inez.Simpanin;
+				PRODUCT_BUNDLE_IDENTIFIER = com.inez.Simpanin.dev;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SIMPANIN_APP_GROUP = group.com.inez.Simpanin.dev;
+				SIMPANIN_KEYCHAIN_GROUP = simpanin.vault.dev;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
@@ -477,6 +479,8 @@
 				MARKETING_VERSION = 0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.inez.Simpanin;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SIMPANIN_APP_GROUP = group.com.inez.Simpanin;
+				SIMPANIN_KEYCHAIN_GROUP = simpanin.vault;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;

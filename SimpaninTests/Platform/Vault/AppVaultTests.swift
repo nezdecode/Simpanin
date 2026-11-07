@@ -34,17 +34,19 @@ struct AppVaultTests {
                 == .completeUntilFirstUserAuthentication)
     }
 
-    @Test func infoPlistCarriesTheExpandedKeychainGroupAndAppGroup() throws {
+    /// Tests run the Debug build, which must never reach the App Store app's vault, key or projection.
+    @Test func debugBuildUsesItsOwnKeychainGroupAndAppGroup() throws {
         let group = try #require(AppConfiguration.keychainAccessGroup)
-        #expect(group.hasSuffix(".simpanin.vault"))
-        #expect(group.count > ".simpanin.vault".count)  // the team prefix is filled in
-        #expect(AppConfiguration.appGroup == "group.com.inez.Simpanin")
+        #expect(group.hasSuffix(".simpanin.vault.dev"))
+        #expect(group.count > ".simpanin.vault.dev".count)  // the team prefix is filled in
+        #expect(AppConfiguration.appGroup == "group.com.inez.Simpanin.dev")
+        #expect(Bundle.main.bundleIdentifier == "com.inez.Simpanin.dev")
         let faceID = Bundle.main.object(forInfoDictionaryKey: "NSFaceIDUsageDescription") as? String
         #expect(faceID == "Simpanin memakai Face ID untuk membuka vault dokumenmu.")
     }
 
     @Test func infoPlistNamesTheAppAndItsCategory() {
-        #expect(Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String == "Simpanin")
+        #expect(Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String == "Simpanin Dev")
         #expect(
             Bundle.main.object(forInfoDictionaryKey: "LSApplicationCategoryType") as? String
                 == "public.app-category.utilities")

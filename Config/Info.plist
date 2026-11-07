@@ -3,8 +3,8 @@
 <plist version="1.0">
 <dict>
 	<key>SimpaninAppGroup</key>
-	<string>group.com.inez.Simpanin</string>
+	<string>$(SIMPANIN_APP_GROUP)</string>
 	<key>SimpaninKeychainAccessGroup</key>
-	<string>$(AppIdentifierPrefix)simpanin.vault</string>
+	<string>$(AppIdentifierPrefix)$(SIMPANIN_KEYCHAIN_GROUP)</string>
 </dict>
 </plist>
