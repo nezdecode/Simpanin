@@ -44,6 +44,20 @@ extension LibraryTests {
         #expect(hidden.saved.entries.isEmpty)
     }
 
+    /// The user hid one date; an edit that gives the document another brings it back, without a "Tampilkan lagi".
+    @Test func aChangedExpiryBringsAHiddenDocumentBackToTheBanner() async throws {
+        let (store, _, library) = try await hiddenSoonDocument()
+        let document = try #require(library.documents.first)
+        #expect(library.bannerDocuments.isEmpty)
+        let later = CalendarDate.day(of: .now.addingTimeInterval(10 * 86_400), in: .current)
+        try await store.editDocument(
+            document.id, type: document.type, label: document.label, expiry: later, pinned: document.pinned,
+            fields: DocumentFields([:]))
+        await library.reload()
+        #expect(library.bannerDocuments.map(\.id) == [document.id])
+        #expect(!library.offersShowInBanner(document.id))
+    }
+
     /// Like a failed hide: the document stays in the banner, and the save is tried again at the next reload.
     @Test func aFailedUnhideSaveKeepsItAndRetries() async throws {
         let (_, hidden, library) = try await hiddenSoonDocument()

@@ -180,12 +180,13 @@ struct LibraryView: View {
     private func documentScreen(_ document: VaultCore.Document) -> DocumentDetailView {
         DocumentDetailView(
             document: document, store: Self.documentStore(for: vault), today: today,
-            hiddenFromBanner: library.offersShowInBanner(document.id),
+            hiddenFromBanner: { library.offersShowInBanner(document.id) },
             isListed: {
                 (document.deletedAt == nil ? library.documents : library.deleted).contains { $0.id == document.id }
             },
             onShowInBanner: { library.showInBanner(document.id) }, onDelete: library.delete,
-            onRestore: library.restore, onDeletePermanently: library.deletePermanently,
+            onRestore: library.restore, onDeletePermanently: library.deletePermanently, onEdited: library.reload,
+            onEditUnsaved: lock.editChanged,
             onShareSheetShown: lock.shareSheetShown, onShareSheetEnded: lock.shareSheetEnded)
     }
 

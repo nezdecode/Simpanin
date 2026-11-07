@@ -36,7 +36,10 @@ nonisolated enum DuplicateCheck {
 
     /// Nil when nothing matches or the list can't be read, so the save goes ahead. Throws only
     /// `VaultError.locked`, which drops the scan as a locked save does.
-    static func find(_ candidate: Candidate, in store: any DocumentStoring) async throws -> Found? {
+    /// - Parameter edited: the document being edited, which is never decrypted for the check.
+    static func find(
+        _ candidate: Candidate, in store: any DocumentStoring, excluding edited: DocumentID? = nil
+    ) async throws -> Found? {
         var firstError: (any Error)?
         // One line per check at most: a line per unreadable document would tell how many there are.
         defer {
@@ -54,7 +57,7 @@ nonisolated enum DuplicateCheck {
             return nil
         }
         var classless: Found?
-        for document in saved where canMatch(document.type, candidate.type) {
+        for document in saved where document.id != edited && canMatch(document.type, candidate.type) {
             let fields: DocumentFields
             do {
                 fields = try await store.fields(of: document.id)

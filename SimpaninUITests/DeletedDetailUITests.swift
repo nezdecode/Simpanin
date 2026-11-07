@@ -61,6 +61,8 @@ final class DeletedDetailUITests: UITestCase {
         XCTAssertFalse(app.buttons["detail.copy.nik"].exists)
         XCTAssertFalse(app.buttons["detail.copy.name"].exists)
         XCTAssertFalse(app.buttons["detail.delete"].exists)
+        // Edit waits until it's restored.
+        XCTAssertFalse(app.buttons["detail.edit"].exists)
         screenshot("59 deleted document")
         darkScreenshot("60 deleted document dark")
     }

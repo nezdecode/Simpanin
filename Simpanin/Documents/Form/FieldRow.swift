@@ -35,7 +35,7 @@ struct FieldRow: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(DocumentFieldStyle.title(for: key)).font(.footnote).foregroundStyle(.secondary)
             Group {
-                if ReviewModel.dateKeys.contains(key) {
+                if FieldDates.dateKeys.contains(key) {
                     DateField(title: DocumentFieldStyle.title(for: key), value: value, onChange: onChange)
                 } else {
                     TextField(text: Binding(get: { value }, set: { onChange($0) })) {
@@ -101,7 +101,9 @@ private struct DateField: View {
         }
         .onAppear { draft = value }
         .onChange(of: draft) { _, typed in
-            let formatted = ReviewModel.typedDate(typed)
+            // The value itself, set on appear, isn't typing: a stored date in another shape stays as stored.
+            guard typed != value else { return }
+            let formatted = FieldDates.typedDate(typed)
             if formatted != typed { draft = formatted }
             if formatted != value { onChange(formatted) }
         }

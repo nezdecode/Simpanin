@@ -71,21 +71,24 @@
         /// The store the document list reads. `-SimpaninUITestLoadError <n>` fails its first n loads;
         /// `-SimpaninUITestDeleteError` fails every Hapus; `-SimpaninUITestBinError` every Pulihkan and
         /// Hapus permanen; `-SimpaninUITestSlowRestore` makes each Pulihkan take eight seconds, and
-        /// `-SimpaninUITestSlowSave` each Simpan; `-SimpaninUITestLaterPagesFail` fails every page after the
-        /// first, so page 1 still shows and a share stops at page 2.
+        /// `-SimpaninUITestSlowSave` each Simpan, an edit's too; `-SimpaninUITestEditError` fails every edit;
+        /// `-SimpaninUITestLaterPagesFail` fails every page after the first, so page 1 still shows and a share
+        /// stops at page 2.
         static func documentStore(for vault: AppVault) -> any DocumentStoring & PageReading {
             let count = value(after: "-SimpaninUITestLoadError").flatMap(Int.init)
             let failsDeletes = ProcessInfo.processInfo.arguments.contains("-SimpaninUITestDeleteError")
             let failsBin = ProcessInfo.processInfo.arguments.contains("-SimpaninUITestBinError")
             let slowRestore = ProcessInfo.processInfo.arguments.contains("-SimpaninUITestSlowRestore")
             let slowSave = ProcessInfo.processInfo.arguments.contains("-SimpaninUITestSlowSave")
+            let failsEdits = ProcessInfo.processInfo.arguments.contains("-SimpaninUITestEditError")
             let failsLaterPages = ProcessInfo.processInfo.arguments.contains("-SimpaninUITestLaterPagesFail")
-            guard count != nil || failsDeletes || failsBin || slowRestore || slowSave || failsLaterPages else {
+            guard count != nil || failsDeletes || failsBin || slowRestore || slowSave || failsEdits || failsLaterPages
+            else {
                 return vault.store
             }
             return ScriptedDocuments(
                 store: vault.store, failingLoads: count ?? 0, failsDeletes: failsDeletes, failsBin: failsBin,
-                slowRestore: slowRestore, slowSave: slowSave, failsLaterPages: failsLaterPages)
+                slowRestore: slowRestore, slowSave: slowSave, failsEdits: failsEdits, failsLaterPages: failsLaterPages)
         }
 
         /// `-SimpaninUITestRecordingAfterLock`: Kunci also acts as if a recording started, and it never stops.
@@ -248,11 +251,12 @@
         private let failsBin: Bool
         private let slowRestore: Bool
         private let slowSave: Bool
+        private let failsEdits: Bool
         private let failsLaterPages: Bool
 
         init(
             store: VaultStore, failingLoads: Int, failsDeletes: Bool = false, failsBin: Bool = false,
-            slowRestore: Bool = false, slowSave: Bool = false, failsLaterPages: Bool = false
+            slowRestore: Bool = false, slowSave: Bool = false, failsEdits: Bool = false, failsLaterPages: Bool = false
         ) {
             self.store = store
             self.failingLoads = failingLoads
@@ -260,6 +264,7 @@
             self.failsBin = failsBin
             self.slowRestore = slowRestore
             self.slowSave = slowSave
+            self.failsEdits = failsEdits
             self.failsLaterPages = failsLaterPages
         }
 
@@ -282,6 +287,16 @@
             if slowSave { try await Task.sleep(for: .seconds(8)) }
             return try await store.createDocument(
                 type: type, label: label, expiry: expiry, pinned: pinned, fields: fields, pages: pages)
+        }
+
+        // swiftlint:disable:next function_parameter_count - mirrors VaultStore.editDocument
+        func editDocument(
+            _ id: DocumentID, type: DocumentType, label: String?, expiry: CalendarDate?, pinned: Bool,
+            fields: DocumentFields
+        ) async throws {
+            if failsEdits { throw VaultError.fileUnavailable }
+            if slowSave { try await Task.sleep(for: .seconds(8)) }
+            try await store.editDocument(id, type: type, label: label, expiry: expiry, pinned: pinned, fields: fields)
         }
 
         func delete(_ id: DocumentID) async throws {

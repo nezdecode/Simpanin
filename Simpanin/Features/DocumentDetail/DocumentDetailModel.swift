@@ -81,7 +81,7 @@ final class DocumentDetailModel {
     /// one, up to `PageViewer.maxPixelSize`.
     nonisolated static let reducedPixelSize = 1_200
 
-    let document: Document
+    private(set) var document: Document
     private(set) var phase = Phase.loading
     private(set) var pages: [PageState] = []
     private(set) var numberShown = false
@@ -97,6 +97,8 @@ final class DocumentDetailModel {
     private let onDeletePermanently: (DocumentID) async -> Bool
     /// Decrypted while the screen is up; never cached or kept elsewhere.
     private var fields: DocumentFields?
+    /// An edit was saved, so the document's label and expiry are read again with its fields.
+    private var editedSinceLoad = false
 
     init(
         document: Document, store: any DocumentStoring, pageReader: any PageReading, clipboard: any Clipboard,
@@ -169,6 +171,13 @@ final class DocumentDetailModel {
     private func loadFields() async -> Bool {
         phase = .loading
         do {
+            if editedSinceLoad {
+                guard let saved = try await store.documents().first(where: { $0.id == document.id }) else {
+                    throw VaultError.documentNotFound
+                }
+                document = saved
+                editedSinceLoad = false
+            }
             fields = try await store.fields(of: document.id)
             phase = .loaded
             return true
@@ -222,6 +231,23 @@ final class DocumentDetailModel {
 
     /// The share screen covers this one, as the viewer does.
     func shareOpened() { numberShown = false }
+
+    /// Edit dokumen opens only on a live document whose fields are open, so it never starts empty.
+    var canEdit: Bool { !isDeleted && phase == .loaded }
+
+    /// The fields Edit dokumen starts from, already open, so nothing is decrypted again.
+    var fieldsToEdit: DocumentFields? { canEdit ? fields : nil }
+
+    /// The sheet covers the screen, as the viewer does.
+    func editOpened() { numberShown = false }
+
+    /// Edit dokumen saved: the document and its fields are read again. If that fails, the screen shows its
+    /// load error rather than the values from before the edit.
+    func edited() async {
+        editedSinceLoad = true
+        fields = nil
+        if await loadFields() { toast = Toast(title: "detail.editSaved") }
+    }
 
     /// The number as digits only, the name as stored. Copying never shows the number.
     func copy(_ key: String) {

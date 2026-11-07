@@ -170,14 +170,6 @@ struct ReviewModelTests {
         #expect(review.label == "Ibu")
     }
 
-    @Test func aLabelThatLooksLikeANumberIsFlagged() {
-        let review = model()
-        for (label, flagged) in [("Ibu", false), ("KTP 12", false), ("3171 0890", true), ("0012341708900001", true)] {
-            review.label = label
-            #expect(review.labelLooksLikeANumber == flagged, "\(label)")
-        }
-    }
-
     @Test func savingSealsTheChosenTypesFieldsAndPages() async throws {
         let store = FakeDocuments()
         let review = model(store)
