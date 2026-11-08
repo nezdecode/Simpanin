@@ -19,7 +19,7 @@ Simpanin has two parts: a core that keeps documents safe, and an app around it.
 | `Documents/` | How a document reads: `DocumentStyle`, `ExpiryText`, dates in Indonesian and on calendar days, and the form a scan and an edit share (`Form/`). |
 | `Platform/` | The app's side of VaultCore and iOS: `Vault/` (`AppVault`, which creates the one `VaultStore`, the Keychain, file protection), `Lock/` (`LockController`, the engine that locks and unlocks, and the recovery table), `Logging/` and `System/` (build settings, system links, the clipboard). |
 | `DesignSystem/` | Views, styles, texts and helpers that know nothing of the domain: no VaultCore, `Documents/` or feature types. |
-| `Resources/` | The asset catalog (colours, icon) and the string catalog. |
+| `Resources/` | The asset catalog (colours), the app icon (`AppIcon.icon`, from Icon Composer, with SVG layers only), the string catalog and the privacy manifest. |
 | `Debug/` | DEBUG-only tools. |
 
 Five rules keep the folders honest:
