@@ -52,6 +52,12 @@ struct AppVaultTests {
                 == "public.app-category.utilities")
     }
 
+    @Test func infoPlistNamesTheAppIcon() {
+        let icons = Bundle.main.object(forInfoDictionaryKey: "CFBundleIcons") as? [String: Any]
+        let primary = icons?["CFBundlePrimaryIcon"] as? [String: Any]
+        #expect(primary?["CFBundleIconName"] as? String == "AppIcon")
+    }
+
     @Test func appGroupContainerIsAvailable() throws {
         let group = try #require(AppConfiguration.appGroup)
         #expect(FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: group) != nil)
