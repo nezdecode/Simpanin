@@ -423,6 +423,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Config/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Simpanin Dev";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Simpanin memakai kamera untuk memindai dokumenmu. Hasil pindaian tidak masuk ke Foto, dan hanya disimpan di vault kalau kamu menyimpannya.";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "Simpanin memakai Face ID untuk membuka vault dokumenmu.";
@@ -462,6 +463,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Config/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Simpanin;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Simpanin memakai kamera untuk memindai dokumenmu. Hasil pindaian tidak masuk ke Foto, dan hanya disimpan di vault kalau kamu menyimpannya.";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "Simpanin memakai Face ID untuk membuka vault dokumenmu.";

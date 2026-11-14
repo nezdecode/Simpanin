@@ -27,4 +27,9 @@ struct AppInfoTests {
         let manifest = try #require(info["UIApplicationSceneManifest"] as? [String: Any])
         #expect(manifest["UIApplicationSupportsMultipleScenes"] as? Bool == false)
     }
+
+    /// Only the system's encryption is used (CryptoKit, the Keychain, Data Protection), which is exempt.
+    @Test func theExportAnswerIsTheExemptOne() {
+        #expect(info["ITSAppUsesNonExemptEncryption"] as? Bool == false)
+    }
 }
