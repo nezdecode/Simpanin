@@ -131,8 +131,12 @@ final class LockController {
         holdsLockScreen = false
         let returning = !hasBeenActive || backgroundedAt != nil
         hasBeenActive = true
-        if let backgroundedAt, state == .unlocked, timedOut(since: backgroundedAt) { await lock() }
+        // Cleared before the lock, not after: the app can go to the background again while the store answers.
+        // That trip keeps its own start, and the prompt waits for the return, as none can show in the background.
+        let awaySince = backgroundedAt
         backgroundedAt = nil
+        if let awaySince, state == .unlocked, timedOut(since: awaySince) { await lock() }
+        guard backgroundedAt == nil else { return }
         // From the welcome too: it promises a passcode lock, and the passcode may have gone meanwhile.
         if returning, state == .locked || state == .noVault || retriesOnReturn { await unlock() }
     }

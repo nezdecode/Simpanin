@@ -120,4 +120,43 @@ struct LockControllerLockingTests {
         #expect(controller.coverShown)
         #expect(controller.contentHidden)
     }
+
+    /// The app can go to the background again while the store still answers a relock. The prompt then waits
+    /// for the return: a phone can't show one in the background, and a refused one would leave an error screen.
+    @Test func leavingToTheBackgroundWhileTheStoreLocksLeavesThePromptForTheReturn() async {
+        let vault = FakeVault([])
+        let controller = await unlocked(vault)
+        controller.sceneDidEnterBackground()
+        clock.advance(by: .seconds(60))
+        let returning = Task { await controller.sceneDidBecomeActive() }
+        #expect(await vault.waitUntilLocking())
+        controller.sceneDidBecomeInactive()
+        controller.sceneDidEnterBackground()
+        await vault.releaseLock()
+        await returning.value
+        #expect(controller.state == .locked)
+        #expect(await vault.openCount == 1)
+        await controller.sceneDidBecomeActive()
+        #expect(controller.state == .unlocked)
+        #expect(await vault.openCount == 2)
+        #expect(await vault.lockCount == 1)
+    }
+
+    /// Control Centre or a call can make the app inactive and active again while the store still answers a
+    /// relock. That second activation is no return from the background, so it doesn't lock again.
+    @Test func aMomentInactiveWhileTheStoreLocksDoesNotLockTwice() async {
+        let vault = FakeVault([])
+        let controller = await unlocked(vault)
+        controller.sceneDidEnterBackground()
+        clock.advance(by: .seconds(60))
+        let returning = Task { await controller.sceneDidBecomeActive() }
+        #expect(await vault.waitUntilLocking())
+        controller.sceneDidBecomeInactive()
+        await controller.sceneDidBecomeActive()
+        await vault.releaseLock()
+        await returning.value
+        #expect(controller.state == .unlocked)
+        #expect(await vault.lockCount == 1)
+        #expect(await vault.openCount == 2)
+    }
 }
