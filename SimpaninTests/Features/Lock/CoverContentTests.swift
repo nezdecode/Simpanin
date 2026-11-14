@@ -26,7 +26,7 @@ struct CoverContentTests {
 
     private func makeController(_ vault: FakeVault) -> LockController {
         LockController(
-            vault: vault, clock: FixedClock(), passcode: { .set }, vaultExists: { true }, vaultIsEmpty: { false },
+            vault: vault, passcode: { .set }, vaultExists: { true }, vaultIsEmpty: { false },
             protectedDataAvailable: { true })
     }
 

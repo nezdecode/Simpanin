@@ -50,14 +50,16 @@ final class LockController {
     /// The same check the lock uses, so "+" can ask for a passcode before the first scan.
     var passcodeState: PasscodeState { passcode() }
     private let vault: any VaultOpening
-    private let clock: any VaultClock
+    /// A clock that can't be set and keeps counting while the phone sleeps: the phone's date can be changed in
+    /// Settings with no passcode, so it must not decide how long the vault stays open.
+    private let now: @MainActor () -> ContinuousClock.Instant
     private let passcode: @MainActor () -> PasscodeState
     private let vaultExists: @MainActor () -> Bool
     private let vaultIsEmpty: @MainActor () throws -> Bool
     private let protectedDataAvailable: @MainActor () -> Bool
 
     private var hasBeenActive = false
-    private var backgroundedAt: Date?
+    private var backgroundedAt: ContinuousClock.Instant?
     private var waitingForProtectedData = false
     private var leftForegroundDuringPrompt = false
     private var failuresInARow = 0
@@ -92,15 +94,15 @@ final class LockController {
     #endif
 
     init(
-        vault: any VaultOpening, clock: any VaultClock = SystemClock(), autoLock: AutoLock = .oneMinute,
-        settings: UserDefaults = .standard,
+        vault: any VaultOpening, now: @escaping @MainActor () -> ContinuousClock.Instant = { ContinuousClock.now },
+        autoLock: AutoLock = .oneMinute, settings: UserDefaults = .standard,
         passcode: @escaping @MainActor () -> PasscodeState = { PasscodeState.current() },
         vaultExists: @escaping @MainActor () -> Bool,
         vaultIsEmpty: @escaping @MainActor () throws -> Bool,
         protectedDataAvailable: @escaping @MainActor () -> Bool
     ) {
         self.vault = vault
-        self.clock = clock
+        self.now = now
         self.autoLock = autoLock
         self.settings = settings
         self.passcode = passcode
@@ -126,12 +128,16 @@ final class LockController {
         holdsLockScreen = false
         let returning = !hasBeenActive || backgroundedAt != nil
         hasBeenActive = true
-        if let backgroundedAt, state == .unlocked, clock.now.timeIntervalSince(backgroundedAt) >= relockTimeout {
-            await lock()
-        }
+        if let backgroundedAt, state == .unlocked, timedOut(since: backgroundedAt) { await lock() }
         backgroundedAt = nil
         // From the welcome too: it promises a passcode lock, and the passcode may have gone meanwhile.
         if returning, state == .locked || state == .noVault || retriesOnReturn { await unlock() }
+    }
+
+    /// Any time away outside zero up to the timeout locks, so a time that comes out negative never keeps
+    /// the vault open.
+    private func timedOut(since start: ContinuousClock.Instant) -> Bool {
+        !(.zero ..< .seconds(relockTimeout)).contains(start.duration(to: now()))
     }
 
     /// Saves the Kunci otomatis choice and applies it at once, so the stored choice and the
@@ -148,7 +154,7 @@ final class LockController {
     /// Suspended apps run no timers, so the timeout is checked on return.
     func sceneDidEnterBackground() {
         coverShown = true
-        backgroundedAt = clock.now
+        backgroundedAt = now()
         if state == .unlocking { leftForegroundDuringPrompt = true }
     }
 

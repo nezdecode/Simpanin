@@ -77,6 +77,13 @@ final class FixedClock: VaultClock {
     func advance(by seconds: TimeInterval) { date.withLock { $0 += seconds } }
 }
 
+/// The lock's clock, moved by hand. It can run backwards, which the real one can't.
+final class ManualClock: Sendable {
+    private let instant = Mutex(ContinuousClock.now)
+    var now: ContinuousClock.Instant { instant.withLock { $0 } }
+    func advance(by duration: Duration) { instant.withLock { $0 = $0.advanced(by: duration) } }
+}
+
 /// Keeps what was copied, instead of the system clipboard.
 final class FakeClipboard: Clipboard {
     private(set) var copied: [String] = []

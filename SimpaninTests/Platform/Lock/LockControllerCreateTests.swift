@@ -20,7 +20,7 @@ import Testing
 @MainActor
 @Suite("Lock controller: creating the vault")
 struct LockControllerCreateTests {
-    let clock = FixedClock()
+    let clock = ManualClock()
     let conditions = LaunchConditions()
 
     func welcome(_ vault: FakeVault) async -> LockController { await conditions.welcome(vault, clock: clock) }
