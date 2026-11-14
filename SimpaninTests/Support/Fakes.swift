@@ -26,6 +26,8 @@ actor FakeVault {
     private let gated: Bool
     private let onlyFirstGated: Bool
     private var nextGated = false
+    private var lockGate: CheckedContinuation<Void, Never>?
+    private var nextLockGated = false
 
     /// - Parameter onlyFirstGated: later opens answer at once, so a retry the test doesn't
     ///   expect fails the test instead of hanging it.
@@ -48,7 +50,32 @@ actor FakeVault {
         return try result.get()
     }
 
-    func lock() async { lockCount += 1 }
+    func lock() async {
+        lockCount += 1
+        if nextLockGated {
+            nextLockGated = false
+            await withCheckedContinuation { lockGate = $0 }
+        }
+    }
+
+    /// Gates only the next lock, like a store that is still busy with a write when the lock comes.
+    func gateNextLock() { nextLockGated = true }
+
+    /// False if lock() didn't start within two seconds, so a broken controller fails the test
+    /// instead of hanging it.
+    func waitUntilLocking() async -> Bool {
+        for _ in 0..<2_000 where lockGate == nil {
+            try? await Task.sleep(for: .milliseconds(1))
+        }
+        return lockGate != nil
+    }
+
+    /// Also withdraws a gate no lock has reached.
+    func releaseLock() {
+        nextLockGated = false
+        lockGate?.resume()
+        lockGate = nil
+    }
 
     /// False if open() didn't start within two seconds, so a broken controller fails the test
     /// instead of hanging it.

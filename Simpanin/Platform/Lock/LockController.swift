@@ -39,7 +39,10 @@ final class LockController {
     private(set) var coverShown = false
     /// Set by the view while the screen is recorded or mirrored.
     var screenCaptured = false
-    var contentHidden: Bool { state != .unlocked || coverShown || screenCaptured }
+    var contentHidden: Bool { state != .unlocked || coverShown || screenCaptured || locksWaiting > 0 }
+    /// Locks the store hasn't answered yet. A store that is busy with a write answers late, and `state` changes
+    /// only then, so this hides the content from the moment a lock is decided.
+    private var locksWaiting = 0
 
     /// The one place the Kunci otomatis choice lives while the app runs; Settings reads it here,
     /// so the screen can't show a different choice than the lock uses.
@@ -277,7 +280,9 @@ final class LockController {
 
     func lock() async {
         lockCount += 1
+        locksWaiting += 1
         await vault.lock()
+        locksWaiting -= 1
         state = welcomeAfterLock ? .noVault : .locked
         notices = []
         // Locking removes every screen, a scan in progress with it; say so after unlocking.
