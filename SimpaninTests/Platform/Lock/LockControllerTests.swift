@@ -19,15 +19,15 @@ import Testing
 @MainActor
 @Suite("Lock controller")
 struct LockControllerTests {
-    let clock = FixedClock()
+    let clock = ManualClock()
 
     func makeController(
         _ vault: FakeVault, passcode: PasscodeState = .set, vaultExists: Bool = true,
         protectedData: @escaping @MainActor () -> Bool = { true }
     ) -> LockController {
         LockController(
-            vault: vault, clock: clock, autoLock: .oneMinute, passcode: { passcode }, vaultExists: { vaultExists },
-            vaultIsEmpty: { false }, protectedDataAvailable: protectedData)
+            vault: vault, now: { clock.now }, autoLock: .oneMinute, passcode: { passcode },
+            vaultExists: { vaultExists }, vaultIsEmpty: { false }, protectedDataAvailable: protectedData)
     }
 
     static func unavailable(_ status: Int32?) -> Result<OpenReport, VaultError> {
@@ -62,7 +62,7 @@ struct LockControllerTests {
         let controller = makeController(vault)
         await controller.sceneDidBecomeActive()
         controller.sceneDidEnterBackground()
-        clock.advance(by: 59)
+        clock.advance(by: .seconds(59))
         await controller.sceneDidBecomeActive()
         #expect(controller.state == .unlocked)
         #expect(await vault.lockCount == 0)
@@ -74,7 +74,7 @@ struct LockControllerTests {
         let controller = makeController(vault)
         await controller.sceneDidBecomeActive()
         controller.sceneDidEnterBackground()
-        clock.advance(by: 60)
+        clock.advance(by: .seconds(60))
         await controller.sceneDidBecomeActive()
         #expect(await vault.lockCount == 1)
         #expect(await vault.openCount == 2)
@@ -183,7 +183,7 @@ struct LockControllerTests {
         let vault = FakeVault([])
         let passcode = Mutex(PasscodeState.notSet)
         let controller = LockController(
-            vault: vault, clock: clock, passcode: { passcode.withLock { $0 } }, vaultExists: { true },
+            vault: vault, passcode: { passcode.withLock { $0 } }, vaultExists: { true },
             vaultIsEmpty: { false }, protectedDataAvailable: { true })
         await controller.sceneDidBecomeActive()
         #expect(controller.state == .recovery(.passcodeTurnedOff))
@@ -261,7 +261,7 @@ struct LockControllerTests {
 struct NoticeTests {
     func unlocked() async -> LockController {
         let controller = LockController(
-            vault: FakeVault([]), clock: FixedClock(), autoLock: .oneMinute, passcode: { .set },
+            vault: FakeVault([]), autoLock: .oneMinute, passcode: { .set },
             vaultExists: { true }, vaultIsEmpty: { false }, protectedDataAvailable: { true })
         await controller.sceneDidBecomeActive()
         return controller
@@ -376,7 +376,7 @@ struct NoticeTests {
         report.newestChangeMayBeLost = true
         report.repairWaitingForSpace = true
         let lock = LockController(
-            vault: FakeVault([.success(report)]), clock: FixedClock(), passcode: { .set },
+            vault: FakeVault([.success(report)]), passcode: { .set },
             vaultExists: { true }, vaultIsEmpty: { false }, protectedDataAvailable: { true })
         await lock.unlock()
         #expect(lock.notices == [.newestChangeMayBeLost, .repairWaitingForSpace])

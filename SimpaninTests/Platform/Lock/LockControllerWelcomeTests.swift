@@ -19,7 +19,7 @@ import Testing
 @MainActor
 @Suite("Lock controller: welcome")
 struct LockControllerWelcomeTests {
-    let clock = FixedClock()
+    let clock = ManualClock()
     let conditions = LaunchConditions()
 
     func makeController(_ vault: FakeVault) -> LockController { conditions.makeController(vault, clock: clock) }
@@ -52,7 +52,7 @@ struct LockControllerWelcomeTests {
         let controller = await welcome(vault)
         controller.sceneDidBecomeInactive()
         controller.sceneDidEnterBackground()
-        clock.advance(by: 600)
+        clock.advance(by: .seconds(600))
         await controller.sceneDidBecomeActive()
         #expect(controller.state == .noVault)
         #expect(await vault.openCount == 0)

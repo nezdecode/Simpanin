@@ -22,7 +22,7 @@ struct StartNewVaultTests {
 
     func makeLock(_ vault: FakeVault) -> LockController {
         LockController(
-            vault: vault, clock: FixedClock(), passcode: { .set }, vaultExists: { true }, vaultIsEmpty: { false },
+            vault: vault, passcode: { .set }, vaultExists: { true }, vaultIsEmpty: { false },
             protectedDataAvailable: { true })
     }
 
@@ -56,7 +56,7 @@ struct StartNewVaultTests {
         conditions.vaultCreated()
         let vault = FakeVault([.failure(.vaultKeyMissing), .success(OpenReport())])
         let lock = LockController(
-            vault: vault, clock: FixedClock(), passcode: { conditions.passcode },
+            vault: vault, passcode: { conditions.passcode },
             vaultExists: { conditions.headerExists }, vaultIsEmpty: { try conditions.isEmpty() },
             protectedDataAvailable: { true })
         await lock.unlock()
@@ -77,7 +77,7 @@ struct StartNewVaultTests {
         conditions.vaultCreated()
         let vault = FakeVault([.failure(.vaultKeyMissing), .success(OpenReport())])
         let lock = LockController(
-            vault: vault, clock: FixedClock(), passcode: { conditions.passcode },
+            vault: vault, passcode: { conditions.passcode },
             vaultExists: { conditions.headerExists }, vaultIsEmpty: { try conditions.isEmpty() },
             protectedDataAvailable: { true })
         await lock.unlock()
@@ -100,7 +100,7 @@ struct StartNewVaultTests {
         conditions.vaultCreated()
         let vault = FakeVault([.failure(.vaultKeyMissing), .success(OpenReport())])
         let lock = LockController(
-            vault: vault, clock: FixedClock(), passcode: { conditions.passcode },
+            vault: vault, passcode: { conditions.passcode },
             vaultExists: { conditions.headerExists }, vaultIsEmpty: { try conditions.isEmpty() },
             protectedDataAvailable: { true })
         await lock.unlock()
@@ -123,7 +123,7 @@ struct StartNewVaultTests {
         conditions.vaultCreated()
         let vault = FakeVault([.failure(.vaultKeyMissing), .failure(.vaultKeyUnavailable(status: -50))])
         let lock = LockController(
-            vault: vault, clock: FixedClock(), passcode: { conditions.passcode },
+            vault: vault, passcode: { conditions.passcode },
             vaultExists: { conditions.headerExists }, vaultIsEmpty: { try conditions.isEmpty() },
             protectedDataAvailable: { true })
         await lock.unlock()
