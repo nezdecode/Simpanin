@@ -6,5 +6,10 @@
 	<string>$(SIMPANIN_APP_GROUP)</string>
 	<key>SimpaninKeychainAccessGroup</key>
 	<string>$(AppIdentifierPrefix)$(SIMPANIN_KEYCHAIN_GROUP)</string>
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+	</dict>
 </dict>
 </plist>
