@@ -14,6 +14,7 @@ import SwiftUI
 
 @main
 struct SimpaninApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     /// The one VaultStore, made here once. Nothing else creates one for the real vault.
     private let vault: Result<AppVault, any Error> = {
         let result = Result { try AppVault.launch() }
