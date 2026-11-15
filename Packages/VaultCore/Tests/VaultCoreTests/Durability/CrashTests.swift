@@ -92,10 +92,10 @@ struct CrashTests {
         try await perform(operation, on: dryStore, base)
         let after = try await dryStore.snapshot()
         let steps = recorder.steps
-        // The write order. A purge writes the index twice.
+        // The write order. A purge deletes its pages between two index writes.
         let indexWrite: [WriteStep] = [.indexMovedToPrevious, .indexWritten]
-        let indexWrites = operation == .deletePermanently ? indexWrite + indexWrite : indexWrite
-        #expect(steps == [.pagesWritten] + indexWrites + [.obsoletePagesDeleted, .projectionWritten])
+        let afterPages = indexWrite + [.obsoletePagesDeleted] + (operation == .deletePermanently ? indexWrite : [])
+        #expect(steps == [.pagesWritten] + afterPages + [.projectionWritten])
         #expect(before != after)
 
         for crashStep in 1...steps.count {

@@ -24,6 +24,9 @@ public enum VaultError: Error, Equatable, Sendable {
     case storageFull
     /// A file has a format or schema version newer than this build understands.
     case unsupportedVersion
+    /// An index file opened with this vault's key, but this build can't decode it. Nothing
+    /// was changed.
+    case indexNotDecodable
     /// The vault key exists but can't be read right now, so don't recreate the vault. `status`
     /// is the Keychain status code, if there was one.
     case vaultKeyUnavailable(status: Int32?)

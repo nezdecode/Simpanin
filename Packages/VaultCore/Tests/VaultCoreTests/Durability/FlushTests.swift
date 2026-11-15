@@ -15,29 +15,10 @@ import Testing
 
 @testable import VaultCore
 
-/// Before step 3 deletes anything, the new pages, the pages folder, the index and the vault
-/// folder are flushed, in that order.
-@Suite("Index flush before deleting pages")
-struct FlushTests {
-    struct FlushError: Error {}
-
-    func makeStore(_ vault: TestVault, _ flusher: RecordingFlusher) async throws -> VaultStore {
-        let store = vault.makeStore(flusher: flusher)
-        try await store.open()
-        return store
-    }
-
-    func path(_ url: URL) -> String { url.standardizedFileURL.path }
-
-    /// The flushes of one commit, in order. Each new page file, then the pages folder, the new
-    /// index file and the vault folder.
-    func expectFlushOrder(_ events: [RecordingFlusher.Event], _ vault: TestVault, newPages: [PageID]) {
-        let expected =
-            newPages.map { path(vault.pageURL($0)) }
-            + [path(vault.pagesDirectory), path(vault.indexURL), path(vault.root)]
-        #expect(events.map { path($0.url) } == expected)
-    }
-
+/// Every save flushes before it returns: its new page files and the pages folder when it wrote
+/// any, then the index and the vault folder. A purge flushes after each of its two index writes.
+@Suite("Flushing every save")
+struct FlushTests: FlushTesting {
     func generation(of sealedIndex: Data, in vault: TestVault) async throws -> VaultIndex {
         let header = try vault.header()
         let key = try #require(await vault.keyStore.key(for: header.vaultID))
@@ -47,19 +28,48 @@ struct FlushTests {
         return try VaultJSON.decoder.decode(VaultIndex.self, from: plain)
     }
 
-    @Test func noFlushWhenNothingIsDeleted() async throws {
+    @Test func everySaveFlushesTheIndexAndTheVaultFolder() async throws {
         let vault = try TestVault()
         let flusher = RecordingFlusher(pagesDirectory: vault.pagesDirectory)
         let store = try await makeStore(vault, flusher)
-        let id = try await store.createDocument(
-            type: .ktp, expiry: nil, pinned: false,
-            fields: Synthetic.ktpFields, pages: [Synthetic.page("k")])
-        try await store.editDocument(id, type: .ktp, label: nil, expiry: nil, pinned: true, fields: Synthetic.ktpFields)
-        _ = try await store.addPage(Synthetic.page("k2"), to: id)
-        try await store.delete(id)
-        try await store.restore(id)
-        #expect(flusher.recorded.isEmpty)
-        #expect(await store.lastFlushMethod == nil)
+        var id: DocumentID?
+        var saved = try await flushes(of: flusher) {
+            id = try await store.createDocument(
+                type: .ktp, expiry: nil, pinned: false,
+                fields: Synthetic.ktpFields, pages: [Synthetic.page("k")])
+        }
+        let ktp = try #require(id)
+        expectFlushOrder(saved, vault, newPages: try await store.document(ktp).pageIDs)
+
+        saved = try await flushes(of: flusher) {
+            try await store.editDocument(
+                ktp, type: .ktp, label: nil, expiry: nil, pinned: true, fields: Synthetic.ktpFields)
+        }
+        expectFlushOrder(saved, vault, newPages: [])
+        var added: PageID?
+        saved = try await flushes(of: flusher) { added = try await store.addPage(Synthetic.page("k2"), to: ktp) }
+        expectFlushOrder(saved, vault, newPages: [try #require(added)])
+        saved = try await flushes(of: flusher) { try await store.delete(ktp) }
+        expectFlushOrder(saved, vault, newPages: [])
+        saved = try await flushes(of: flusher) { try await store.restore(ktp) }
+        expectFlushOrder(saved, vault, newPages: [])
+        #expect(await store.lastFlushMethod == .fullFsync)
+    }
+
+    /// No index ever names a page that hasn't reached the disk.
+    @Test func newPagesAreFlushedBeforeTheIndexIsWritten() async throws {
+        let vault = try TestVault()
+        let flusher = RecordingFlusher(pagesDirectory: vault.pagesDirectory)
+        let store = try await makeStore(vault, flusher)
+        let indexBefore = try Data(contentsOf: vault.indexURL)
+        let saved = try await flushes(of: flusher) {
+            _ = try await store.createDocument(
+                type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields,
+                pages: [Synthetic.page("front"), Synthetic.page("back")])
+        }
+        try #require(saved.count == 5)
+        for event in saved.prefix(3) { #expect(event.indexContents == indexBefore) }
+        #expect(saved[3].contents != indexBefore)
     }
 
     @Test func replacePageFlushesNewPageThenPagesFolderThenIndexThenVaultFolder() async throws {
@@ -71,9 +81,12 @@ struct FlushTests {
             pages: [Synthetic.page("front"), Synthetic.page("back")])
         let generationBefore = try await vault.readIndex(at: vault.indexURL).generation
         let old = try await store.document(id).pageIDs[0]
-        let new = try await store.replacePage(old, of: id, with: Synthetic.page("front-rescan"))
+        var replaced: PageID?
+        let events = try await flushes(of: flusher) {
+            replaced = try await store.replacePage(old, of: id, with: Synthetic.page("front-rescan"))
+        }
+        let new = try #require(replaced)
 
-        let events = flusher.recorded
         try #require(events.count == 4)
         // The new page is flushed first, so the index never points to a page lost in a power cut.
         expectFlushOrder(events, vault, newPages: [new])
@@ -88,28 +101,38 @@ struct FlushTests {
         #expect(await store.lastFlushMethod == .fullFsync)
     }
 
-    @Test func purgeFlushesAfterBothIndexWrites() async throws {
+    func indexPairs(_ vault: TestVault) -> [String] {
+        [vault.indexURL, vault.root, vault.indexURL, vault.root].map(path)
+    }
+
+    /// The pages go between the two index writes, so a cut-short second write can't bring them back.
+    @Test func purgeFlushesAfterEachIndexWriteAndDeletesItsPagesBetweenThem() async throws {
         let vault = try TestVault()
         let flusher = RecordingFlusher(pagesDirectory: vault.pagesDirectory)
         let store = try await makeStore(vault, flusher)
         let id = try await store.createDocument(
             type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields,
             pages: [Synthetic.page("p1"), Synthetic.page("p2")])
-        let pages = try await store.document(id).pageIDs
+        let pages = try await store.document(id).pageIDs.map { "\($0.string).enc" }
         try await store.delete(id)
         let generationBefore = try await vault.readIndex(at: vault.indexURL).generation
-        try await store.deletePermanently(id)
+        let events = try await flushes(of: flusher) { try await store.deletePermanently(id) }
 
-        let events = flusher.recorded
-        try #require(events.count == 3)
-        expectFlushOrder(events, vault, newPages: [])  // a purge writes no page in step 1
-        let flushed = try await generation(of: events[1].contents, in: vault)
-        #expect(flushed.generation == generationBefore + 2)
-        #expect(flushed.documents.isEmpty)
-        for page in pages { #expect(events[2].pageFiles.contains("\(page.string).enc")) }
+        // The pages folder is flushed after the deletions, so they reach the disk before the second write.
+        let expected = [vault.indexURL, vault.root, vault.pagesDirectory, vault.indexURL, vault.root].map(path)
+        #expect(events.map { path($0.url) } == expected)
+        try #require(events.count == 5)
+        let first = try await generation(of: events[0].contents, in: vault)
+        #expect(first.generation == generationBefore + 1)
+        #expect(first.documents.isEmpty)
+        #expect(try await generation(of: events[3].contents, in: vault).generation == generationBefore + 2)
+        for page in pages {
+            #expect(events[0].pageFiles.contains(page) && events[1].pageFiles.contains(page))
+            #expect(events[2...].allSatisfy { !$0.pageFiles.contains(page) })
+        }
     }
 
-    @Test func purgeOfADocumentWithoutPagesDoesNotFlush() async throws {
+    @Test func purgeOfADocumentWithoutPagesFlushesBothIndexWrites() async throws {
         let vault = try TestVault()
         let flusher = RecordingFlusher(pagesDirectory: vault.pagesDirectory)
         let store = try await makeStore(vault, flusher)
@@ -117,11 +140,11 @@ struct FlushTests {
             type: .npwp, expiry: nil, pinned: false,
             fields: DocumentFields(["number": "00.000.000.0-000.000"]), pages: [])
         try await store.delete(id)
-        try await store.deletePermanently(id)
-        #expect(flusher.recorded.isEmpty)
+        let events = try await flushes(of: flusher) { try await store.deletePermanently(id) }
+        #expect(events.map { path($0.url) } == indexPairs(vault))
     }
 
-    @Test func obsoletePageAlreadyGoneDoesNotFlush() async throws {
+    @Test func obsoletePageAlreadyGoneStillFlushes() async throws {
         let vault = try TestVault()
         let flusher = RecordingFlusher(pagesDirectory: vault.pagesDirectory)
         let store = try await makeStore(vault, flusher)
@@ -130,85 +153,33 @@ struct FlushTests {
             pages: [Synthetic.page("front")])
         let old = try await store.document(id).pageIDs[0]
         try FileManager.default.removeItem(at: vault.pageURL(old))
-        _ = try await store.replacePage(old, of: id, with: Synthetic.page("front-rescan"))
-        #expect(flusher.recorded.isEmpty)
+        var new: PageID?
+        let events = try await flushes(of: flusher) {
+            new = try await store.replacePage(old, of: id, with: Synthetic.page("front-rescan"))
+        }
+        expectFlushOrder(events, vault, newPages: [try #require(new)])
     }
 
-    /// A failed flush skips only the deletions. The index is already written, so the save
-    /// counts, the projection is still written, and a later open removes the old page.
-    @Test func failedFlushKeepsTheSaveAndOnlySkipsTheDeletion() async throws {
+    /// Without this, a power cut soon after the first save could leave an empty vault.json beside
+    /// a good index. Opening an existing vault writes and flushes nothing.
+    @Test func aNewVaultFlushesItsHeaderAndFolders() async throws {
         let vault = try TestVault()
-        let flusher = RecordingFlusher(pagesDirectory: vault.pagesDirectory, failure: FlushError())
-        let store = try await makeStore(vault, flusher)
-        let id = try await store.createDocument(
-            type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields,
-            pages: [Synthetic.page("front")])
-        let old = try await store.document(id).pageIDs[0]
-        try FileManager.default.removeItem(at: vault.projectionURL)
-
-        _ = try await store.replacePage(old, of: id, with: Synthetic.page("front-rescan"))
-        #expect(try await store.pages(of: id).map(\.data) == [Synthetic.page("front-rescan")])
-        #expect(FileManager.default.fileExists(atPath: vault.pageURL(old).path))
-        #expect(FileManager.default.fileExists(atPath: vault.projectionURL.path))
-
-        vault.clock.advance(by: 3600)
-        let reopened = vault.makeStore()
-        let report = try await reopened.open()
-        #expect(report.indexSource == .current)
-        #expect(try await reopened.pages(of: id).map(\.data) == [Synthetic.page("front-rescan")])
-        #expect(!FileManager.default.fileExists(atPath: vault.pageURL(old).path))
+        let flusher = RecordingFlusher(pagesDirectory: vault.pagesDirectory)
+        _ = try await makeStore(vault, flusher)
+        let header = [vault.headerURL, vault.root, vault.root.deletingLastPathComponent()].map(path)
+        // Then the first, empty index.
+        #expect(flusher.recorded.map { path($0.url) } == header + [path(vault.indexURL), path(vault.root)])
+        #expect(flusher.recorded.first?.contents == (try Data(contentsOf: vault.headerURL)))
     }
 
-    @Test func failedDirectoryFlushOnlySkipsTheDeletion() async throws {
+    /// A header that a lock or a relaunch kept from its flush gets another at the next open.
+    @Test func everyOpenFlushesTheHeaderAndItsFolders() async throws {
         let vault = try TestVault()
-        let flusher = RecordingFlusher(
-            pagesDirectory: vault.pagesDirectory, failure: FlushError(),
-            failOnlyAt: vault.root)
-        let store = try await makeStore(vault, flusher)
-        let id = try await store.createDocument(
-            type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields,
-            pages: [Synthetic.page("front")])
-        let old = try await store.document(id).pageIDs[0]
-        let new = try await store.replacePage(old, of: id, with: Synthetic.page("front-rescan"))
-        expectFlushOrder(flusher.recorded, vault, newPages: [new])
-        #expect(FileManager.default.fileExists(atPath: vault.pageURL(old).path))
-    }
-
-    @Test func failedPagesFolderFlushStopsBeforeTheIndex() async throws {
-        let vault = try TestVault()
-        let flusher = RecordingFlusher(
-            pagesDirectory: vault.pagesDirectory, failure: FlushError(),
-            failOnlyAt: vault.pagesDirectory)
-        let store = try await makeStore(vault, flusher)
-        let id = try await store.createDocument(
-            type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields,
-            pages: [Synthetic.page("front")])
-        let old = try await store.document(id).pageIDs[0]
-        let new = try await store.replacePage(old, of: id, with: Synthetic.page("front-rescan"))
-        #expect(flusher.recorded.map { path($0.url) } == [path(vault.pageURL(new)), path(vault.pagesDirectory)])
-        #expect(FileManager.default.fileExists(atPath: vault.pageURL(old).path))
-    }
-
-    @Test func failedFlushDuringThePurgeInOpenStillOpens() async throws {
-        let vault = try TestVault()
-        let store = vault.makeStore()
-        try await store.open()
-        let id = try await store.createDocument(
-            type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields,
-            pages: [Synthetic.page("front"), Synthetic.page("back")])
-        try await store.delete(id)
-        let pages = try vault.pageFiles()
-        vault.clock.advance(by: 31 * 86400)
-
-        let flusher = RecordingFlusher(pagesDirectory: vault.pagesDirectory, failure: FlushError())
-        let report = try await vault.makeStore(flusher: flusher).open()
-        #expect(report.purgedDocuments == 1)
-        // The purged pages, with their sealed key, wait for the next open's cleanup.
-        #expect(try vault.pageFiles() == pages)
-
-        let next = try await vault.makeStore().open()
-        #expect(next.removedOrphanPages == pages.count)
-        #expect(try vault.pageFiles().isEmpty)
+        _ = try await makeStore(vault, RecordingFlusher(pagesDirectory: vault.pagesDirectory))
+        let reopening = RecordingFlusher(pagesDirectory: vault.pagesDirectory)
+        _ = try await makeStore(vault, reopening)
+        let header = [vault.headerURL, vault.root, vault.root.deletingLastPathComponent()].map(path)
+        #expect(reopening.recorded.map { path($0.url) } == header)
     }
 
     @Test func recordsTheWeakerMethodWhenTheTwoFlushesDiffer() async throws {

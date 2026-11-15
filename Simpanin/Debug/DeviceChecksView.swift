@@ -101,6 +101,18 @@
                     )
                 }
                 Section {
+                    Button("Time a save") {
+                        run { try await DeviceChecks.saveTime(in: FileManager.default.temporaryDirectory) }
+                    }
+                } header: {
+                    Text("8. Save time")
+                } footer: {
+                    Text(
+                        "Saves a synthetic 3-page document and edits it, five times each, in a throwaway "
+                            + "vault in tmp that is deleted afterwards."
+                    )
+                }
+                Section {
                     Button("Start over", role: .destructive) { confirmingStartOver = true }
                         // UI tests use a throwaway vault but the real access group, so the real keys would go.
                         .disabled(vault == nil || accessGroup == nil || UITestSetup.isActive)

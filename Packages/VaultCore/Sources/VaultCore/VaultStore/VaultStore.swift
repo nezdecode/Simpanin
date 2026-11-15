@@ -62,7 +62,7 @@ public actor VaultStore {
     let reminderOffsets: [Int]
     let crashHook: (@Sendable (WriteStep) throws -> Void)?
     let flusher: any IndexFlusher
-    /// How the last commit that flushed did it. `.fsync` if any of its flushes fell back.
+    /// How the last commit whose flushes all succeeded did them. `.fsync` if any of them fell back.
     var lastFlushMethod: FlushMethod?
     /// How often the crash hook stopped a write, so `afterSave` never swallows a simulated crash.
     var crashHookStops = 0
@@ -72,8 +72,13 @@ public actor VaultStore {
         let indexKey: SymmetricKey
         let wrapKey: SymmetricKey
         var index: VaultIndex
-        /// True when index.enc on disk holds `index`. Only then may it become index.prev.enc.
-        var indexFileIsCurrent: Bool
+        /// True when index.enc holds `index` and reached the disk: it was flushed, or read at open.
+        /// Only then may it become index.prev.enc, or may pages it no longer names be deleted.
+        var indexFileIsOnDisk: Bool
+        /// True once vault.json and its folders were flushed since this open. It's written only once, so no
+        /// later write repeats that flush; until one works, a save flushes them first and fails
+        /// with them.
+        var headerIsOnDisk: Bool
     }
 
     var state: OpenState?
@@ -223,6 +228,15 @@ public actor VaultStore {
             try writeNew(VaultJSON.encoder.encode(header), to: headerURL, protection: .complete)
             report.createdVault = true
         }
+        // Every open, not only the first: a phone that locks during the creation makes this flush
+        // fail, and the next open reads the header without it. A failure doesn't stop the open.
+        let headerIsOnDisk: Bool
+        do {
+            _ = try flushHeader()
+            headerIsOnDisk = true
+        } catch {
+            headerIsOnDisk = false
+        }
         // lock() may have run while we waited for the key, and the files may have been
         // quarantined meanwhile. Nothing below waits, so this is the last chance to honour it.
         guard lockCount == lockCountAtStart else { throw VaultError.locked }
@@ -240,7 +254,7 @@ public actor VaultStore {
         report.unreadablePages = loaded.unreadablePages
         state = OpenState(
             header: header, indexKey: indexKey, wrapKey: wrapKey, index: loaded.index,
-            indexFileIsCurrent: loaded.source == .current)
+            indexFileIsOnDisk: loaded.source == .current, headerIsOnDisk: headerIsOnDisk)
 
         do {
             try repairAndCleanUp(loaded, &report)
@@ -256,7 +270,15 @@ public actor VaultStore {
     /// must not lock the user out: the vault opens with what was loaded, and a bad index.enc is
     /// replaced by the next save, never moved to index.prev.enc.
     private func repairAndCleanUp(_ loaded: LoadedIndex, _ report: inout OpenReport) throws {
-        if loaded.source != .current || loaded.previousHoldsRemovedDocuments {
+        // Before the repair: a repair cut short falls back to index.prev.enc and would re-attach
+        // these pages, which may be a purged document's.
+        if loaded.allowsOrphanCleanup {
+            report.removedOrphanPages = try removeOrphanPages(unreadable: &report.unreadablePages)
+        }
+        // A commit would retry the header flush that just failed and fail with it, so the repair
+        // and the purge wait for an open whose flush works rather than fail this one.
+        let canCommit = try requireState().headerIsOnDisk
+        if canCommit, loaded.source != .current || loaded.previousHoldsRemovedDocuments {
             // Replace a bad or stale index.enc, or finish an interrupted purge.
             do {
                 try commit(loaded.index.documents)
@@ -265,13 +287,12 @@ public actor VaultStore {
             }
         }
         try removeLeftoverTempFiles()
-        if loaded.allowsOrphanCleanup {
-            report.removedOrphanPages = try removeOrphanPages(unreadable: &report.unreadablePages)
-        }
-        do {
-            report.purgedDocuments = try purgeExpired()
-        } catch VaultError.storageFull {
-            report.repairWaitingForSpace = true
+        if canCommit {
+            do {
+                report.purgedDocuments = try purgeExpired()
+            } catch VaultError.storageFull {
+                report.repairWaitingForSpace = true
+            }
         }
         try afterSave { try writeProjection(try requireState().index.documents) }
     }
