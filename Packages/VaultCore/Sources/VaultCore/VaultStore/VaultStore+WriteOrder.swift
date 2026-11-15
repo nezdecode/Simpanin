@@ -18,49 +18,63 @@ extension VaultStore {
         _ documents: [IndexEntry], newPages: [(PageID, Data)] = [],
         obsoletePages: [PageID] = [], writeIndexTwice: Bool = false
     ) throws {
-        // 1. New page files.
+        // 1. New page files, flushed with their folder, so no index names a page that isn't on
+        //    disk. A failure here fails the save, and a later open removes the pages.
+        var methods: [FlushMethod] = []
         for (pageID, data) in newPages {
             try write(data, to: pageURL(pageID), protection: .complete)
+            methods.append(try flusher.flush(pageURL(pageID)))
         }
+        if !newPages.isEmpty { methods.append(try flusher.flush(pagesDirectory)) }
         try step(.pagesWritten)
 
-        // 2. Rotate and write the index (twice for a purge). Once index.enc is written the
-        //    change is saved. Anything that fails after this is repaired by the next open().
-        try writeIndex(documents)
-        if writeIndexTwice { try afterSave { try writeIndex(documents) } }
+        // 2. Rotate, write and flush the index. Once index.enc is written the change is saved.
+        //    Anything that fails after this is repaired by the next open().
+        let flushed = try writeIndex(documents, flushMethods: &methods)
 
-        // 3. Delete pages the index no longer references. First flush the new pages, the pages
-        //    folder, the index and the vault folder, so nothing is deleted before its
-        //    replacement is on disk. If a flush fails, the save still counts because the index
-        //    is written. The old pages just stay until orphan cleanup on a later open.
-        let fileManager = FileManager.default
-        var doomed: [PageID] = []
-        for pageID in obsoletePages where fileManager.fileExists(atPath: pageURL(pageID).path) {
-            doomed.append(pageID)
-        }
-        if !doomed.isEmpty {
-            do {
-                var methods: [FlushMethod] = []
-                for (pageID, _) in newPages {
-                    methods.append(try flusher.flush(pageURL(pageID)))
-                }
-                methods.append(try flusher.flush(pagesDirectory))
-                methods.append(try flusher.flush(indexURL))
-                methods.append(try flusher.flush(root))
-                // A commit is only as durable as its weakest flush.
-                lastFlushMethod = methods.allSatisfy { $0 == .fullFsync } ? .fullFsync : .fsync
-            } catch {
-                doomed = []
-            }
-        }
-        for pageID in doomed {
-            try afterSave { try FileManager.default.removeItem(at: pageURL(pageID)) }
+        // 3. Delete pages the index no longer references, only once it's on disk. If its flush
+        //    failed, they stay until orphan cleanup on a later open. A purge flushes the pages
+        //    folder and writes the index again after its pages are gone, so index.prev.enc loses
+        //    the purged keys and nothing is left to bring them back.
+        var allFlushed = flushed
+        if flushed {
+            allFlushed = try deleteObsoletePages(obsoletePages, flushingFolder: writeIndexTwice, flushMethods: &methods)
         }
         try step(.obsoletePagesDeleted)
+        if writeIndexTwice {
+            var flushedAgain = false
+            try afterSave { flushedAgain = try writeIndex(documents, flushMethods: &methods) }
+            if flushedAgain, !flushed {
+                // The first write never reached the disk, so the pages waited for this one.
+                _ = try deleteObsoletePages(obsoletePages, flushingFolder: true, flushMethods: &methods)
+            }
+            allFlushed = allFlushed && flushedAgain
+        }
+        // A commit is only as durable as its weakest flush.
+        if allFlushed { lastFlushMethod = methods.allSatisfy { $0 == .fullFsync } ? .fullFsync : .fsync }
 
         // 4. Projection last.
         try afterSave { try writeProjection(documents) }
         try step(.projectionWritten)
+    }
+
+    /// Deletes the page files in `pageIDs` that still exist. With `flushingFolder`, it then flushes
+    /// the pages folder, so the deletions reach the disk; returns whether that flush worked.
+    private func deleteObsoletePages(
+        _ pageIDs: [PageID], flushingFolder: Bool, flushMethods: inout [FlushMethod]
+    ) throws -> Bool {
+        var deleted = false
+        for pageID in pageIDs where FileManager.default.fileExists(atPath: pageURL(pageID).path) {
+            try afterSave { try FileManager.default.removeItem(at: pageURL(pageID)) }
+            deleted = true
+        }
+        guard flushingFolder, deleted else { return true }
+        do {
+            flushMethods.append(try flusher.flush(pagesDirectory))
+            return true
+        } catch {
+            return false
+        }
     }
 
     /// Runs a step that comes after index.enc is written. A failure is left for the next
@@ -74,14 +88,17 @@ extension VaultStore {
         }
     }
 
-    private func writeIndex(_ documents: [IndexEntry]) throws {
+    /// Writes the index, then flushes it and the vault folder, adding their methods to
+    /// `flushMethods`. Returns whether both flushes worked. Only an index that reached the disk is
+    /// ever moved to index.prev.enc, so one whose flush failed is replaced by the next write.
+    private func writeIndex(_ documents: [IndexEntry], flushMethods: inout [FlushMethod]) throws -> Bool {
         var state = try requireState()
         let next = VaultIndex(generation: state.index.generation + 1, documents: documents)
         let sealed = try VaultCrypto.seal(
             VaultJSON.encoder.encode(next), with: state.indexKey,
             as: .index(state.header.vaultID))
         let fileManager = FileManager.default
-        if state.indexFileIsCurrent, fileManager.fileExists(atPath: indexURL.path) {
+        if state.indexFileIsOnDisk, fileManager.fileExists(atPath: indexURL.path) {
             if fileManager.fileExists(atPath: previousIndexURL.path) {
                 try fileManager.removeItem(at: previousIndexURL)
             }
@@ -90,9 +107,16 @@ extension VaultStore {
         try step(.indexMovedToPrevious)
         try write(sealed, to: indexURL, protection: .complete)
         state.index = next
-        state.indexFileIsCurrent = true
+        state.indexFileIsOnDisk = false
         self.state = state
         try step(.indexWritten)
+        do {
+            flushMethods += [try flusher.flush(indexURL), try flusher.flush(root)]
+        } catch {
+            return false
+        }
+        self.state?.indexFileIsOnDisk = true
+        return true
     }
 
     func writeProjection(_ documents: [IndexEntry]) throws {

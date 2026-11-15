@@ -26,13 +26,28 @@ extension FlushTesting {
 
     func path(_ url: URL) -> String { url.standardizedFileURL.path }
 
-    /// The flushes of one commit, in order. Each new page file, then the pages folder, the new
-    /// index file and the vault folder.
+    /// The flushes of one save, in order. Each new page file and the pages folder when it wrote
+    /// pages, then the new index file and the vault folder.
     func expectFlushOrder(_ events: [RecordingFlusher.Event], _ vault: TestVault, newPages: [PageID]) {
-        let expected =
-            newPages.map { path(vault.pageURL($0)) }
-            + [path(vault.pagesDirectory), path(vault.indexURL), path(vault.root)]
-        #expect(events.map { path($0.url) } == expected)
+        let pages = newPages.isEmpty ? [] : newPages.map { path(vault.pageURL($0)) } + [path(vault.pagesDirectory)]
+        #expect(events.map { path($0.url) } == pages + [path(vault.indexURL), path(vault.root)])
+    }
+
+    /// The flushes `save` made.
+    func flushes(
+        of flusher: RecordingFlusher, during save: () async throws -> Void
+    ) async throws -> [RecordingFlusher.Event] {
+        let start = flusher.recorded.count
+        try await save()
+        return Array(flusher.recorded.dropFirst(start))
+    }
+
+    /// Neither index file still holds `sealedKey`.
+    func expectNoIndexHolds(_ sealedKey: Data, in vault: TestVault) async throws {
+        for url in [vault.indexURL, vault.previousIndexURL] where FileManager.default.fileExists(atPath: url.path) {
+            let index = try await vault.readIndex(at: url)
+            #expect(!index.documents.contains { $0.sealedKey == sealedKey }, "\(url.lastPathComponent)")
+        }
     }
 }
 

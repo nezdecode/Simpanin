@@ -11,7 +11,7 @@
 
 import Foundation
 
-/// How the flushes before a deletion were done.
+/// How a save's flushes were done.
 enum FlushMethod: Sendable, Equatable {
     /// fcntl(F_FULLFSYNC), which asks the drive to write its cache to permanent storage.
     case fullFsync
@@ -19,7 +19,8 @@ enum FlushMethod: Sendable, Equatable {
     case fsync
 }
 
-/// A flush didn't reach permanent storage. Internal: the store only skips its deletions.
+/// A flush didn't reach permanent storage. Internal: a failed page flush fails the save with it,
+/// and a failed index flush only skips what depends on it.
 struct FlushFailed: Error, Equatable {}
 
 /// Flushes a file or folder to permanent storage. It's a protocol so tests can record flushes.

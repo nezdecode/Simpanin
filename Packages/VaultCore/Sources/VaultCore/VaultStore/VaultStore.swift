@@ -62,7 +62,7 @@ public actor VaultStore {
     let reminderOffsets: [Int]
     let crashHook: (@Sendable (WriteStep) throws -> Void)?
     let flusher: any IndexFlusher
-    /// How the last commit that flushed did it. `.fsync` if any of its flushes fell back.
+    /// How the last commit whose flushes all succeeded did them. `.fsync` if any of them fell back.
     var lastFlushMethod: FlushMethod?
     /// How often the crash hook stopped a write, so `afterSave` never swallows a simulated crash.
     var crashHookStops = 0
@@ -72,8 +72,9 @@ public actor VaultStore {
         let indexKey: SymmetricKey
         let wrapKey: SymmetricKey
         var index: VaultIndex
-        /// True when index.enc on disk holds `index`. Only then may it become index.prev.enc.
-        var indexFileIsCurrent: Bool
+        /// True when index.enc holds `index` and reached the disk: it was flushed, or read at open.
+        /// Only then may it become index.prev.enc, or may pages it no longer names be deleted.
+        var indexFileIsOnDisk: Bool
     }
 
     var state: OpenState?
@@ -221,6 +222,8 @@ public actor VaultStore {
             try createFolder(root, protection: .complete)
             try createFolder(pagesDirectory, protection: .complete)
             try writeNew(VaultJSON.encoder.encode(header), to: headerURL, protection: .complete)
+            // Like an index flush, a failure doesn't stop the vault being created.
+            for url in [headerURL, root, root.deletingLastPathComponent()] { _ = try? flusher.flush(url) }
             report.createdVault = true
         }
         // lock() may have run while we waited for the key, and the files may have been
@@ -240,7 +243,7 @@ public actor VaultStore {
         report.unreadablePages = loaded.unreadablePages
         state = OpenState(
             header: header, indexKey: indexKey, wrapKey: wrapKey, index: loaded.index,
-            indexFileIsCurrent: loaded.source == .current)
+            indexFileIsOnDisk: loaded.source == .current)
 
         do {
             try repairAndCleanUp(loaded, &report)
@@ -256,6 +259,11 @@ public actor VaultStore {
     /// must not lock the user out: the vault opens with what was loaded, and a bad index.enc is
     /// replaced by the next save, never moved to index.prev.enc.
     private func repairAndCleanUp(_ loaded: LoadedIndex, _ report: inout OpenReport) throws {
+        // Before the repair: a repair cut short falls back to index.prev.enc and would re-attach
+        // these pages, which may be a purged document's.
+        if loaded.allowsOrphanCleanup {
+            report.removedOrphanPages = try removeOrphanPages(unreadable: &report.unreadablePages)
+        }
         if loaded.source != .current || loaded.previousHoldsRemovedDocuments {
             // Replace a bad or stale index.enc, or finish an interrupted purge.
             do {
@@ -265,9 +273,6 @@ public actor VaultStore {
             }
         }
         try removeLeftoverTempFiles()
-        if loaded.allowsOrphanCleanup {
-            report.removedOrphanPages = try removeOrphanPages(unreadable: &report.unreadablePages)
-        }
         do {
             report.purgedDocuments = try purgeExpired()
         } catch VaultError.storageFull {
