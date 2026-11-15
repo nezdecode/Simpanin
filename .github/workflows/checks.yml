@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -33,7 +33,7 @@ jobs:
     # another release can format differently. Move it when Xcode's Swift moves.
     container: swift:6.4.0
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - run: swift format lint --strict -r Packages/VaultCore Simpanin SimpaninTests SimpaninUITests
@@ -51,7 +51,7 @@ jobs:
     # The version .swiftlint.yml asks for; SwiftLint refuses to run as any other.
     container: ghcr.io/realm/swiftlint:0.59.1
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - run: swiftlint lint --strict
