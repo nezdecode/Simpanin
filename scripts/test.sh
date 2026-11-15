@@ -2,6 +2,8 @@
 # Runs the app's tests on the iOS 27 "iPhone 17" simulator and fails unless they ran and passed.
 #   scripts/test.sh                              every test, unit and UI
 #   scripts/test.sh --only SimpaninTests         one target, or Target/Class; repeat --only for several
+#   scripts/test.sh --skip SimpaninTests         everything but a target or Target/Class; repeatable, and
+#                                                applied after --only
 # SIMPANIN_SIMULATOR names another simulator by id. SIMPANIN_IDLE_TIMEOUT (seconds, default 300) stops a
 # run that prints nothing for that long: xcodebuild has hung after the build with no output. After Swift
 # Testing's summary the limit is 60 seconds, since xcodebuild often hangs there after a failing run.
@@ -12,16 +14,16 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 # Anything it doesn't know stops it: a filter it skipped once ran less than the command asked for.
-only=()
+filters=()
 while [ $# -gt 0 ]; do
   case "$1" in
-    --only)
-      [ -n "${2:-}" ] && [ "${2#-}" = "$2" ] || { echo "test.sh: --only needs a target or Target/Class" >&2; exit 2; }
-      only+=(-only-testing:"$2")
+    --only | --skip)
+      [ -n "${2:-}" ] && [ "${2#-}" = "$2" ] || { echo "test.sh: $1 needs a target or Target/Class" >&2; exit 2; }
+      if [ "$1" = --only ]; then filters+=(-only-testing:"$2"); else filters+=(-skip-testing:"$2"); fi
       shift 2
       ;;
     *)
-      echo "test.sh: unknown argument '$1'; use --only <Target or Target/Class>, as often as needed" >&2
+      echo "test.sh: unknown argument '$1'; use --only or --skip <Target or Target/Class>, as often as needed" >&2
       exit 2
       ;;
   esac
@@ -53,7 +55,7 @@ echo "test.sh: simulator $simulator; log and results in $run"
 xcodebuild test -project Simpanin.xcodeproj -scheme Simpanin \
   -destination "platform=iOS Simulator,id=$simulator" -destination-timeout 120 \
   -parallel-testing-enabled NO -derivedDataPath build/DerivedData-test \
-  -resultBundlePath "$bundle" "${only[@]+"${only[@]}"}" > "$log" 2>&1 &
+  -resultBundlePath "$bundle" "${filters[@]+"${filters[@]}"}" > "$log" 2>&1 &
 pid=$!
 # Stops xcodebuild and its direct children (the build service, compilers) on any exit, Ctrl-C included.
 # The test runner inside the simulator is launchd_sim's, not xcodebuild's; it ends with the run.
@@ -113,7 +115,7 @@ total, failed = s.get("totalTestCount", 0), s.get("failedTests", 0)
 passed, skipped = s.get("passedTests", 0), s.get("skippedTests", 0)
 print(f"test.sh: {total} tests: {passed} passed, {failed} failed, {skipped} skipped")
 if total == 0:
-    sys.exit("test.sh: FAILED, no test ran: check the --only filter")
+    sys.exit("test.sh: FAILED, no test ran: check the --only and --skip filters")
 if failed or s.get("result") != "Passed":
     sys.exit("test.sh: FAILED")
 print("test.sh: PASSED")
