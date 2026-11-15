@@ -1,0 +1,58 @@
+# The app's unit and UI tests on every pull request into main, on GitHub's macOS image with the same Xcode
+# as the Mac. UI tests take about 40 minutes one after another, so three jobs split them by class. Like
+# checks.yml, they advise and don't block: check them before merging (CONTRIBUTING.md).
+name: App tests
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+
+concurrency:
+  group: app-tests-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: ${{ matrix.name }}
+    runs-on: xcode-27
+    timeout-minutes: 60
+    strategy:
+      # A flake in one job shouldn't cancel the others.
+      fail-fast: false
+      # Balanced by each class's time in a full run, about 13 minutes of UI tests each on the Mac. The last
+      # job runs everything the others don't, so a new class or target is never left out.
+      matrix:
+        include:
+          - name: Unit tests and UI tests, part 1
+            args: >-
+              --only SimpaninTests
+              --only SimpaninUITests/EditDocumentUITests --only SimpaninUITests/ShareUITests
+              --only SimpaninUITests/LibraryUITests --only SimpaninUITests/LockCoverUITests
+              --only SimpaninUITests/ReviewMarksUITests
+          - name: UI tests, part 2
+            args: >-
+              --only SimpaninUITests/DeletedDetailUITests --only SimpaninUITests/DocumentDetailUITests
+              --only SimpaninUITests/ScanFlowUITests --only SimpaninUITests/DocumentPagesUITests
+              --only SimpaninUITests/SettingsUITests
+          - name: UI tests, the rest
+            args: >-
+              --skip SimpaninTests
+              --skip SimpaninUITests/EditDocumentUITests --skip SimpaninUITests/ShareUITests
+              --skip SimpaninUITests/LibraryUITests --skip SimpaninUITests/LockCoverUITests
+              --skip SimpaninUITests/ReviewMarksUITests
+              --skip SimpaninUITests/DeletedDetailUITests --skip SimpaninUITests/DocumentDetailUITests
+              --skip SimpaninUITests/ScanFlowUITests --skip SimpaninUITests/DocumentPagesUITests
+              --skip SimpaninUITests/SettingsUITests
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # The Xcode the Mac builds with; the image's default is newer. Move it when the Mac's Xcode moves.
+      - run: sudo xcode-select -s /Applications/Xcode_27.0.app
+      # Only test.sh's summary reaches this public log: test names and counts, never field values or the
+      # app's logs. Nothing is uploaded; a failure is rerun on the Mac with --only.
+      - run: scripts/test.sh ${{ matrix.args }}
