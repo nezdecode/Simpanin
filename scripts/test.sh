@@ -88,10 +88,11 @@ done
 stop
 wait "$pid" 2> /dev/null || true
 
-# Only the names of failed tests: an issue's details, and an XCTest failure's "error: -[…]" line, can
-# hold field values.
-grep -E 'Test run with [0-9]+ tests|✘ Test .+ failed after|Executed [0-9]+ tests|\*\* TEST|error:' "$log" \
-  | grep -v 'error: -\[' | sort -u || true
+# Only the names of failed tests: an issue's details, an XCTest failure's "error: -[…]" line and the
+# app's log lines (they start with a timestamp) can hold field values, and CI's log is public.
+# "Test Case" is XCTest's serial form, "Test case … failed on 'Clone 1 …'" its parallel one.
+grep -E "Test run with [0-9]+ tests|✘ Test .+ failed after|Test [Cc]ase '[^']+' failed|Executed [0-9]+ tests|\*\* TEST|error:" "$log" \
+  | grep -vE 'error: -\[|^[0-9]{4}-[0-9]{2}-[0-9]{2} ' | sort -u || true
 # A stopped xcodebuild may still have written a bundle, without the tests it never ran.
 if [ -n "$stopped" ]; then
   echo "test.sh: FAILED, xcodebuild was stopped; see $log" >&2
