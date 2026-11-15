@@ -93,6 +93,45 @@
             return lines
         }
 
+        // MARK: - Save time
+
+        /// Saves a synthetic 3-page document and edits it, five times each, and reports the median of
+        /// each in milliseconds. The vault, its projection and its keys are throwaway: a folder in
+        /// `tmp` and keys in memory, so it never touches the real vault, projection or Keychain.
+        static func saveTime(in temporaryDirectory: URL) async throws -> [DeviceCheckLine] {
+            let scratch = temporaryDirectory.appending(path: "SaveTime", directoryHint: .isDirectory)
+            try? FileManager.default.removeItem(at: scratch)
+            defer { try? FileManager.default.removeItem(at: scratch) }
+            let store = VaultStore(
+                rootDirectory: scratch.appending(path: "Vault", directoryHint: .isDirectory),
+                projectionURL: scratch.appending(path: "projection.json"), keyStore: PreviewKeyStore(),
+                fileProtector: DataProtectionFileProtector())
+            try await store.open()
+            let fields = DocumentFields([FieldKey.nik: "0012345678901234"])
+            // About the size of a scanned page.
+            let pages = (0..<3).map { Data(repeating: UInt8($0), count: 600_000) }
+            let clock = ContinuousClock()
+            var saves: [Duration] = []
+            var edits: [Duration] = []
+            for run in 0..<5 {
+                var start = clock.now
+                let id = try await store.createDocument(
+                    type: .ktp, expiry: nil, pinned: false, fields: fields, pages: pages)
+                saves.append(start.duration(to: clock.now))
+                start = clock.now
+                try await store.editDocument(
+                    id, type: .ktp, label: "\(run)", expiry: nil, pinned: true, fields: fields)
+                edits.append(start.duration(to: clock.now))
+            }
+            func median(_ times: [Duration]) -> String {
+                "\(Int((times.sorted()[times.count / 2] / .milliseconds(1)).rounded())) ms"
+            }
+            return [
+                DeviceCheckLine(label: "3-page save, median of 5", result: median(saves)),
+                DeviceCheckLine(label: "edit, median of 5", result: median(edits)),
+            ]
+        }
+
         /// A file born at the background class, set to Complete, then renamed like VaultCore's
         /// temp-file write. The rename should keep Complete.
         static func renameKeepsClass(in folder: URL) throws -> [DeviceCheckLine] {
