@@ -1,6 +1,6 @@
 # The hooks' checks, the linters and VaultCore's tests on every pull request into main, on Linux so they
 # cost the fewest Actions minutes. They advise and don't block: check them before merging (CONTRIBUTING.md).
-# The app's own tests need the simulator and stay local (scripts/test.sh).
+# The app's own tests need the simulator, so they run on macOS in app-tests.yml.
 name: Checks
 
 on:

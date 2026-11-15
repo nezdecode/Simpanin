@@ -51,7 +51,8 @@ bundle="$run/Tests.xcresult"
 echo "test.sh: simulator $simulator; log and results in $run"
 : > "$log"  # exists before the loop reads its time
 
-# Parallel testing clones the simulator, and a clone once never finished booting.
+# Parallel testing clones the simulator. A clone once never finished booting, and in three trials two
+# clones loaded an 8-core Mac so heavily that UI tests stalled for minutes. CI splits the classes instead.
 xcodebuild test -project Simpanin.xcodeproj -scheme Simpanin \
   -destination "platform=iOS Simulator,id=$simulator" -destination-timeout 120 \
   -parallel-testing-enabled NO -derivedDataPath build/DerivedData-test \
