@@ -18,9 +18,16 @@ extension VaultStore {
         _ documents: [IndexEntry], newPages: [(PageID, Data)] = [],
         obsoletePages: [PageID] = [], writeIndexTwice: Bool = false
     ) throws {
+        // 0. vault.json and its folders, until a flush of them has worked (`headerIsOnDisk`).
+        //    A failure fails the save before anything is written.
+        var methods: [FlushMethod] = []
+        if try !requireState().headerIsOnDisk {
+            methods += try flushHeader()
+            state?.headerIsOnDisk = true
+        }
+
         // 1. New page files, flushed with their folder, so no index names a page that isn't on
         //    disk. A failure here fails the save, and a later open removes the pages.
-        var methods: [FlushMethod] = []
         for (pageID, data) in newPages {
             try write(data, to: pageURL(pageID), protection: .complete)
             methods.append(try flusher.flush(pageURL(pageID)))
@@ -56,6 +63,11 @@ extension VaultStore {
         // 4. Projection last.
         try afterSave { try writeProjection(documents) }
         try step(.projectionWritten)
+    }
+
+    /// Flushes vault.json, the vault folder and the folder that holds it, in that order.
+    func flushHeader() throws -> [FlushMethod] {
+        try [headerURL, root, root.deletingLastPathComponent()].map { try flusher.flush($0) }
     }
 
     /// Deletes the page files in `pageIDs` that still exist. With `flushingFolder`, it then flushes

@@ -187,4 +187,21 @@ struct PowerLossTests: FlushTesting {
         #expect(try await reopened.fields(of: id) == Synthetic.ktpFields)
         #expect(try await reopened.pages(of: id).map(\.data) == [Synthetic.page("front")])
     }
+
+    /// The header's flush failed at creation, as when the phone locks then; the first save
+    /// flushes it before anything else.
+    @Test func aPowerCutAfterAFailedHeaderFlushKeepsTheHeader() async throws {
+        let vault = try TestVault()
+        let flusher = RecordingFlusher(pagesDirectory: vault.pagesDirectory, failingAt: .file(vault.headerURL))
+        flusher.arm(times: 1)
+        let store = vault.makeStore(flusher: flusher)
+        try await store.open()
+        let id = try await store.createDocument(
+            type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields, pages: [Synthetic.page("front")])
+        try cutPower(vault, onDiskBefore: [:], flusher)
+
+        let reopened = vault.makeStore()
+        #expect(try await reopened.open().indexSource == .current)
+        #expect(try await reopened.fields(of: id) == Synthetic.ktpFields)
+    }
 }

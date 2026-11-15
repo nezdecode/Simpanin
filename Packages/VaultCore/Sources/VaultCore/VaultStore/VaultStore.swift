@@ -75,6 +75,10 @@ public actor VaultStore {
         /// True when index.enc holds `index` and reached the disk: it was flushed, or read at open.
         /// Only then may it become index.prev.enc, or may pages it no longer names be deleted.
         var indexFileIsOnDisk: Bool
+        /// True once vault.json and its folders were flushed since this open. It's written only once, so no
+        /// later write repeats that flush; until one works, a save flushes them first and fails
+        /// with them.
+        var headerIsOnDisk: Bool
     }
 
     var state: OpenState?
@@ -222,9 +226,16 @@ public actor VaultStore {
             try createFolder(root, protection: .complete)
             try createFolder(pagesDirectory, protection: .complete)
             try writeNew(VaultJSON.encoder.encode(header), to: headerURL, protection: .complete)
-            // Like an index flush, a failure doesn't stop the vault being created.
-            for url in [headerURL, root, root.deletingLastPathComponent()] { _ = try? flusher.flush(url) }
             report.createdVault = true
+        }
+        // Every open, not only the first: a phone that locks during the creation makes this flush
+        // fail, and the next open reads the header without it. A failure doesn't stop the open.
+        let headerIsOnDisk: Bool
+        do {
+            _ = try flushHeader()
+            headerIsOnDisk = true
+        } catch {
+            headerIsOnDisk = false
         }
         // lock() may have run while we waited for the key, and the files may have been
         // quarantined meanwhile. Nothing below waits, so this is the last chance to honour it.
@@ -243,7 +254,7 @@ public actor VaultStore {
         report.unreadablePages = loaded.unreadablePages
         state = OpenState(
             header: header, indexKey: indexKey, wrapKey: wrapKey, index: loaded.index,
-            indexFileIsOnDisk: loaded.source == .current)
+            indexFileIsOnDisk: loaded.source == .current, headerIsOnDisk: headerIsOnDisk)
 
         do {
             try repairAndCleanUp(loaded, &report)
@@ -264,7 +275,10 @@ public actor VaultStore {
         if loaded.allowsOrphanCleanup {
             report.removedOrphanPages = try removeOrphanPages(unreadable: &report.unreadablePages)
         }
-        if loaded.source != .current || loaded.previousHoldsRemovedDocuments {
+        // A commit would retry the header flush that just failed and fail with it, so the repair
+        // and the purge wait for an open whose flush works rather than fail this one.
+        let canCommit = try requireState().headerIsOnDisk
+        if canCommit, loaded.source != .current || loaded.previousHoldsRemovedDocuments {
             // Replace a bad or stale index.enc, or finish an interrupted purge.
             do {
                 try commit(loaded.index.documents)
@@ -273,10 +287,12 @@ public actor VaultStore {
             }
         }
         try removeLeftoverTempFiles()
-        do {
-            report.purgedDocuments = try purgeExpired()
-        } catch VaultError.storageFull {
-            report.repairWaitingForSpace = true
+        if canCommit {
+            do {
+                report.purgedDocuments = try purgeExpired()
+            } catch VaultError.storageFull {
+                report.repairWaitingForSpace = true
+            }
         }
         try afterSave { try writeProjection(try requireState().index.documents) }
     }

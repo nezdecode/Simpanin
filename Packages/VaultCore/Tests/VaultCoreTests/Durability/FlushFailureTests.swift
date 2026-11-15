@@ -127,7 +127,7 @@ struct FlushFailureTests: FlushTesting {
         let pages = try vault.pageFiles()
         vault.clock.advance(by: 31 * 86400)
 
-        let flusher = RecordingFlusher(pagesDirectory: vault.pagesDirectory)
+        let flusher = RecordingFlusher(pagesDirectory: vault.pagesDirectory, failingAt: .file(vault.indexURL))
         flusher.arm()
         let report = try await vault.makeStore(flusher: flusher).open()
         #expect(report.purgedDocuments == 1)
@@ -216,17 +216,88 @@ struct FlushFailureTests: FlushTesting {
     }
 
     /// Like an index flush, a header flush that fails doesn't stop a new vault.
-    @Test func failedHeaderFlushStillCreatesTheVault() async throws {
+    /// vault.json is written once, so no later write repeats its flush: a save flushes it first
+    /// while that hasn't worked, and fails rather than store a document beside a header that may
+    /// come back empty.
+    @Test func aSaveFailsUntilTheHeaderReachesTheDisk() async throws {
         let vault = try TestVault()
         let flusher = RecordingFlusher(pagesDirectory: vault.pagesDirectory, failingAt: .file(vault.headerURL))
         flusher.arm()
         let store = vault.makeStore(flusher: flusher)
         #expect(try await store.open().createdVault)
+        await #expect(throws: FlushError.self) {
+            _ = try await store.createDocument(
+                type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields, pages: [Synthetic.page("front")])
+        }
+        #expect(try await store.documents().isEmpty)
+        #expect(try vault.pageFiles().isEmpty)
+        #expect(!FileManager.default.fileExists(atPath: vault.indexURL.path))
+
+        flusher.disarm()
         let id = try await store.createDocument(
             type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields, pages: [Synthetic.page("front")])
+        try await store.editDocument(id, type: .ktp, label: nil, expiry: nil, pinned: true, fields: Synthetic.ktpFields)
+        // Flushed once, by the first save that worked.
+        #expect(flusher.recorded.filter { path($0.url) == path(vault.headerURL) && !$0.failed }.count == 1)
         let reopened = vault.makeStore()
         try await reopened.open()
-        #expect(try await reopened.document(id).type == .ktp)
+        #expect(try await reopened.document(id).pinned)
+    }
+
+    /// With the header flush failing, a new vault's open writes no index.enc, so the next open
+    /// finds vault.json alone: an empty vault, not a damaged one.
+    @Test func aNewVaultWhoseHeaderFlushFailedReopensEmpty() async throws {
+        let vault = try TestVault()
+        let failing = RecordingFlusher(pagesDirectory: vault.pagesDirectory, failingAt: .file(vault.headerURL))
+        failing.arm()
+        #expect(try await vault.makeStore(flusher: failing).open().createdVault)
+
+        let report = try await vault.makeStore(flusher: failing).open()
+        #expect(!report.createdVault && !report.recoveredFromPages && !report.newestChangeMayBeLost)
+        let reopened = vault.makeStore()
+        try await reopened.open()
+        #expect(try await reopened.documents().isEmpty)
+        #expect(FileManager.default.fileExists(atPath: vault.indexURL.path))
+    }
+
+    @Test func aFailedHeaderFlushAtOpenStillOpensAndReads() async throws {
+        let vault = try TestVault()
+        let first = vault.makeStore()
+        try await first.open()
+        let id = try await first.createDocument(
+            type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields, pages: [Synthetic.page("front")])
+
+        let flusher = RecordingFlusher(pagesDirectory: vault.pagesDirectory, failingAt: .file(vault.headerURL))
+        flusher.arm()
+        let store = vault.makeStore(flusher: flusher)
+        try await store.open()
+        #expect(try await store.fields(of: id) == Synthetic.ktpFields)
+        #expect(try await store.pages(of: id).map(\.data) == [Synthetic.page("front")])
+        await #expect(throws: FlushError.self) {
+            try await store.editDocument(
+                id, type: .ktp, label: nil, expiry: nil, pinned: true, fields: Synthetic.ktpFields)
+        }
+        #expect(try await !store.document(id).pinned)
+    }
+
+    /// The purge writes the index twice; with the header's flush failing it waits for an open
+    /// where it works, so the open itself never fails over it.
+    @Test func aFailedHeaderFlushAtOpenPutsOffThePurge() async throws {
+        let vault = try TestVault()
+        let store = vault.makeStore()
+        try await store.open()
+        let id = try await store.createDocument(
+            type: .ktp, expiry: nil, pinned: false, fields: Synthetic.ktpFields, pages: [Synthetic.page("front")])
+        try await store.delete(id)
+        vault.clock.advance(by: 31 * 86400)
+
+        let flusher = RecordingFlusher(pagesDirectory: vault.pagesDirectory, failingAt: .file(vault.headerURL))
+        flusher.arm()
+        let waiting = vault.makeStore(flusher: flusher)
+        #expect(try await waiting.open().purgedDocuments == 0)
+        #expect(try await waiting.recentlyDeleted().map(\.id) == [id])
+
+        #expect(try await vault.makeStore().open().purgedDocuments == 1)
     }
 
     /// index.enc is damaged, so the open writes a new one from index.prev.enc. Its flush fails,

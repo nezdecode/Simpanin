@@ -170,10 +170,16 @@ struct FlushTests: FlushTesting {
         // Then the first, empty index.
         #expect(flusher.recorded.map { path($0.url) } == header + [path(vault.indexURL), path(vault.root)])
         #expect(flusher.recorded.first?.contents == (try Data(contentsOf: vault.headerURL)))
+    }
 
+    /// A header that a lock or a relaunch kept from its flush gets another at the next open.
+    @Test func everyOpenFlushesTheHeaderAndItsFolders() async throws {
+        let vault = try TestVault()
+        _ = try await makeStore(vault, RecordingFlusher(pagesDirectory: vault.pagesDirectory))
         let reopening = RecordingFlusher(pagesDirectory: vault.pagesDirectory)
         _ = try await makeStore(vault, reopening)
-        #expect(reopening.recorded.isEmpty)
+        let header = [vault.headerURL, vault.root, vault.root.deletingLastPathComponent()].map(path)
+        #expect(reopening.recorded.map { path($0.url) } == header)
     }
 
     @Test func recordsTheWeakerMethodWhenTheTwoFlushesDiffer() async throws {
