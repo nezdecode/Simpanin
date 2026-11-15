@@ -6,7 +6,8 @@ name: App tests
 on:
   pull_request:
     branches: [main]
-    types: [opened, synchronize, reopened, ready_for_review]
+    # Not ready_for_review: a draft's commits have already run, and a rerun takes half an hour.
+    types: [opened, synchronize, reopened]
 
 concurrency:
   group: app-tests-${{ github.event.pull_request.number }}
@@ -24,7 +25,8 @@ jobs:
       # A flake in one job shouldn't cancel the others.
       fail-fast: false
       # Balanced by each class's time in a full run, about 13 minutes of UI tests each on the Mac. The last
-      # job runs everything the others don't, so a new class or target is never left out.
+      # job runs everything the others don't, so a new class or target is never left out. A class that
+      # leaves part 1 or 2 leaves the last job's --skip list too, or no job runs it.
       matrix:
         include:
           - name: Unit tests and UI tests, part 1
@@ -53,6 +55,6 @@ jobs:
           persist-credentials: false
       # The Xcode the Mac builds with; the image's default is newer. Move it when the Mac's Xcode moves.
       - run: sudo xcode-select -s /Applications/Xcode_27.0.app
-      # Only test.sh's summary reaches this public log: test names and counts, never field values or the
-      # app's logs. Nothing is uploaded; a failure is rerun on the Mac with --only.
+      # Only test.sh's summary reaches this public log: test names, counts and build errors, never a
+      # failure's message or the app's logs. Nothing is uploaded; a failure is rerun on the Mac with --only.
       - run: scripts/test.sh ${{ matrix.args }}
