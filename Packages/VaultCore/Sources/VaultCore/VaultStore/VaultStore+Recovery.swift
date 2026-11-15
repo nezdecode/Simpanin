@@ -16,7 +16,9 @@ extension VaultStore {
     // MARK: - Loading the index
 
     private enum IndexFile {
-        case missing, unreadable
+        /// `unreadable`: the seal didn't open. `undecodable`: it opened, so the file was written
+        /// correctly, but this build can't decode it, and an open must never replace it.
+        case missing, unreadable, undecodable
         case readable(VaultIndex)
 
         var isMissing: Bool {
@@ -38,10 +40,10 @@ extension VaultStore {
         guard let sealed = try readFile(at: url) else { return .missing }
         guard let plain = try? VaultCrypto.open(sealed, with: indexKey, as: .index(vaultID)) else { return .unreadable }
         struct VersionProbe: Decodable { var schemaVersion: Int }
-        guard let probe = try? VaultJSON.decoder.decode(VersionProbe.self, from: plain) else { return .unreadable }
+        guard let probe = try? VaultJSON.decoder.decode(VersionProbe.self, from: plain) else { return .undecodable }
         // A newer build wrote this vault. Stop, rather than fall back and overwrite it.
         guard probe.schemaVersion <= VaultIndex.currentSchemaVersion else { throw VaultError.unsupportedVersion }
-        guard let index = try? VaultJSON.decoder.decode(VaultIndex.self, from: plain) else { return .unreadable }
+        guard let index = try? VaultJSON.decoder.decode(VaultIndex.self, from: plain) else { return .undecodable }
         return .readable(index)
     }
 
@@ -55,8 +57,10 @@ extension VaultStore {
             return LoadedIndex(
                 index: cur, source: .current, previousHoldsRemovedDocuments: removed,
                 allowsOrphanCleanup: true)
-        case (.readable(let cur), .missing), (.readable(let cur), .unreadable):
+        case (.readable(let cur), .missing), (.readable(let cur), .unreadable), (.readable(let cur), .undecodable):
             return LoadedIndex(index: cur, source: .current, allowsOrphanCleanup: true)
+        case (.undecodable, _), (_, .undecodable):
+            throw VaultError.indexNotDecodable
         case (.missing, .readable(let prev)):
             // A crash between the two index writes: the newer change never committed.
             return LoadedIndex(index: prev, source: .previous, allowsOrphanCleanup: true)
