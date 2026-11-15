@@ -24,12 +24,11 @@ struct DocumentCamera: UIViewControllerRepresentable {
     /// False in the simulator, which has no camera.
     static var isSupported: Bool { VNDocumentCameraViewController.isSupported }
 
-    /// Whether to offer scanning, in "+" and on the welcome screen. UI tests can hide the camera or
-    /// stand in for it.
+    /// Whether to offer scanning, in "+" and on the welcome screen. UI tests always have the camera
+    /// unless they hide it, whatever the simulator reports: CI's simulator says it has none.
     static var isAvailable: Bool {
         #if DEBUG
-            if UITestSetup.hidesCamera { return false }
-            if UITestSetup.scansSynthetically { return true }
+            if UITestSetup.isActive { return !UITestSetup.hidesCamera }
         #endif
         return isSupported
     }

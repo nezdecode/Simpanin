@@ -113,8 +113,8 @@
             isActive && ProcessInfo.processInfo.arguments.contains("-SimpaninUITestWelcome")
         }
 
-        /// `-SimpaninUITestNoCamera`: "+" acts as on a phone without a document camera, which the iOS 27
-        /// simulator otherwise has.
+        /// `-SimpaninUITestNoCamera`: "+" acts as on a phone without a document camera. Without it, UI
+        /// tests always have one, whatever the simulator reports.
         static var hidesCamera: Bool {
             isActive && ProcessInfo.processInfo.arguments.contains("-SimpaninUITestNoCamera")
         }
