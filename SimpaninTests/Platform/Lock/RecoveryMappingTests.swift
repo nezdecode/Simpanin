@@ -108,6 +108,11 @@ struct RecoveryMappingTests {
         #expect(outcome(VaultError.unsupportedVersion) == .recovery(.updateApp))
     }
 
+    /// A later build may read it, so the way out is to try again, never to start a new vault.
+    @Test func anIndexThatCannotBeDecodedNeverOffersANewVault() {
+        #expect(outcome(VaultError.indexNotDecodable) == .recovery(.cannotOpenNow))
+    }
+
     @Test func storageFullFromOpen() {
         #expect(outcome(VaultError.storageFull) == .recovery(.storageFullOnOpen))
     }
