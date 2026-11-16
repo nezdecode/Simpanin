@@ -31,23 +31,28 @@ NEVER = re.compile(r"error: -\[|^\s+(t = |\u21aa\ufe0e)")
 TIMESTAMP = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:")
 
 # The system's output can share a line with these, so they're found anywhere in it, but a name must look
-# like one: an issue's text can contain "passed after" too. With retries on, a
-# start reads "started (Iteration 1 of 2)."; a test past its time allowance ends "exceeded execution time
-# allowance of 3 minutes", and the runner restarts.
-XCTEST_START = re.compile(r"Test Case '-\[(?:\w+\.)?(\w+) (\w+)\]' started(?: \(Iteration [0-9]+ of [0-9]+\))?\.$")
+# like one: an issue's text can contain "passed after" too. A retry starts "started (Iteration 2 of 2)."
+# in XCTest and "started (repetition 2)." in Swift Testing, where the failure before it shows only as
+# "recorded an issue". A test past its time allowance ends "exceeded execution time allowance of 3
+# minutes", and the runner restarts.
+XCTEST_START = re.compile(r"Test Case '-\[(?:\w+\.)?(\w+) (\w+)\]' started(?: \(Iteration ([0-9]+) of [0-9]+\))?\.$")
 XCTEST_END = re.compile(
     r"Test Case '-\[(?:\w+\.)?(\w+) (\w+)\]' (passed|failed|skipped|exceeded execution time allowance)"
 )
-SWIFT_START = re.compile(r"◇ Test " + SWIFT_NAME + r" started\.$")
+SWIFT_START = re.compile(r"◇ Test " + SWIFT_NAME + r" started(?: \(repetition ([0-9]+)\))?\.$")
 # A parameterized test ends "Test name(_:) with 3 test cases passed after 0.1 seconds.".
 SWIFT_END = re.compile(
     r"[✔✘➜] Test " + SWIFT_NAME + r"(?: with [0-9]+ test cases?)? (passed after|failed after|skipped)"
 )
+# The first sign a Swift Testing test failed: its result comes only when it ends, and it may hang first.
+SWIFT_ISSUE = re.compile(r"✘ Test " + SWIFT_NAME + r" recorded an issue")
 OUTCOME = {
     'passed': 'passed', 'passed after': 'passed', 'failed': 'failed', 'failed after': 'failed',
     'skipped': 'skipped', 'exceeded execution time allowance': 'timed out',
 }
 FAILURES = ('failed', 'timed out')
+# A test whose last event is an issue, or a retry's start, has failed and hasn't passed since.
+STANDS = FAILURES + ('issue', 'retry')
 # Build steps start at the margin with their name. Other words there can come from anywhere, even the app,
 # so only these are named.
 STEP = re.compile(r"^([A-Za-z]+)\b")
@@ -72,21 +77,25 @@ CLASS_TIME = re.compile(r"Executed ([0-9]+) tests?, with .* in ([0-9.]+) \(")
 
 
 def test_event(line):
-    """A test's name and what happened to it on this line ("started", "passed", "timed out" …), if any. A
-    parameterized case's line holds its arguments' values, and its name never matches."""
+    """A test's name and what happened to it on this line ("started", "issue", "retry", "passed" …), if
+    any. A parameterized case's line holds its arguments' values, and its name never matches."""
     if match := XCTEST_START.search(line):
-        return f'{match[1]}.{match[2]}', 'started'
+        return f'{match[1]}.{match[2]}', 'retry' if int(match[3] or 1) > 1 else 'started'
     if match := XCTEST_END.search(line):
         return f'{match[1]}.{match[2]}', OUTCOME[match[3]]
     if match := SWIFT_START.search(line):
-        return match[1], 'started'
+        return match[1], 'retry' if int(match[2] or 1) > 1 else 'started'
     if match := SWIFT_END.search(line):
         return match[1], OUTCOME[match[2]]
+    if match := SWIFT_ISSUE.search(line):
+        return match[1], 'issue'
     return None, None
 
 
 def scan(lines):
     """The tests still running, each test's results in order, the last to finish and the last build step."""
+    # shortcut: Swift Testing's lines name a test without its suite, so two suites' tests of the same name
+    # would share results (a false "flaky"); none do on 16 Nov 2026. Key them by suite if two ever do.
     running, results, last_finished, step = {}, {}, None, None
     for line in lines:
         name, outcome = test_event(line)
@@ -95,6 +104,9 @@ def scan(lines):
                 step = match[1] if match[1] in STEPS else 'other'
         elif outcome == 'started':
             running[name] = True
+        elif outcome in ('issue', 'retry'):
+            running[name] = True
+            results.setdefault(name, []).append(outcome)
         else:
             running.pop(name, None)
             results.setdefault(name, []).append(outcome)
@@ -130,7 +142,7 @@ def summary(lines, on_github=False):
     printed += [
         f'{flag}flaky: {name} failed, then passed on its retry'
         for name, outcomes in results.items()
-        if outcomes[-1] == 'passed' and any(outcome in FAILURES for outcome in outcomes)
+        if outcomes[-1] == 'passed' and any(outcome in STANDS for outcome in outcomes)
     ]
     return printed
 
@@ -146,7 +158,7 @@ def stopped(lines):
         message = f'stopped after {last_finished}, before the next test'
     else:
         message = f'no test had started; last step: {step or "none"}'
-    return message, any(outcomes[-1] in FAILURES for outcomes in results.values())
+    return message, any(outcomes[-1] in STANDS for outcomes in results.values())
 
 
 def after_summary(lines):

@@ -19,7 +19,7 @@ SECRET = 'Budi Contoh'
 
 RUN = f"""\
 Resolve Package Graph
-SwiftCompile normal arm64 /work/Simpanin/Simpanin/App/AppSetup.swift
+CompileSwift normal arm64 /work/Simpanin/Simpanin/App/AppSetup.swift
 ◇ Test run started.
 ◇ Test case passing 1 argument name → "{SECRET}" to namesAreKept(_:) started.
 ✘ Test namesAreKept(_:) recorded an issue at NameTests.swift:12:5: Expectation failed: "{SECRET}" == ""
@@ -160,8 +160,8 @@ def summary_names_timeouts_and_flaky_tests():
 
 
 def summary_warns_of_flaky_tests_on_github():
-    got = log.summary(RETRIED.split('\n'), on_github=True)[-1]
-    return None if got.startswith('::warning::flaky: SettingsUITests.testFlaky') else f'got {got}'
+    got = log.summary(RETRIED.split('\n'), on_github=True)[-1:]
+    return None if got == ['::warning::flaky: SettingsUITests.testFlaky failed, then passed on its retry'] else f'got {got}'
 
 
 def stopped_counts_a_timeout_as_a_failure_and_a_retried_pass_as_none():
@@ -215,8 +215,58 @@ Test case '-[T.A b]' failed on 'Clone 2' (1.0 secon2026-11-15 21:40:35.003 Simpa
     return None if not leaked else f'leaked {leaked}'
 
 
+SWIFT_RETRIED = """\
+◇ Test keyboards() started.
+✘ Test keyboards() recorded an issue at AppDelegateTests.swift:29:25: Issue recorded
+◇ Test keyboards() started (repetition 2).
+✔ Test keyboards() passed after 0.003 seconds."""
+
+
+def a_swift_testing_repetition_is_a_retry():
+    lines = SWIFT_RETRIED.split('\n')
+    # A test that hangs after its issue has failed already, so test.sh must not retry the run.
+    got = [log.summary(lines)[-1:], log.stopped(lines[:2]), log.stopped(lines[:3])]
+    expected = [
+        ['flaky: keyboards() failed, then passed on its retry'],
+        ('stopped during keyboards(), still running', True),
+        ('stopped during keyboards(), still running', True),
+    ]
+    return None if got == expected else f'got {got}'
+
+
+def exit_codes_drive_test_sh():
+    """test.sh retries a stopped run only when `stopped` exits 0, and uses the 60 s limit when
+    `after-summary` does."""
+    import subprocess
+    import tempfile
+    script = os.path.join(ROOT, 'scripts', 'xcodebuild-log.py')
+    logs = {
+        'passing': "Test Case '-[T.A testOne]' started.\nTest Case '-[T.A testOne]' passed (1.0 seconds).",
+        'failing': "Test Case '-[T.A testOne]' started.\nTest Case '-[T.A testOne]' failed (1.0 seconds).",
+        'summary': '✔ Test run with 2 tests in 1 suite passed after 0.1 seconds.',
+    }
+    got = {}
+    with tempfile.TemporaryDirectory() as folder:
+        for name, text in logs.items():
+            path = os.path.join(folder, name)
+            open(path, 'w', encoding='utf-8').write(text)
+            for command in ('stopped', 'after-summary'):
+                run = subprocess.run([sys.executable, '-B', script, command, path], capture_output=True)
+                got[(name, command)] = run.returncode
+        got['usage'] = subprocess.run([sys.executable, '-B', script, 'nonsense'], capture_output=True).returncode
+    expected = {
+        ('passing', 'stopped'): 0, ('passing', 'after-summary'): 1,
+        ('failing', 'stopped'): 1, ('failing', 'after-summary'): 1,
+        ('summary', 'stopped'): 0, ('summary', 'after-summary'): 0,
+        'usage': 2,
+    }
+    return None if got == expected else f'got {got}'
+
+
 CASES = [
     issue_text_is_never_a_name,
+    a_swift_testing_repetition_is_a_retry,
+    exit_codes_drive_test_sh,
     summary_gives_each_class_its_time,
     summary_names_timeouts_and_flaky_tests,
     summary_warns_of_flaky_tests_on_github,
