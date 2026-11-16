@@ -9,19 +9,33 @@ command -v graphify > /dev/null 2>&1 && [ -d graphify-out ] || exit 0
 # shortcut: a commit landing between the last check and the unlock waits for the next commit to be graphed.
 lock="$(git rev-parse --git-path graphify-update.lock)"
 log="$(git rev-parse --git-path graphify-update.log)"
-# A lock left by a crash is removed after 10 minutes; an update takes seconds.
-[ -n "$(find "$lock" -maxdepth 0 -mmin +10 2> /dev/null)" ] && rm -rf "$lock"
-if ! mkdir "$lock" 2> /dev/null; then
-  touch "$lock/again" 2> /dev/null
-  exit 0
-fi
-(
+
+# The update itself, started below as its own process, so its id ($$) is what the lock records.
+if [ "${1:-}" = update ]; then
+  echo $$ > "$lock/owner"
   while :; do
     rm -f "$lock/again"
     # graphify refuses a graph with fewer nodes; after deleting code, run `graphify update . --force`.
     graphify update . > "$log" 2>&1
     [ -e "$lock/again" ] || break
   done
-  rm -rf "$lock"
-) < /dev/null > /dev/null 2>&1 &
+  # Only a lock still ours: one taken over after we were thought gone belongs to another update.
+  [ "$(cat "$lock/owner" 2> /dev/null)" = $$ ] && rm -rf "$lock"
+  exit 0
+fi
+
+# A lock whose update has exited was left by a crash. One with no owner yet is being taken right now,
+# unless it's over a minute old. The mv is atomic, so of two commits only one takes the lock over.
+if [ -d "$lock" ]; then
+  owner=$(cat "$lock/owner" 2> /dev/null)
+  if { [ -n "$owner" ] && ! kill -0 "$owner" 2> /dev/null; } \
+    || { [ -z "$owner" ] && [ -n "$(find "$lock" -maxdepth 0 -mmin +1 2> /dev/null)" ]; }; then
+    mv "$lock" "$lock.stale.$$" 2> /dev/null && rm -rf "$lock.stale.$$"
+  fi
+fi
+if ! mkdir "$lock" 2> /dev/null; then
+  touch "$lock/again" 2> /dev/null
+  exit 0
+fi
+sh "$0" update < /dev/null > /dev/null 2>&1 &
 exit 0
