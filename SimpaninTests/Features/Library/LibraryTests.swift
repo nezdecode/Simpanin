@@ -114,7 +114,7 @@ struct LibraryTests {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = try #require(TimeZone(identifier: "Asia/Makassar"))
         let morning = try #require(calendar.date(from: DateComponents(year: 2027, month: 3, day: 2, hour: 8)))
-        library.refreshDay(at: morning, in: calendar)
+        library.refreshDay(at: morning, in: calendar.timeZone)
         #expect(library.today == CalendarDate(year: 2027, month: 3, day: 2))
     }
 

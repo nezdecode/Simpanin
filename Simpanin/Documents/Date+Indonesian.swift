@@ -26,8 +26,9 @@ extension FormatStyle where Self == Date.FormatStyle {
         indonesian(timeZone).hour(.twoDigits(amPM: .omitted)).minute(.twoDigits)
     }
 
+    /// Gregorian whatever calendar the phone is set to, as Indonesian documents are dated.
     nonisolated private static func indonesian(_ timeZone: TimeZone) -> Date.FormatStyle {
-        Date.FormatStyle(locale: .indonesian, timeZone: timeZone)
+        Date.FormatStyle(locale: .indonesian, calendar: Calendar(identifier: .gregorian), timeZone: timeZone)
     }
 }
 

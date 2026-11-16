@@ -42,8 +42,10 @@ struct ValiditySection: View {
                     ) {
                         expiryLabel
                     }
-                    // Expiry dates are calendar days in UTC, so no time zone moves them.
+                    // Expiry dates are calendar days in UTC, so no time zone moves them, and Gregorian whatever
+                    // calendar the phone is set to.
                     .environment(\.timeZone, .gmt)
+                    .environment(\.calendar, .gregorianUTCPicker)
                     .accessibilityIdentifier("review.expiry")
                 } else {
                     // Never shown as today: an empty expiry has to be seen, not saved quietly as none. The

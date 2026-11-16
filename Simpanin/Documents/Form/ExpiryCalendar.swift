@@ -25,8 +25,10 @@ struct ExpiryCalendar: View {
                 Text(title)
             }
             .datePickerStyle(.graphical)
-            // Expiry dates are calendar days in UTC, so no time zone moves them.
+            // Expiry dates are calendar days in UTC, so no time zone moves them, and Gregorian whatever
+            // calendar the phone is set to.
             .environment(\.timeZone, .gmt)
+            .environment(\.calendar, .gregorianUTCPicker)
             .padding(.horizontal)
             .navigationTitle(Text(title))
             .navigationBarTitleDisplayMode(.inline)

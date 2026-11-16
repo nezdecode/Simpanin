@@ -33,6 +33,18 @@
             return arguments[index + 1]
         }
 
+        /// `-SimpaninUITestSetupFails <n>`: the first n setups fail, as one might before the phone's first unlock.
+        @MainActor static func setupLauncher() -> @MainActor () throws -> AppVault {
+            var failures = Int(value(after: "-SimpaninUITestSetupFails") ?? "") ?? 0
+            return {
+                guard failures == 0 else {
+                    failures -= 1
+                    throw CocoaError(.fileWriteNoPermission)
+                }
+                return try AppVault.launch()
+            }
+        }
+
         /// The error, and how many opens fail with it. "Any other status" needs two failures in
         /// a row before its screen shows.
         static var openFailure: (error: VaultError, times: Int)? {

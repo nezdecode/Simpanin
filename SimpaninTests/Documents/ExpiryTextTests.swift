@@ -214,15 +214,16 @@ struct ExpiryTextTests {
         #expect(order(same) == [2, 1, 0])
     }
 
-    /// The day comes from the phone's own calendar: a minute before midnight is still today.
-    @Test func theDayFollowsThePhonesCalendar() throws {
+    /// The day comes from the phone's own time zone: a minute before midnight there is still today.
+    @Test func theDayFollowsThePhonesTimeZone() throws {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = try #require(TimeZone(identifier: "Asia/Makassar"))
         let lastMinute = try #require(
             calendar.date(from: DateComponents(year: 2026, month: 10, day: 15, hour: 23, minute: 59)))
-        #expect(CalendarDate.day(of: lastMinute, in: calendar) == CalendarDate(year: 2026, month: 10, day: 15))
         #expect(
-            CalendarDate.day(of: lastMinute.addingTimeInterval(60), in: calendar)
+            CalendarDate.day(of: lastMinute, in: calendar.timeZone) == CalendarDate(year: 2026, month: 10, day: 15))
+        #expect(
+            CalendarDate.day(of: lastMinute.addingTimeInterval(60), in: calendar.timeZone)
                 == CalendarDate(year: 2026, month: 10, day: 16))
     }
 }

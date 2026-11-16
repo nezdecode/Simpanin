@@ -31,8 +31,9 @@ nonisolated struct VaultLocations: Equatable, Sendable {
     }
 }
 
-/// The app's one VaultStore. `SimpaninApp` makes it once at launch; VaultStore's shared open
-/// only protects a single instance per vault folder, so nothing else may create one.
+/// The app's one VaultStore. `AppSetup` makes it once, at launch or on a later try if that failed.
+/// VaultStore's shared open only protects a single instance per vault folder, so nothing else may
+/// create one.
 nonisolated final class AppVault: Sendable {
     enum SetupError: Error {
         /// Info.plist lacks the Keychain group or App Group, or the entitlement is missing.
@@ -47,7 +48,7 @@ nonisolated final class AppVault: Sendable {
         self.locations = locations
     }
 
-    /// What SimpaninApp starts with: the real vault, or in DEBUG UI tests a throwaway one.
+    /// What AppSetup starts with: the real vault, or in DEBUG UI tests a throwaway one.
     static func launch() throws -> AppVault {
         #if DEBUG
             if UITestSetup.isActive {
