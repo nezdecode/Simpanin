@@ -129,7 +129,13 @@ if [ -n "$stopped" ] && what=$(python3 -B scripts/xcodebuild-log.py stopped "$lo
   [ "${GITHUB_ACTIONS:-}" = true ] && warning="::warning::" || warning=""
   echo "${warning}test.sh: $what; no test had failed, so running once more on a freshly booted simulator"
   xcrun simctl shutdown "$simulator" 2> /dev/null || true  # it may have shut down already
-  xcrun simctl bootstatus "$simulator" -b > /dev/null
+  # On GitHub's image the boot has failed with "the iOS 27.0 simulator runtime is not available"; the retry
+  # then goes on, and xcodebuild boots the simulator itself or fails with its own message.
+  if ! boot=$(xcrun simctl bootstatus "$simulator" -b 2>&1 > /dev/null); then
+    boot=$(echo "$boot" | grep . | tr '\n' ' ')
+    echo "${warning}test.sh: the simulator didn't boot again; xcodebuild will try. simctl: $boot"
+    xcrun simctl list runtimes >&2 || true
+  fi
   run_tests "$run-retry"
 fi
 # A stopped xcodebuild may still have written a bundle, without the tests it never ran.
