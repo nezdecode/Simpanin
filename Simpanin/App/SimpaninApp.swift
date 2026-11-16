@@ -9,37 +9,54 @@
 //  file, You can obtain one at https://mozilla.org/MPL/2.0/.
 //
 
-import OSLog
 import SwiftUI
 
 @main
 struct SimpaninApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-    /// The one VaultStore, made here once. Nothing else creates one for the real vault.
-    private let vault: Result<AppVault, any Error> = {
-        let result = Result { try AppVault.launch() }
-        if case .failure(let error) = result {
-            // Domain and code only; a file system error's message can hold paths.
-            let error = error as NSError
-            Logger.launch.error("Setup failed: \(error.domain, privacy: .public) \(error.code, privacy: .public)")
-        }
-        return result
-    }()
+    /// Makes the one VaultStore. Nothing else creates one for the real vault.
+    @State private var setup: AppSetup
 
     init() {
-        // The app may have been stopped during a scan or a share, before their copies were removed.
-        DocumentCameraCache.clear()
-        SharedCopies.clear()
+        #if DEBUG
+            let launch: @MainActor () throws -> AppVault =
+                UITestSetup.isActive ? UITestSetup.setupLauncher() : AppVault.launch
+        #else
+            let launch = AppVault.launch
+        #endif
+        _setup = State(initialValue: AppSetup(launch: launch))
     }
 
     var body: some Scene {
         WindowGroup {
-            if let vault = try? vault.get() {
-                RootView(vault: vault)
-            } else {
-                // A broken build (missing entitlements or Info.plist values) or a file system error.
-                ContentUnavailableView("setup.failed", systemImage: "exclamationmark.triangle")
+            Group {
+                if let vault = setup.vault {
+                    RootView(vault: vault)
+                } else {
+                    // A broken build (missing entitlements or Info.plist values) or a file system error.
+                    LoadFailedView(title: "setup.failed") { setup.retry() }
+                }
             }
+            .background(ScenePhaseWatcher(setup: setup))
         }
+    }
+}
+
+/// Passes the scene's phase on to AppSetup. It's read here, not in SimpaninApp, whose body would otherwise run
+/// again at every change and rebuild RootView, with a LockController it then throws away.
+private struct ScenePhaseWatcher: View {
+    let setup: AppSetup
+    @Environment(\.scenePhase) private var scenePhase
+
+    var body: some View {
+        Color.clear
+            .accessibilityHidden(true)
+            .onChange(of: scenePhase, initial: true) { _, phase in
+                switch phase {
+                case .active: setup.sceneDidBecomeActive()
+                case .inactive: setup.sceneDidBecomeInactive()
+                default: break
+                }
+            }
     }
 }
