@@ -20,7 +20,9 @@ jobs:
   tests:
     name: ${{ matrix.name }}
     runs-on: xcode-27
-    timeout-minutes: 60
+    # Time for test.sh's one retry of a hung run: twice the longest job (46 min), plus 15. When a job passes
+    # 40 min on two pull requests, rebalance the classes below by the times test.sh prints, or add a job.
+    timeout-minutes: 110
     strategy:
       # A flake in one job shouldn't cancel the others.
       fail-fast: false
