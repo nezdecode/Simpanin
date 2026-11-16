@@ -46,6 +46,8 @@ done
 python3 scripts/commit-checks.py staged --all || failed=1
 # The Release identity check guards every user's vault, so it's tested too.
 python3 scripts/test-commit-checks.py || failed=1
+# What reaches CI's public log from a test run, so it's tested too.
+python3 scripts/test-xcodebuild-log.py || failed=1
 refused_files "$(git ls-files -z | tr '\0' '\n')" "the tree"
 python3 scripts/check-folder-rules.py || failed=1
 
