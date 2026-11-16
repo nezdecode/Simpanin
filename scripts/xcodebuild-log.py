@@ -43,6 +43,10 @@ STEP = re.compile(r"^([A-Za-z]+)\b")
 SHOWN_RUNNING = 5
 SWIFT_SUMMARY = re.compile(r"Test run with [0-9]+ tests")
 XCTEST_SUITE_START = re.compile(r"Test Suite '[^']+' started")
+# A class's suite ends with its time on the next line. "Selected tests" and "SimpaninUITests.xctest" don't
+# match, and a class split by a runner restart has a part per launch.
+CLASS_END = re.compile(r"^Test Suite '(\w+)' (passed|failed) at ")
+CLASS_TIME = re.compile(r"Executed ([0-9]+) tests?, with .* in ([0-9.]+) \(")
 
 
 def test_event(line):
@@ -75,10 +79,26 @@ def scan(lines):
     return running, results, last_finished, step
 
 
+def class_times(lines):
+    """Each XCTest class's tests and seconds, slowest first, for balancing CI's jobs."""
+    times, ended = {}, None
+    for line in lines:
+        if match := CLASS_END.search(line):
+            ended = match[1]
+        elif ended and (match := CLASS_TIME.search(line)):
+            tests, seconds = times.get(ended, (0, 0.0))
+            times[ended] = (tests + int(match[1]), seconds + float(match[2]))
+            ended = None
+    return sorted(times.items(), key=lambda item: -item[1][1])
+
+
 def summary(lines, on_github=False):
-    """The lines worth printing after a run: names and counts each once in byte order, then the tests that
-    timed out and those that passed only on their retry."""
+    """The lines worth printing after a run: names and counts each once in byte order, each class's time,
+    then the tests that timed out and those that passed only on their retry."""
     printed = sorted({line for line in lines if SUMMARY.search(line) and not NEVER.search(line)})
+    printed += [
+        f'class time: {name}, {tests} tests, {seconds / 60:.1f} min' for name, (tests, seconds) in class_times(lines)
+    ]
     _, results, _, _ = scan(lines)
     printed += [f'{name}: timed out' for name, outcomes in results.items() if 'timed out' in outcomes]
     # On CI a warning shows on the pull request's checks, so a passing run can't hide a flaky test.

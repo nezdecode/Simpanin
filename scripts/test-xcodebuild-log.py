@@ -176,7 +176,26 @@ def stopped_during_a_retry_after_a_failure_stands():
     return expect_stopped(retrying, 'stopped during SettingsUITests.testFlaky, still running', True)
 
 
+def summary_gives_each_class_its_time():
+    text = """\
+Test Suite 'Selected tests' started at 2026-11-16 19:00:00.000.
+Test Suite 'SettingsUITests' failed at 2026-11-16 19:03:00.000.
+\t Executed 1 test, with 1 failure (0 unexpected) in 190.000 (190.010) seconds
+Test Suite 'SimpaninUITests.xctest' failed at 2026-11-16 19:03:00.000.
+\t Executed 1 test, with 1 failure (0 unexpected) in 190.000 (190.020) seconds
+Test Suite 'SettingsUITests' passed at 2026-11-16 19:04:00.000.
+\t Executed 1 test, with 0 failures (0 unexpected) in 20.000 (20.010) seconds
+Test Suite 'LibraryUITests' passed at 2026-11-16 19:08:00.000.
+\t Executed 4 tests, with 0 failures (0 unexpected) in 240.000 (240.010) seconds
+Test Suite 'Selected tests' passed at 2026-11-16 19:08:00.000.
+\t Executed 6 tests, with 1 failure (0 unexpected) in 450.000 (450.030) seconds"""
+    got = [line for line in log.summary(text.split('\n')) if line.startswith('class time')]
+    expected = ['class time: LibraryUITests, 4 tests, 4.0 min', 'class time: SettingsUITests, 2 tests, 3.5 min']
+    return None if got == expected else f'got {got}'
+
+
 CASES = [
+    summary_gives_each_class_its_time,
     summary_names_timeouts_and_flaky_tests,
     summary_warns_of_flaky_tests_on_github,
     stopped_counts_a_timeout_as_a_failure_and_a_retried_pass_as_none,
