@@ -59,7 +59,86 @@ def summary_never_prints_values():
     return None if not leaked else f'leaked {leaked}'
 
 
-CASES = [summary_keeps_names_and_counts, summary_never_prints_values]
+def expect_stopped(text, message, failed):
+    got = log.stopped(text.split('\n'))
+    return None if got == (message, failed) else f'got {got}'
+
+
+def stopped_names_the_ui_test_still_running():
+    return expect_stopped(
+        """\
+Test Case '-[SimpaninUITests.LibraryUITests testOne]' started.
+Test Case '-[SimpaninUITests.LibraryUITests testOne]' passed (3.000 seconds).
+Test Case '-[SimpaninUITests.LibraryUITests testTwo]' started.
+    t =     1.02s Wait for app to idle""",
+        'stopped during LibraryUITests.testTwo, still running',
+        False,
+    )
+
+
+def stopped_names_unit_tests_still_running_and_never_arguments():
+    return expect_stopped(
+        f"""\
+◇ Test run started.
+◇ Test first() started.
+◇ Test second(_:) started.
+◇ Test case passing 1 argument name → "{SECRET}" to second(_:) started.
+some system outputs✔ Test first() passed after 0.001 seconds.""",
+        'stopped during second(_:), still running',
+        False,
+    )
+
+
+def stopped_between_tests_names_the_last_one_finished():
+    return expect_stopped(
+        """\
+◇ Test aClock(_:) started.
+✔ Test aClock(_:) with 3 test cases passed after 0.001 seconds.
+✔ Test run with 1 test in 1 suite passed after 0.002 seconds.""",
+        'stopped after aClock(_:), before the next test',
+        False,
+    )
+
+
+def stopped_before_any_test_names_the_last_step():
+    return expect_stopped(
+        f"""\
+Resolve Package Graph
+CompileSwift normal arm64 /work/Simpanin/Simpanin/App/AppSetup.swift
+    cd /work/Simpanin
+2026-11-16 16:40:00.000 Simpanin[1:2] {SECRET}
+◇ Test run started.
+""",
+        'no test had started; last step: CompileSwift',
+        False,
+    )
+
+
+def stopped_says_when_a_test_had_failed():
+    return expect_stopped(
+        """\
+Test Case '-[SimpaninUITests.LibraryUITests testOne]' started.
+Test Case '-[SimpaninUITests.LibraryUITests testOne]' failed (3.000 seconds).""",
+        'stopped after LibraryUITests.testOne, before the next test',
+        True,
+    )
+
+
+def stopped_shortens_a_long_list():
+    starts = '\n'.join(f'◇ Test t{number}() started.' for number in range(7))
+    return expect_stopped(starts, 'stopped during t0(), t1(), t2(), t3(), t4() and 2 more, still running', False)
+
+
+CASES = [
+    summary_keeps_names_and_counts,
+    summary_never_prints_values,
+    stopped_names_the_ui_test_still_running,
+    stopped_names_unit_tests_still_running_and_never_arguments,
+    stopped_between_tests_names_the_last_one_finished,
+    stopped_before_any_test_names_the_last_step,
+    stopped_says_when_a_test_had_failed,
+    stopped_shortens_a_long_list,
+]
 
 
 def main():

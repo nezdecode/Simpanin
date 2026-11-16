@@ -95,6 +95,7 @@ wait "$pid" 2> /dev/null || true
 python3 -B scripts/xcodebuild-log.py summary "$log"
 # A stopped xcodebuild may still have written a bundle, without the tests it never ran.
 if [ -n "$stopped" ]; then
+  echo "test.sh: $(python3 -B scripts/xcodebuild-log.py stopped "$log" || true)" >&2
   echo "test.sh: FAILED, xcodebuild was stopped; see $log" >&2
   exit 1
 fi
