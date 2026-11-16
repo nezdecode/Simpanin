@@ -25,6 +25,8 @@ Before every commit, the hooks in `scripts/hooks` refuse:
 
 Never skip them with `--no-verify`; if one is wrong, fix the check.
 
+After each commit, if graphify is installed and you have built its code graph (`graphify-out/`), the post-commit hook refreshes the graph in the background; otherwise it does nothing.
+
 Two scripts run what the hooks can't:
 
 ```sh

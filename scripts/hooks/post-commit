@@ -1,0 +1,27 @@
+#!/bin/sh
+# Refreshes graphify's code graph after each commit, in the background, where graphify is installed and a
+# graph has been built (graphify-out/). Otherwise it does nothing, and it never fails a commit.
+# Install once per clone: git config core.hooksPath scripts/hooks
+command -v graphify > /dev/null 2>&1 && [ -d graphify-out ] || exit 0
+
+# One update at a time: two writers could break graph.json, and rebuilding it costs tokens. A commit made
+# while one runs leaves a mark, and the update runs once more, so a rebase still ends with a current graph.
+# shortcut: a commit landing between the last check and the unlock waits for the next commit to be graphed.
+lock="$(git rev-parse --git-path graphify-update.lock)"
+log="$(git rev-parse --git-path graphify-update.log)"
+# A lock left by a crash is removed after 10 minutes; an update takes seconds.
+[ -n "$(find "$lock" -maxdepth 0 -mmin +10 2> /dev/null)" ] && rm -rf "$lock"
+if ! mkdir "$lock" 2> /dev/null; then
+  touch "$lock/again" 2> /dev/null
+  exit 0
+fi
+(
+  while :; do
+    rm -f "$lock/again"
+    # graphify refuses a graph with fewer nodes; after deleting code, run `graphify update . --force`.
+    graphify update . > "$log" 2>&1
+    [ -e "$lock/again" ] || break
+  done
+  rm -rf "$lock"
+) < /dev/null > /dev/null 2>&1 &
+exit 0
