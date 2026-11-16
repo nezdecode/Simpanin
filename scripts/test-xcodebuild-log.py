@@ -19,7 +19,7 @@ SECRET = 'Budi Contoh'
 
 RUN = f"""\
 Resolve Package Graph
-CompileSwift normal arm64 /work/Simpanin/Simpanin/App/AppSetup.swift
+SwiftCompile normal arm64 /work/Simpanin/Simpanin/App/AppSetup.swift
 ◇ Test run started.
 ◇ Test case passing 1 argument name → "{SECRET}" to namesAreKept(_:) started.
 ✘ Test namesAreKept(_:) recorded an issue at NameTests.swift:12:5: Expectation failed: "{SECRET}" == ""
@@ -35,6 +35,7 @@ Test Case '-[SimpaninUITests.LibraryUITests testTheListShowsANewDocument]' faile
 Test Case '-[SimpaninUITests.LibraryUITests testTheListShowsANewDocument]' failed (12.345 seconds).
 Test case 'LibraryUITests.testTheListShowsANewDocument()' failed on 'Clone 1 of iPhone 17' (12.3 seconds)
 	 Executed 2 tests, with 1 failure (0 unexpected) in 12.345 (12.350) seconds
+	 Executed 1 test, with 1 failure (0 unexpected) in 12.345 (12.351) seconds
 /work/Simpanin/Simpanin/App/AppSetup.swift:10:5: error: cannot find 'vault' in scope
 ** TEST FAILED **
 """
@@ -42,6 +43,7 @@ Test case 'LibraryUITests.testTheListShowsANewDocument()' failed on 'Clone 1 of 
 
 def summary_keeps_names_and_counts():
     expected = [
+        "\t Executed 1 test, with 1 failure (0 unexpected) in 12.345 (12.351) seconds",
         "\t Executed 2 tests, with 1 failure (0 unexpected) in 12.345 (12.350) seconds",
         "** TEST FAILED **",
         "/work/Simpanin/Simpanin/App/AppSetup.swift:10:5: error: cannot find 'vault' in scope",
@@ -104,12 +106,12 @@ def stopped_before_any_test_names_the_last_step():
     return expect_stopped(
         f"""\
 Resolve Package Graph
-CompileSwift normal arm64 /work/Simpanin/Simpanin/App/AppSetup.swift
+SwiftCompile normal arm64 /work/Simpanin/Simpanin/App/AppSetup.swift
     cd /work/Simpanin
 2026-11-16 16:40:00.000 Simpanin[1:2] {SECRET}
 ◇ Test run started.
 """,
-        'no test had started; last step: CompileSwift',
+        'no test had started; last step: SwiftCompile',
         False,
     )
 
@@ -132,8 +134,9 @@ def stopped_shortens_a_long_list():
 def after_summary_only_while_nothing_followed():
     summary = "Test Suite 'All tests' started at 2026-11-16 16:33:08.473.\n✔ Test run with 2 tests in 1 suite passed after 0.1 seconds."
     ui = summary + "\nTest Suite 'Selected tests' started at 2026-11-16 16:33:21.691."
-    got = [log.after_summary(text.split('\n')) for text in ("◇ Test run started.", summary, ui)]
-    return None if got == [False, True, False] else f'got {got}'
+    one = '✘ Test run with 1 test in 1 suite failed after 0.014 seconds with 1 issue.'
+    got = [log.after_summary(text.split('\n')) for text in ("◇ Test run started.", summary, ui, one)]
+    return None if got == [False, True, False, True] else f'got {got}'
 
 
 RETRIED = """\
@@ -194,7 +197,26 @@ Test Suite 'Selected tests' passed at 2026-11-16 19:08:00.000.
     return None if got == expected else f'got {got}'
 
 
+def issue_text_is_never_a_name():
+    text = f"""\
+✔ Test first() passed after 0.001 seconds.
+✘ Test first() recorded an issue at A.swift:3:5: Expectation failed: (status → "{SECRET} passed after") == ""
+✘ Test second() recorded an issue at A.swift:9:5: Expectation failed: "{SECRET} failed after 1 skipped" == ""
+✘ Test third() recorded an issue at A.swift:12:5: Caught error: "{SECRET}"
+Swift/ContiguousArrayBuffer.swift:695: Fatal error: {SECRET}
+Test case '-[T.A b]' failed on 'Clone 2' (1.0 secon2026-11-15 21:40:35.003 Simpanin[1:2] {SECRET}
+{SECRET} was here"""
+    lines = text.split('\n')
+    printed = log.summary(lines) + [log.stopped(lines)[0], log.stopped(lines[-1:])[0]]
+    if "Test case '-[T.A b]' failed on 'Clone 2' (1.0 secon" not in printed:
+        return f'a failed test cut at a timestamp went missing: {printed}'
+    # Even one word of it: a margin line's first word is all `stopped` could print.
+    leaked = [line for line in printed if SECRET.split()[0] in line]
+    return None if not leaked else f'leaked {leaked}'
+
+
 CASES = [
+    issue_text_is_never_a_name,
     summary_gives_each_class_its_time,
     summary_names_timeouts_and_flaky_tests,
     summary_warns_of_flaky_tests_on_github,

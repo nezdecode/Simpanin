@@ -14,34 +14,56 @@ import os
 import re
 import sys
 
-# "Test Case" is XCTest's serial form, "Test case … failed on 'Clone 1 …'" its parallel one.
+# A Swift Testing name: a function, or a display name in quotes. Matching only that keeps an issue's text,
+# which can contain "failed after" too, out of the log.
+SWIFT_NAME = r'([A-Za-z_]\w*\([\w:]*\)|"[^"]*")'
+# "Test Case" is XCTest's serial form, "Test case … failed on 'Clone 1 …'" its parallel one. Only a
+# diagnostic's own shapes of "error:" count: an issue's text ("Caught error: …") or a crash's message can
+# hold a value.
 SUMMARY = re.compile(
-    r"Test run with [0-9]+ tests|✘ Test .+ failed after|Test [Cc]ase '[^']+' failed|Executed [0-9]+ tests"
-    r"|\*\* TEST|error:"
+    r"Test run with [0-9]+ tests?|✘ Test " + SWIFT_NAME + r"(?: with [0-9]+ test cases?)? failed after"
+    r"|Test [Cc]ase '[^']+' failed|Executed [0-9]+ tests?|\*\* TEST"
+    r"|^(?:\S+:[0-9]+(?::[0-9]+)?: |xcodebuild: |macro expansion [#@]\w+:[0-9]+:[0-9]+: )?error: "
 )
-NEVER = re.compile(r"error: -\[|^\s+(t = |\u21aa\ufe0e)|^[0-9]{4}-[0-9]{2}-[0-9]{2} ")
+NEVER = re.compile(r"error: -\[|^\s+(t = |\u21aa\ufe0e)")
+# The app's log lines start with a timestamp, and output can push one into the middle of another line, so a
+# line is cut where one starts.
+TIMESTAMP = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:")
 
-# The system's output can share a line with these, so they're found anywhere in it. With retries on, a
+# The system's output can share a line with these, so they're found anywhere in it, but a name must look
+# like one: an issue's text can contain "passed after" too. With retries on, a
 # start reads "started (Iteration 1 of 2)."; a test past its time allowance ends "exceeded execution time
 # allowance of 3 minutes", and the runner restarts.
 XCTEST_START = re.compile(r"Test Case '-\[(?:\w+\.)?(\w+) (\w+)\]' started(?: \(Iteration [0-9]+ of [0-9]+\))?\.$")
 XCTEST_END = re.compile(
     r"Test Case '-\[(?:\w+\.)?(\w+) (\w+)\]' (passed|failed|skipped|exceeded execution time allowance)"
 )
-SWIFT_START = re.compile(r"◇ Test (.+) started\.$")
-# A parameterized test ends "Test name(_:) with 3 test cases passed after …".
-SWIFT_END = re.compile(r"[✔✘➜] Test (.+?)(?: with [0-9]+ test cases?)? (passed after|failed after|skipped)")
+SWIFT_START = re.compile(r"◇ Test " + SWIFT_NAME + r" started\.$")
+# A parameterized test ends "Test name(_:) with 3 test cases passed after 0.1 seconds.".
+SWIFT_END = re.compile(
+    r"[✔✘➜] Test " + SWIFT_NAME + r"(?: with [0-9]+ test cases?)? (passed after|failed after|skipped)"
+)
 OUTCOME = {
     'passed': 'passed', 'passed after': 'passed', 'failed': 'failed', 'failed after': 'failed',
     'skipped': 'skipped', 'exceeded execution time allowance': 'timed out',
 }
 FAILURES = ('failed', 'timed out')
-# A parameterized case's line holds its arguments' values; "Test run" is the whole run, not a test.
-NOT_A_NAME = re.compile(r"^(case passing |run$|run with )")
-# Build steps and xcodebuild's own messages start at the margin with a word, like "CompileSwift".
+# Build steps start at the margin with their name. Other words there can come from anywhere, even the app,
+# so only these are named.
 STEP = re.compile(r"^([A-Za-z]+)\b")
+STEPS = {
+    'AppIntentsSSUTraining', 'Build', 'ClangStatCache', 'CodeSign', 'Command', 'CompileAssetCatalogVariant',
+    'ComputePackagePrebuildTargetDependencyGraph', 'ComputeTargetDependencyGraph',
+    'ConstructStubExecutorLinkFileList', 'Copy', 'CopyPlistFile', 'CopySwiftLibs', 'CreateBuildDescription',
+    'CreateBuildOperation', 'CreateBuildRequest', 'ExecuteExternalTool', 'ExtractAppIntentsMetadata',
+    'GatherProvisioningInputs', 'GenerateAssetSymbols', 'Ld', 'LinkAssetCatalog', 'Prepare',
+    'ProcessInfoPlistFile', 'PruneExplicitPrecompiledModules', 'ReadFileContents', 'Resolve', 'Resolved',
+    'Retrying', 'SendProjectDescription', 'SwiftCompile', 'SwiftDriver', 'SwiftDriverJobDiscovery',
+    'SwiftEmitModule', 'SwiftExplicitDependencyCompileModuleFromInterface', 'SwiftExplicitDependencyGeneratePcm',
+    'SwiftMergeGeneratedHeaders', 'Test', 'Testing', 'Validate', 'WriteAuxiliaryFile', 'Writing',
+}
 SHOWN_RUNNING = 5
-SWIFT_SUMMARY = re.compile(r"Test run with [0-9]+ tests")
+SWIFT_SUMMARY = re.compile(r"Test run with [0-9]+ tests?")
 XCTEST_SUITE_START = re.compile(r"Test Suite '[^']+' started")
 # A class's suite ends with its time on the next line. "Selected tests" and "SimpaninUITests.xctest" don't
 # match, and a class split by a runner restart has a part per launch.
@@ -50,14 +72,15 @@ CLASS_TIME = re.compile(r"Executed ([0-9]+) tests?, with .* in ([0-9.]+) \(")
 
 
 def test_event(line):
-    """A test's name and what happened to it on this line ("started", "passed", "timed out" …), if any."""
+    """A test's name and what happened to it on this line ("started", "passed", "timed out" …), if any. A
+    parameterized case's line holds its arguments' values, and its name never matches."""
     if match := XCTEST_START.search(line):
         return f'{match[1]}.{match[2]}', 'started'
     if match := XCTEST_END.search(line):
         return f'{match[1]}.{match[2]}', OUTCOME[match[3]]
-    if (match := SWIFT_START.search(line)) and not NOT_A_NAME.match(match[1]):
+    if match := SWIFT_START.search(line):
         return match[1], 'started'
-    if (match := SWIFT_END.search(line)) and not NOT_A_NAME.match(match[1]):
+    if match := SWIFT_END.search(line):
         return match[1], OUTCOME[match[2]]
     return None, None
 
@@ -69,7 +92,7 @@ def scan(lines):
         name, outcome = test_event(line)
         if name is None:
             if match := STEP.match(line):
-                step = match[1]
+                step = match[1] if match[1] in STEPS else 'other'
         elif outcome == 'started':
             running[name] = True
         else:
@@ -95,7 +118,8 @@ def class_times(lines):
 def summary(lines, on_github=False):
     """The lines worth printing after a run: names and counts each once in byte order, each class's time,
     then the tests that timed out and those that passed only on their retry."""
-    printed = sorted({line for line in lines if SUMMARY.search(line) and not NEVER.search(line)})
+    cut = (TIMESTAMP.split(line, maxsplit=1)[0] for line in lines)
+    printed = sorted({line for line in cut if SUMMARY.search(line) and not NEVER.search(line)})
     printed += [
         f'class time: {name}, {tests} tests, {seconds / 60:.1f} min' for name, (tests, seconds) in class_times(lines)
     ]
