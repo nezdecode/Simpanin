@@ -12,8 +12,8 @@
 # a filter naming one Swift Testing function matches nothing and would otherwise report success.
 # A run it stops before any test failed runs once more on a freshly booted simulator; one stopped again, or
 # after a failure, fails, whatever xcodebuild left in the bundle. A UI test gets 180 seconds, and no second
-# try; any other test that fails gets one more. The summary names the tests that timed out and those that
-# passed only on their retry.
+# try, and the run stops after three time out; any other test that fails gets one more. The summary names
+# the tests that timed out and those that passed only on their retry.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -52,6 +52,7 @@ idle_limit="${SIMPANIN_IDLE_TIMEOUT:-300}"
 # Only while Swift Testing's summary is the last thing out: a run with UI tests goes on to them, and those
 # get the full limit.
 summary_idle_limit=60
+timeout_limit=3
 # Stops xcodebuild and its direct children (the build service, compilers) on any exit, Ctrl-C included.
 # The test runner inside the simulator is launchd_sim's, not xcodebuild's; it ends with the run.
 stop() {
@@ -89,6 +90,13 @@ run_tests() {
   while kill -0 "$pid" 2> /dev/null; do
     if grep -qsE '\*\* TEST (SUCCEEDED|FAILED) \*\*' "$log"; then
       sleep 10  # time to finish writing the result bundle
+      break
+    fi
+    # One stuck test is a test's problem; three mean the app hangs everywhere, say at launch. Each would
+    # take 3 minutes, so CI would cancel the job before the summary named any.
+    if [ "$(grep -c 'exceeded execution time allowance' "$log" || true)" -ge "$timeout_limit" ]; then
+      echo "test.sh: $timeout_limit tests ran out of time, so the rest likely would too; stopping xcodebuild" >&2
+      stopped=yes
       break
     fi
     idle=$(( $(date +%s) - $(stat -f %m "$log") ))
