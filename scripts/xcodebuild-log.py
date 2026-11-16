@@ -24,6 +24,10 @@ SUMMARY = re.compile(
     r"Test run with [0-9]+ tests?|✘ Test " + SWIFT_NAME + r"(?: with [0-9]+ test cases?)? failed after"
     r"|Test [Cc]ase '[^']+' failed|Executed [0-9]+ tests?|\*\* TEST"
     r"|^(?:\S+:[0-9]+(?::[0-9]+)?: |xcodebuild: |macro expansion [#@]\w+:[0-9]+:[0-9]+: )?error: "
+    # Why no test ran, from xcodebuild's "Testing failed:" list. Only these shapes: the same list holds each
+    # failed test's message, which can hold a value.
+    r"|^\t(?:\S+ \([0-9]+\) encountered an error \(|The test runner failed|Failed to install or launch"
+    r"|Test runner exited|Early unexpected exit|Lost connection to the test|Testing cancelled because)"
 )
 NEVER = re.compile(r"error: -\[|^\s+(t = |\u21aa\ufe0e)")
 # The app's log lines start with a timestamp, and output can push one into the middle of another line, so a

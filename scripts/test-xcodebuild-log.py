@@ -263,7 +263,26 @@ def exit_codes_drive_test_sh():
     return None if got == expected else f'got {got}'
 
 
+def a_runner_failure_says_why_and_test_messages_stay_out():
+    lines = [
+        'Testing failed:',
+        f'\tXCTAssertEqual failed: ("{SECRET}") is not equal to ("") (in target \'SimpaninUITests\')',
+        f'\tkeep(_:) failed: Expectation failed: "{SECRET}" == ""',
+        '\tSimpaninUITests-Runner (4242) encountered an error (Failed to install or launch the test runner.)',
+        '\tTesting cancelled because the build failed.',
+        '** TEST FAILED **',
+    ]
+    got = log.summary(lines)
+    expected = [
+        '\tSimpaninUITests-Runner (4242) encountered an error (Failed to install or launch the test runner.)',
+        '\tTesting cancelled because the build failed.',
+        '** TEST FAILED **',
+    ]
+    return None if got == expected else f'got {got}'
+
+
 CASES = [
+    a_runner_failure_says_why_and_test_messages_stay_out,
     issue_text_is_never_a_name,
     a_swift_testing_repetition_is_a_retry,
     exit_codes_drive_test_sh,
