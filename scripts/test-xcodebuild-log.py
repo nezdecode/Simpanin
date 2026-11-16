@@ -129,7 +129,15 @@ def stopped_shortens_a_long_list():
     return expect_stopped(starts, 'stopped during t0(), t1(), t2(), t3(), t4() and 2 more, still running', False)
 
 
+def after_summary_only_while_nothing_followed():
+    summary = "Test Suite 'All tests' started at 2026-11-16 16:33:08.473.\n✔ Test run with 2 tests in 1 suite passed after 0.1 seconds."
+    ui = summary + "\nTest Suite 'Selected tests' started at 2026-11-16 16:33:21.691."
+    got = [log.after_summary(text.split('\n')) for text in ("◇ Test run started.", summary, ui)]
+    return None if got == [False, True, False] else f'got {got}'
+
+
 CASES = [
+    after_summary_only_while_nothing_followed,
     summary_keeps_names_and_counts,
     summary_never_prints_values,
     stopped_names_the_ui_test_still_running,

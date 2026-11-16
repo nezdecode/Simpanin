@@ -5,8 +5,9 @@
 #   scripts/test.sh --skip SimpaninTests         everything but a target or Target/Class; repeatable, and
 #                                                applied after --only
 # SIMPANIN_SIMULATOR names another simulator by id. SIMPANIN_IDLE_TIMEOUT (seconds, default 300) stops a
-# run that prints nothing for that long: xcodebuild has hung after the build with no output. After Swift
-# Testing's summary the limit is 60 seconds, since xcodebuild often hangs there after a failing run.
+# run that prints nothing for that long: xcodebuild has hung after the build with no output. While Swift
+# Testing's summary is the last thing out, the limit is 60 seconds, since xcodebuild often hangs there
+# after a failing run.
 # Its verdict comes from the result bundle, never from xcodebuild's exit status, and zero tests fail it:
 # a filter naming one Swift Testing function matches nothing and would otherwise report success.
 # A run it stops always fails, whatever xcodebuild left in the bundle.
@@ -67,7 +68,8 @@ stop() {
 trap stop EXIT INT TERM
 
 idle_limit="${SIMPANIN_IDLE_TIMEOUT:-300}"
-# In a full run the UI tests start about 3 s after the summary and are never quiet for more than a few.
+# Only while Swift Testing's summary is the last thing out: a run with UI tests goes on to them, and those
+# get the full limit.
 summary_idle_limit=60
 stopped=""
 while kill -0 "$pid" 2> /dev/null; do
@@ -76,7 +78,7 @@ while kill -0 "$pid" 2> /dev/null; do
     break
   fi
   idle=$(( $(date +%s) - $(stat -f %m "$log") ))
-  if grep -qsE 'Test run with [0-9]+ tests' "$log" && [ "$idle" -gt "$summary_idle_limit" ]; then
+  if [ "$idle" -gt "$summary_idle_limit" ] && python3 -B scripts/xcodebuild-log.py after-summary "$log"; then
     echo "test.sh: no output for ${summary_idle_limit}s after Swift Testing's summary; stopping xcodebuild" >&2
     stopped=yes
     break

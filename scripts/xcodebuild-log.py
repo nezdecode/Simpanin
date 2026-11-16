@@ -3,6 +3,8 @@
 #   python3 scripts/xcodebuild-log.py summary <log>   the lines test.sh prints after a run
 #   python3 scripts/xcodebuild-log.py stopped <log>   what was running when test.sh stopped the run;
 #                                                     exits 1 when a test had failed, 0 otherwise
+#   python3 scripts/xcodebuild-log.py after-summary <log>   exits 0 when Swift Testing's summary is out
+#                                                     and no XCTest suite has started since
 # CI's log is public, so all this prints is test names, counts and xcodebuild's own words. A failure's
 # details, an XCTest "error: -[…]" line, its indented activity lines (a query can name a label) and the
 # app's log lines (they start with a timestamp) can hold field values. Tested by
@@ -30,6 +32,8 @@ NOT_A_NAME = re.compile(r"^(case passing |run$|run with )")
 # Build steps and xcodebuild's own messages start at the margin with a word, like "CompileSwift".
 STEP = re.compile(r"^([A-Za-z]+)\b")
 SHOWN_RUNNING = 5
+SWIFT_SUMMARY = re.compile(r"Test run with [0-9]+ tests")
+XCTEST_SUITE_START = re.compile(r"Test Suite '[^']+' started")
 
 
 def summary(lines):
@@ -68,17 +72,30 @@ def stopped(lines):
     return message, any(FAILED.search(line) for line in lines)
 
 
+def after_summary(lines):
+    """Whether Swift Testing's summary is out and no XCTest suite has started since."""
+    after = False
+    for line in lines:
+        if SWIFT_SUMMARY.search(line):
+            after = True
+        elif XCTEST_SUITE_START.search(line):
+            after = False
+    return after
+
+
 def read(path):
     with open(path, encoding='utf-8', errors='surrogateescape', newline='') as log:
         return log.read().split('\n')
 
 
 def main(argv):
-    if len(argv) != 3 or argv[1] not in ('summary', 'stopped'):
-        print('usage: xcodebuild-log.py summary|stopped <log>', file=sys.stderr)
+    if len(argv) != 3 or argv[1] not in ('summary', 'stopped', 'after-summary'):
+        print('usage: xcodebuild-log.py summary|stopped|after-summary <log>', file=sys.stderr)
         return 2
     sys.stdout.reconfigure(errors='surrogateescape')
     lines = read(argv[2])
+    if argv[1] == 'after-summary':
+        return 0 if after_summary(lines) else 1
     if argv[1] == 'stopped':
         message, failed = stopped(lines)
         print(message)
