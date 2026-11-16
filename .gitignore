@@ -60,3 +60,7 @@ Packages/*/.swiftpm/
 
 # Claude Code agents and settings, private like CLAUDE.md.
 /.claude/
+
+# graphify's code graph, which the post-commit hook refreshes. It holds names and text from whatever it was
+# built from, the private notes included, so it stays local.
+/graphify-out/

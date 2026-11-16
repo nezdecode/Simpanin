@@ -21,9 +21,9 @@ refused_files() {
     echo "$bad" | sed 's/^/  /' >&2
     failed=1
   fi
-  private=$(printf '%s\n' "$paths" | grep -E '^(docs/|\.claude/|CLAUDE\.md$)' || true)
+  private=$(printf '%s\n' "$paths" | grep -E '^(docs/|\.claude/|graphify-out/|CLAUDE\.md$)' || true)
   if [ -n "$private" ]; then
-    echo "ci-checks: $label: private files (docs/, .claude/, CLAUDE.md):" >&2
+    echo "ci-checks: $label: private files (docs/, .claude/, graphify-out/, CLAUDE.md):" >&2
     echo "$private" | sed 's/^/  /' >&2
     failed=1
   fi

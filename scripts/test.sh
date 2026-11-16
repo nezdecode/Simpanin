@@ -121,8 +121,9 @@ run_tests() {
 }
 
 run_tests "build/test-$(date +%Y%m%d-%H%M%S)"
-# A run stopped before any test had failed hung in xcodebuild, the runner or the simulator, or in a unit
-# test (a UI test's time allowance would have failed it). It runs once more on a freshly booted simulator.
+# A run stopped before any test had failed hung in xcodebuild, the runner or the simulator, or in a Swift
+# Testing unit test: the time allowance covers XCTest, and every XCTest here is a UI test. It runs once more
+# on a freshly booted simulator.
 if [ -n "$stopped" ] && what=$(python3 -B scripts/xcodebuild-log.py stopped "$log"); then
   # On GitHub a warning, so a job that passes on the retry still shows the hang on the pull request.
   [ "${GITHUB_ACTIONS:-}" = true ] && warning="::warning::" || warning=""
