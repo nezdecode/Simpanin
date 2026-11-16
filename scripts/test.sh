@@ -46,7 +46,20 @@ if [ -z "$simulator" ]; then
   echo "test.sh: no iOS 27 \"iPhone 17\" simulator; set SIMPANIN_SIMULATOR to a simulator id" >&2
   exit 1
 fi
-xcrun simctl bootstatus "$simulator" -b > /dev/null
+# On GitHub a warning, so a job that passes still shows what went wrong on the pull request.
+[ "${GITHUB_ACTIONS:-}" = true ] && warning="::warning::" || warning=""
+# Boots the simulator and waits for it. On GitHub's image a boot has failed with "the iOS 27.0 simulator
+# runtime is not available"; the run then goes on, and xcodebuild boots it itself or fails with its own
+# message.
+boot_simulator() {
+  local boot
+  if ! boot=$(xcrun simctl bootstatus "$simulator" -b 2>&1 > /dev/null); then
+    boot=$(echo "$boot" | grep . | tr '\n' ' ')
+    echo "${warning}test.sh: the simulator didn't boot; xcodebuild will try. simctl: $boot"
+    xcrun simctl list runtimes >&2 || true
+  fi
+}
+boot_simulator
 
 idle_limit="${SIMPANIN_IDLE_TIMEOUT:-300}"
 # Only while Swift Testing's summary is the last thing out: a run with UI tests goes on to them, and those
@@ -121,22 +134,28 @@ run_tests() {
 }
 
 run_tests "build/test-$(date +%Y%m%d-%H%M%S)"
+# On GitHub's image the simulator has gone missing during the build: booted at the start, then not found
+# by xcodebuild before any test ran.
+lost="(Unable to find a device|Timed out waiting for all destinations) matching the provided destination"
 # A run stopped before any test had failed hung in xcodebuild, the runner or the simulator, or in a Swift
-# Testing unit test: the time allowance covers XCTest, and every XCTest here is a UI test. It runs once more
-# on a freshly booted simulator.
+# Testing unit test: the time allowance covers XCTest, and every XCTest here is a UI test. That run, and one
+# that lost its simulator, runs once more on a freshly booted simulator.
+retry=""
 if [ -n "$stopped" ] && what=$(python3 -B scripts/xcodebuild-log.py stopped "$log"); then
-  # On GitHub a warning, so a job that passes on the retry still shows the hang on the pull request.
-  [ "${GITHUB_ACTIONS:-}" = true ] && warning="::warning::" || warning=""
-  echo "${warning}test.sh: $what; no test had failed, so running once more on a freshly booted simulator"
+  retry="$what; no test had failed"
+elif [ -z "$stopped" ] && grep -qE "$lost" "$log"; then
+  retry="xcodebuild couldn't find the simulator, and no test ran"
+  xcrun simctl list runtimes >&2 || true
+fi
+if [ -n "$retry" ]; then
+  echo "${warning}test.sh: $retry, so running once more on a freshly booted simulator"
   xcrun simctl shutdown "$simulator" 2> /dev/null || true  # it may have shut down already
-  # On GitHub's image the boot has failed with "the iOS 27.0 simulator runtime is not available"; the retry
-  # then goes on, and xcodebuild boots the simulator itself or fails with its own message.
-  if ! boot=$(xcrun simctl bootstatus "$simulator" -b 2>&1 > /dev/null); then
-    boot=$(echo "$boot" | grep . | tr '\n' ' ')
-    echo "${warning}test.sh: the simulator didn't boot again; xcodebuild will try. simctl: $boot"
-    xcrun simctl list runtimes >&2 || true
-  fi
+  boot_simulator
   run_tests "$run-retry"
+fi
+if [ -z "$stopped" ] && grep -qE "$lost" "$log"; then
+  echo "test.sh: FAILED, xcodebuild couldn't find the simulator, so no test ran; see $log" >&2
+  exit 1
 fi
 # A stopped xcodebuild may still have written a bundle, without the tests it never ran.
 if [ -n "$stopped" ]; then
@@ -159,7 +178,7 @@ total, failed = s.get("totalTestCount", 0), s.get("failedTests", 0)
 passed, skipped = s.get("passedTests", 0), s.get("skippedTests", 0)
 print(f"test.sh: {total} tests: {passed} passed, {failed} failed, {skipped} skipped")
 if total == 0:
-    sys.exit("test.sh: FAILED, no test ran: check the --only and --skip filters")
+    sys.exit("test.sh: FAILED, no test ran: see the errors above, or check the --only and --skip filters")
 if failed or s.get("result") != "Passed":
     sys.exit("test.sh: FAILED")
 print("test.sh: PASSED")
