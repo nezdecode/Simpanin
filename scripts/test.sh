@@ -5,11 +5,15 @@
 #   scripts/test.sh --skip SimpaninTests         everything but a target or Target/Class; repeatable, and
 #                                                applied after --only
 # SIMPANIN_SIMULATOR names another simulator by id. SIMPANIN_IDLE_TIMEOUT (seconds, default 300) stops a
-# run that prints nothing for that long: xcodebuild has hung after the build with no output. After Swift
-# Testing's summary the limit is 60 seconds, since xcodebuild often hangs there after a failing run.
+# run that prints nothing for that long: xcodebuild has hung after the build with no output. While Swift
+# Testing's summary is the last thing out, the limit is 60 seconds, since xcodebuild often hangs there
+# after a failing run.
 # Its verdict comes from the result bundle, never from xcodebuild's exit status, and zero tests fail it:
 # a filter naming one Swift Testing function matches nothing and would otherwise report success.
-# A run it stops always fails, whatever xcodebuild left in the bundle.
+# A run it stops before any test failed runs once more on a freshly booted simulator; one stopped again, or
+# after a failure, fails, whatever xcodebuild left in the bundle. A UI test gets 180 seconds, and no second
+# try, and the run stops after three time out; any other test that fails gets one more. The summary names
+# the tests that timed out and those that passed only on their retry.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -42,63 +46,120 @@ if [ -z "$simulator" ]; then
   echo "test.sh: no iOS 27 \"iPhone 17\" simulator; set SIMPANIN_SIMULATOR to a simulator id" >&2
   exit 1
 fi
-xcrun simctl bootstatus "$simulator" -b > /dev/null
+# On GitHub a warning, so a job that passes still shows what went wrong on the pull request.
+[ "${GITHUB_ACTIONS:-}" = true ] && warning="::warning::" || warning=""
+# Boots the simulator and waits for it. On GitHub's image a boot has failed with "the iOS 27.0 simulator
+# runtime is not available"; the run then goes on, and xcodebuild boots it itself or fails with its own
+# message.
+boot_simulator() {
+  local boot
+  if ! boot=$(xcrun simctl bootstatus "$simulator" -b 2>&1 > /dev/null); then
+    boot=$(echo "$boot" | grep . | tr '\n' ' ')
+    echo "${warning}test.sh: the simulator didn't boot; xcodebuild will try. simctl: $boot"
+    xcrun simctl list runtimes >&2 || true
+  fi
+}
+boot_simulator
 
-run="build/test-$(date +%Y%m%d-%H%M%S)"
-mkdir -p "$run"
-log="$run/xcodebuild.log"
-bundle="$run/Tests.xcresult"
-echo "test.sh: simulator $simulator; log and results in $run"
-: > "$log"  # exists before the loop reads its time
-
-# Parallel testing clones the simulator. A clone once never finished booting, and with two clones UI
-# tests stalled for minutes in all three trials. CI splits the classes instead.
-xcodebuild test -project Simpanin.xcodeproj -scheme Simpanin \
-  -destination "platform=iOS Simulator,id=$simulator" -destination-timeout 120 \
-  -parallel-testing-enabled NO -derivedDataPath build/DerivedData-test \
-  -resultBundlePath "$bundle" "${filters[@]+"${filters[@]}"}" > "$log" 2>&1 &
-pid=$!
+idle_limit="${SIMPANIN_IDLE_TIMEOUT:-300}"
+# Only while Swift Testing's summary is the last thing out: a run with UI tests goes on to them, and those
+# get the full limit.
+summary_idle_limit=60
+timeout_limit=3
 # Stops xcodebuild and its direct children (the build service, compilers) on any exit, Ctrl-C included.
 # The test runner inside the simulator is launchd_sim's, not xcodebuild's; it ends with the run.
 stop() {
+  [ -n "${pid:-}" ] || return 0
   pkill -P "$pid" 2> /dev/null || true
   kill "$pid" 2> /dev/null || true
 }
 trap stop EXIT INT TERM
 
-idle_limit="${SIMPANIN_IDLE_TIMEOUT:-300}"
-# In a full run the UI tests start about 3 s after the summary and are never quiet for more than a few.
-summary_idle_limit=60
-stopped=""
-while kill -0 "$pid" 2> /dev/null; do
-  if grep -qsE '\*\* TEST (SUCCEEDED|FAILED) \*\*' "$log"; then
-    sleep 10  # time to finish writing the result bundle
-    break
-  fi
-  idle=$(( $(date +%s) - $(stat -f %m "$log") ))
-  if grep -qsE 'Test run with [0-9]+ tests' "$log" && [ "$idle" -gt "$summary_idle_limit" ]; then
-    echo "test.sh: no output for ${summary_idle_limit}s after Swift Testing's summary; stopping xcodebuild" >&2
-    stopped=yes
-    break
-  fi
-  if [ "$idle" -gt "$idle_limit" ]; then
-    echo "test.sh: no output for ${idle_limit}s; stopping xcodebuild" >&2
-    stopped=yes
-    break
-  fi
-  sleep 5
-done
-stop
-wait "$pid" 2> /dev/null || true
+# Runs xcodebuild once with its log and result bundle in the folder it's given, stops it if it goes quiet,
+# and prints the summary. Sets run, log, bundle and stopped for the verdict.
+run_tests() {
+  run="$1"
+  mkdir -p "$run"
+  log="$run/xcodebuild.log"
+  bundle="$run/Tests.xcresult"
+  echo "test.sh: simulator $simulator; log and results in $run"
+  : > "$log"  # exists before the loop reads its time
 
-# Only the names of failed tests: an issue's details, an XCTest failure's "error: -[…]" line, its
-# indented activity lines (a query can name a label) and the app's log lines (they start with a
-# timestamp) can hold field values, and CI's log is public.
-# "Test Case" is XCTest's serial form, "Test case … failed on 'Clone 1 …'" its parallel one.
-grep -E "Test run with [0-9]+ tests|✘ Test .+ failed after|Test [Cc]ase '[^']+' failed|Executed [0-9]+ tests|\*\* TEST|error:" "$log" \
-  | grep -vE 'error: -\[|^[[:space:]]+(t = |↪︎)|^[0-9]{4}-[0-9]{2}-[0-9]{2} ' | sort -u || true
+  # Parallel testing clones the simulator. A clone once never finished booting, and with two clones UI
+  # tests stalled for minutes in all three trials. CI splits the classes instead.
+  # A test still running after 180 s fails with its name, the runner restarts and the run goes on; the
+  # longest test takes about 30 s. The idle limit stays above it, so a stuck test is named rather than the
+  # whole run stopped. A timed-out test isn't run again; any other test that fails is, and the summary
+  # names it if it passes then.
+  # Not -test-repetition-relaunch-enabled: with it, xcodebuild reran the whole class and then hung.
+  xcodebuild test -project Simpanin.xcodeproj -scheme Simpanin \
+    -destination "platform=iOS Simulator,id=$simulator" -destination-timeout 120 \
+    -parallel-testing-enabled NO -derivedDataPath build/DerivedData-test \
+    -test-timeouts-enabled YES -default-test-execution-time-allowance 180 \
+    -retry-tests-on-failure -test-iterations 2 \
+    -resultBundlePath "$bundle" "${filters[@]+"${filters[@]}"}" > "$log" 2>&1 &
+  pid=$!
+  stopped=""
+  while kill -0 "$pid" 2> /dev/null; do
+    if grep -qsE '\*\* TEST (SUCCEEDED|FAILED) \*\*' "$log"; then
+      sleep 10  # time to finish writing the result bundle
+      break
+    fi
+    # One stuck test is a test's problem; three mean the app hangs everywhere, say at launch. Each would
+    # take 3 minutes, so CI would cancel the job before the summary named any.
+    if [ "$(grep -c 'exceeded execution time allowance' "$log" || true)" -ge "$timeout_limit" ]; then
+      echo "test.sh: $timeout_limit tests ran out of time, so the rest likely would too; stopping xcodebuild" >&2
+      stopped=yes
+      break
+    fi
+    idle=$(( $(date +%s) - $(stat -f %m "$log") ))
+    if [ "$idle" -gt "$summary_idle_limit" ] && python3 -B scripts/xcodebuild-log.py after-summary "$log"; then
+      echo "test.sh: no output for ${summary_idle_limit}s after Swift Testing's summary; stopping xcodebuild" >&2
+      stopped=yes
+      break
+    fi
+    if [ "$idle" -gt "$idle_limit" ]; then
+      echo "test.sh: no output for ${idle_limit}s; stopping xcodebuild" >&2
+      stopped=yes
+      break
+    fi
+    sleep 5
+  done
+  stop
+  wait "$pid" 2> /dev/null || true
+  pid=""  # so the trap can't kill a process that took its number
+
+  # Only names and counts: CI's log is public, and the script keeps out whatever can hold field values.
+  python3 -B scripts/xcodebuild-log.py summary "$log"
+}
+
+run_tests "build/test-$(date +%Y%m%d-%H%M%S)"
+# On GitHub's image the simulator has gone missing during the build: booted at the start, then not found
+# by xcodebuild before any test ran.
+lost="(Unable to find a device|Timed out waiting for all destinations) matching the provided destination"
+# A run stopped before any test had failed hung in xcodebuild, the runner or the simulator, or in a Swift
+# Testing unit test: the time allowance covers XCTest, and every XCTest here is a UI test. That run, and one
+# that lost its simulator, runs once more on a freshly booted simulator.
+retry=""
+if [ -n "$stopped" ] && what=$(python3 -B scripts/xcodebuild-log.py stopped "$log"); then
+  retry="$what; no test had failed"
+elif [ -z "$stopped" ] && grep -qE "$lost" "$log"; then
+  retry="xcodebuild couldn't find the simulator, and no test ran"
+  xcrun simctl list runtimes >&2 || true
+fi
+if [ -n "$retry" ]; then
+  echo "${warning}test.sh: $retry, so running once more on a freshly booted simulator"
+  xcrun simctl shutdown "$simulator" 2> /dev/null || true  # it may have shut down already
+  boot_simulator
+  run_tests "$run-retry"
+fi
+if [ -z "$stopped" ] && grep -qE "$lost" "$log"; then
+  echo "test.sh: FAILED, xcodebuild couldn't find the simulator, so no test ran; see $log" >&2
+  exit 1
+fi
 # A stopped xcodebuild may still have written a bundle, without the tests it never ran.
 if [ -n "$stopped" ]; then
+  echo "test.sh: $(python3 -B scripts/xcodebuild-log.py stopped "$log" || true)" >&2
   echo "test.sh: FAILED, xcodebuild was stopped; see $log" >&2
   exit 1
 fi
@@ -117,7 +178,7 @@ total, failed = s.get("totalTestCount", 0), s.get("failedTests", 0)
 passed, skipped = s.get("passedTests", 0), s.get("skippedTests", 0)
 print(f"test.sh: {total} tests: {passed} passed, {failed} failed, {skipped} skipped")
 if total == 0:
-    sys.exit("test.sh: FAILED, no test ran: check the --only and --skip filters")
+    sys.exit("test.sh: FAILED, no test ran: see the errors above, or check the --only and --skip filters")
 if failed or s.get("result") != "Passed":
     sys.exit("test.sh: FAILED")
 print("test.sh: PASSED")

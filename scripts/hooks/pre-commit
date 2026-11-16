@@ -1,6 +1,6 @@
 #!/bin/sh
 # Rejects any staged image or PDF outside Fixtures/Synthetic/, and the
-# private docs/ folder, CLAUDE.md and .claude/. Checks staged Swift files with swift-format
+# private docs/ folder, CLAUDE.md, .claude/ and graphify-out/. Checks staged Swift files with swift-format
 # and SwiftLint.
 # Real document scans must never be committed; see .gitignore.
 # Install once per clone: git config core.hooksPath scripts/hooks
@@ -19,10 +19,10 @@ if [ -n "$bad" ]; then
 fi
 private=$(git diff --cached --name-only --diff-filter=ACMR -z \
   | tr '\0' '\n' \
-  | grep -E '^(docs/|\.claude/|CLAUDE\.md$)')
+  | grep -E '^(docs/|\.claude/|graphify-out/|CLAUDE\.md$)')
 
 if [ -n "$private" ]; then
-  echo "pre-commit: refusing to commit private files (docs/, .claude/, CLAUDE.md):" >&2
+  echo "pre-commit: refusing to commit private files (docs/, .claude/, graphify-out/, CLAUDE.md):" >&2
   echo "$private" | sed 's/^/  /' >&2
   echo "Unstage them with: git rm --cached <file>" >&2
   exit 1
