@@ -10,7 +10,9 @@
 # after a failing run.
 # Its verdict comes from the result bundle, never from xcodebuild's exit status, and zero tests fail it:
 # a filter naming one Swift Testing function matches nothing and would otherwise report success.
-# A run it stops always fails, whatever xcodebuild left in the bundle.
+# A run it stops always fails, whatever xcodebuild left in the bundle. A UI test gets 180 seconds, and no
+# second try; any other test that fails gets one more. The summary names the tests that timed out and those
+# that passed only on their retry.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -54,9 +56,16 @@ echo "test.sh: simulator $simulator; log and results in $run"
 
 # Parallel testing clones the simulator. A clone once never finished booting, and with two clones UI
 # tests stalled for minutes in all three trials. CI splits the classes instead.
+# A test still running after 180 s fails with its name, the runner restarts and the run goes on; the
+# longest test takes about 30 s. The idle limit stays above it, so a stuck test is named rather than the
+# whole run stopped. A timed-out test isn't run again; any other test that fails is, and the summary
+# names it if it passes then.
+# Not -test-repetition-relaunch-enabled: with it, xcodebuild reran the whole class and then hung.
 xcodebuild test -project Simpanin.xcodeproj -scheme Simpanin \
   -destination "platform=iOS Simulator,id=$simulator" -destination-timeout 120 \
   -parallel-testing-enabled NO -derivedDataPath build/DerivedData-test \
+  -test-timeouts-enabled YES -default-test-execution-time-allowance 180 \
+  -retry-tests-on-failure -test-iterations 2 \
   -resultBundlePath "$bundle" "${filters[@]+"${filters[@]}"}" > "$log" 2>&1 &
 pid=$!
 # Stops xcodebuild and its direct children (the build service, compilers) on any exit, Ctrl-C included.

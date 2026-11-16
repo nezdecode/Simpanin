@@ -136,7 +136,51 @@ def after_summary_only_while_nothing_followed():
     return None if got == [False, True, False] else f'got {got}'
 
 
+RETRIED = """\
+Test Case '-[SimpaninUITests.SettingsUITests testFlaky]' started (Iteration 1 of 2).
+Test Case '-[SimpaninUITests.SettingsUITests testFlaky]' failed (0.174 seconds).
+Test Case '-[SimpaninUITests.SettingsUITests testFlaky]' started (Iteration 2 of 2).
+Test Case '-[SimpaninUITests.SettingsUITests testFlaky]' passed (11.304 seconds).
+Test Case '-[SimpaninUITests.SettingsUITests testStuck]' started (Iteration 1 of 2).
+Test Case '-[SimpaninUITests.SettingsUITests testStuck]' exceeded execution time allowance of 3 minutes. The test may have hung.
+Restarting after unexpected exit, crash, or test timeout; summary will include totals from previous launches.
+** TEST FAILED **"""
+
+
+def summary_names_timeouts_and_flaky_tests():
+    got = log.summary(RETRIED.split('\n'))[-2:]
+    expected = [
+        'SettingsUITests.testStuck: timed out',
+        'flaky: SettingsUITests.testFlaky failed, then passed on its retry',
+    ]
+    return None if got == expected else f'got {got}'
+
+
+def summary_warns_of_flaky_tests_on_github():
+    got = log.summary(RETRIED.split('\n'), on_github=True)[-1]
+    return None if got.startswith('::warning::flaky: SettingsUITests.testFlaky') else f'got {got}'
+
+
+def stopped_counts_a_timeout_as_a_failure_and_a_retried_pass_as_none():
+    flaky_only = '\n'.join(RETRIED.split('\n')[:4])
+    got = [log.stopped(RETRIED.split('\n')), log.stopped(flaky_only.split('\n'))]
+    expected = [
+        ('stopped after SettingsUITests.testStuck, before the next test', True),
+        ('stopped after SettingsUITests.testFlaky, before the next test', False),
+    ]
+    return None if got == expected else f'got {got}'
+
+
+def stopped_during_a_retry_after_a_failure_stands():
+    retrying = '\n'.join(RETRIED.split('\n')[:3])
+    return expect_stopped(retrying, 'stopped during SettingsUITests.testFlaky, still running', True)
+
+
 CASES = [
+    summary_names_timeouts_and_flaky_tests,
+    summary_warns_of_flaky_tests_on_github,
+    stopped_counts_a_timeout_as_a_failure_and_a_retried_pass_as_none,
+    stopped_during_a_retry_after_a_failure_stands,
     after_summary_only_while_nothing_followed,
     summary_keeps_names_and_counts,
     summary_never_prints_values,
