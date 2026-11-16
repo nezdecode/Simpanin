@@ -51,8 +51,8 @@ final class LibraryModel {
         documents.filter { !hidden.hides($0.id, expiry: $0.expiry, today: today) }
     }
 
-    func refreshDay(at date: Date = .now, in calendar: Calendar = .current) {
-        today = CalendarDate.day(of: date, in: calendar)
+    func refreshDay(at date: Date = .now, in timeZone: TimeZone = .current) {
+        today = CalendarDate.day(of: date, in: timeZone)
     }
 
     /// Whether the document screen offers "Tampilkan lagi": a live document within the banner's window

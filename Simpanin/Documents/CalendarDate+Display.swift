@@ -25,14 +25,17 @@ extension CalendarDate {
         self.init(year: year, month: month, day: day)
     }
 
-    /// The day a moment falls on in a calendar, the phone's own for "today".
-    nonisolated static func day(of date: Date, in calendar: Calendar) -> CalendarDate {
+    /// The Gregorian day a moment falls on in a time zone. Never on the phone's calendar: a Buddhist or
+    /// Japanese one is in year 2569 or 8, and every expiry date would be read against that.
+    nonisolated static func day(of date: Date, in timeZone: TimeZone) -> CalendarDate {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
         let parts = calendar.dateComponents([.year, .month, .day], from: date)
         return CalendarDate(year: parts.year ?? 2000, month: parts.month ?? 1, day: parts.day ?? 1)
             ?? CalendarDate(year: 2000, month: 1, day: 1)!
     }
 
-    /// Today on the phone's calendar.
+    /// Today in the phone's time zone.
     nonisolated static var today: CalendarDate { day(of: .now, in: .current) }
 
     /// The day in Indonesian, for example "17 Agu 2030". Read as UTC, so no time zone moves it.

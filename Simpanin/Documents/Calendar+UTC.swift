@@ -18,4 +18,11 @@ extension Calendar {
         calendar.timeZone = .gmt
         return calendar
     }()
+
+    /// `gregorianUTC` for a date picker, which also starts its weeks on the day the phone's calendar does.
+    nonisolated static var gregorianUTCPicker: Calendar {
+        var calendar = gregorianUTC
+        calendar.firstWeekday = Calendar.current.firstWeekday
+        return calendar
+    }
 }

@@ -213,4 +213,24 @@ final class LibraryUITests: UITestCase {
         add.tap()
         XCTAssertTrue(app.buttons["photos.add"].waitForExistence(timeout: 10))
     }
+
+    /// A phone set to the Buddhist calendar is in year 2569. Indonesian documents carry Gregorian dates, so
+    /// "today" and every date shown stay Gregorian, or a valid SIM would read as expired.
+    @MainActor
+    func testABuddhistCalendarKeepsGregorianDays() throws {
+        let app = launch(["-AppleLocale", "id_ID@calendar=buddhist"])
+        // The second sample is a SIM A that expires on 17 Aug 2032.
+        addSamples(app, 2)
+        let sim = tile(app, "SIM A")
+        XCTAssertTrue(sim.label.contains("2032"), sim.label)
+        XCTAssertFalse(sim.label.contains("Sudah habis"), sim.label)
+        sim.tap()
+        XCTAssertTrue(pages(app).waitForExistence(timeout: 5))
+        let validity = app.descendants(matching: .any)["detail.validity"].label
+        XCTAssertTrue(validity.contains("2032"), validity)
+        XCTAssertFalse(validity.contains("Sudah habis"), validity)
+        let added = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Ditambahkan '")).firstMatch
+        let year = Calendar(identifier: .gregorian).component(.year, from: .now)
+        XCTAssertTrue(added.label.hasSuffix(" \(year)"), added.label)
+    }
 }

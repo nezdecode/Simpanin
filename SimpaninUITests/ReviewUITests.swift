@@ -213,4 +213,36 @@ final class ReviewUITests: UITestCase {
         app.buttons["review.expiryCancel"].tap()
         XCTAssertTrue(app.staticTexts["Belum diisi"].waitForExistence(timeout: 5))
     }
+
+    /// With the phone on the Buddhist calendar (year 2569), both expiry pickers still show Gregorian years.
+    @MainActor
+    func testABuddhistCalendarKeepsTheExpiryPickerGregorian() throws {
+        let app = launch(["-SimpaninUITestScan", "-AppleLocale", "id_ID@calendar=buddhist"])
+        openReview(app)
+        app.buttons["review.type"].tap()
+        app.buttons["typePicker.sim"].tap()
+        XCTAssertTrue(app.buttons["typePicker.sim-c"].waitForExistence(timeout: 5))
+        app.buttons["typePicker.sim-c"].tap()
+        app.swipeUp()
+        let expiry = app.descendants(matching: .any)["review.expiry"]
+        XCTAssertTrue(expiry.waitForExistence(timeout: 5))
+        let year = Calendar(identifier: .gregorian).component(.year, from: .now)
+        let showing = { (year: Int) in
+            app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", "\(year)")).firstMatch
+                .exists
+        }
+        // The calendar sheet opens on today.
+        expiry.tap()
+        XCTAssertTrue(app.buttons["review.expiryPick"].waitForExistence(timeout: 5))
+        XCTAssertTrue(showing(year))
+        XCTAssertFalse(showing(year + 543))
+        // Pilih puts today in the row's own picker.
+        app.buttons["review.expiryPick"].tap()
+        expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: app.buttons["review.expiryPick"])
+        waitForExpectations(timeout: 5)
+        XCTAssertFalse(app.staticTexts["Belum diisi"].exists)
+        // The row's picker keeps its date in its button's value, for example "16 Nov 2026".
+        let shown = expiry.buttons.firstMatch.value as? String ?? ""
+        XCTAssertTrue(shown.hasSuffix(" \(year)"), shown)
+    }
 }
