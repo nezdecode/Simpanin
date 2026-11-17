@@ -51,7 +51,7 @@ write_pid_file() {
 # Whatever happens once pending is posted, the commit gets a final state, so it never stays pending.
 finish() {
   trap '' USR1 INT TERM HUP ALRM  # nothing may cut this short
-  [ -n "$timer" ] && { pkill -KILL -P "$timer"; kill -KILL "$timer"; } 2> /dev/null
+  [ -n "$timer" ] && { kill -KILL "$timer"; wait "$timer"; } 2> /dev/null  # waited, so bash says nothing
   # test.sh runs in a process group of its own, xcodebuild with it; one stuck in a trap gets 10 s. Before
   # the post, which can hang on the network: a newer run that gives up waiting kills this run, not its tests.
   if [ -n "$group" ]; then
@@ -62,7 +62,7 @@ finish() {
     # test.sh sends xcodebuild TERM and ends without waiting; one that ignores it gets the same 10 s.
     for _ in $(seq 20); do pgrep -g "$group" > /dev/null || break; sleep 0.5; done
     kill -KILL -- "-$group" 2> /dev/null
-    kill -KILL "$killer" 2> /dev/null  # it ignores TERM, as this function does
+    { kill -KILL "$killer"; wait "$killer"; } 2> /dev/null  # it ignores TERM, as this function does
   fi
   if [ -n "$pending" ] && [ -z "$final" ]; then
     post "$sha" error "$reason" || echo "ci-mac: couldn't post the error status for $short" >&2
@@ -184,7 +184,13 @@ for runtime, devices in json.load(sys.stdin)["devices"].items():
   group=$!
   # test.sh only notices a run that goes quiet; one that hangs before xcodebuild, or never stops printing,
   # would leave the commit pending for good.
-  ( sleep "$limit" && kill -ALRM $$ ) &
+  # It checks this run is still alive and goes with it: a run killed outright would otherwise leave it to
+  # signal whatever process takes this number.
+  ( end=$(( $(date +%s) + limit ))
+    while running $$; do
+      [ "$(date +%s)" -ge "$end" ] && { kill -ALRM $$; exit; }
+      sleep 2
+    done ) &
   timer=$!
   write_pid_file "$$ $sha $group"
   wait "$group"

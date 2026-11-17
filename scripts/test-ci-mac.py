@@ -251,6 +251,7 @@ class CIMacTests(unittest.TestCase):
     def test_success_only_when_test_sh_exits_zero(self):
         passed = self.clone.ci_mac(self.clone.first)
         self.assertEqual(passed.returncode, 0, passed.stdout + passed.stderr)
+        self.assertNotIn('Killed', passed.stdout + passed.stderr)
         self.assertEqual(self.clone.statuses()[-1],
                          (self.clone.first, 'success', '786 tests: 785 passed, 0 failed, 1 skipped'))
         lied = self.clone.ci_mac(self.clone.second, FAKE_TEST_MODE='lies')
@@ -385,6 +386,16 @@ class CIMacTests(unittest.TestCase):
         self.assertEqual(self.clone.statuses()[-1][:2], (self.clone.first, 'error'))
         self.assertIn('no result after', self.clone.statuses()[-1][2])
         self.assertFalse(alive(self.clone.test_sh_pid()), 'test.sh still running')
+
+    def test_a_run_killed_outright_leaves_no_timer_behind(self):
+        # Its timer would otherwise signal whatever process takes its number when the limit runs out.
+        self.clone.start_ci_mac(self.clone.first, FAKE_TEST_MODE='sleep')
+        self.assertTrue(self.clone.wait_for_file('test-sh.pid'), 'test.sh never started')
+        with open(os.path.join(self.clone.work, 'build', 'ci', 'run.pid')) as f:
+            os.kill(int(f.read().split()[0]), signal.SIGKILL)
+        left = lambda: subprocess.run(['pgrep', '-f', f'ci-mac.sh {self.clone.first}'],
+                                      capture_output=True, text=True).stdout.split()
+        self.assertTrue(self.clone.wait_for(lambda: not left(), 10), f'still running: {left()}')
 
     def test_marks_a_run_killed_outright_as_interrupted(self):
         dead = subprocess.Popen(['true'])
