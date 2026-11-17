@@ -21,8 +21,8 @@ struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var cover: CoverWindow<LockCoverView>
     @State private var windowScene: UIWindowScene?
-    /// Background time asked for while a lock "Langsung" started on leaving still waits for the store.
-    @State private var backgroundTasks: [UIBackgroundTaskIdentifier] = []
+    /// For the lock that "Langsung" starts as the app leaves.
+    @State private var backgroundTime = BackgroundTime.live()
 
     init(vault: AppVault) {
         self.vault = vault
@@ -74,7 +74,10 @@ struct RootView: View {
             case .active: Task { await lock.sceneDidBecomeActive() }
             case .inactive: lock.sceneDidBecomeInactive()
             case .background:
-                if let locking = lock.sceneDidEnterBackground() { keepRunning(until: locking) }
+                // The cleanup runs here too, so the time lasts until the files are gone; `onChange` can't wait for it.
+                if let locking = lock.sceneDidEnterBackground() {
+                    backgroundTime.hold(until: locking) { LockCleanup.live(in: windowScene).run(then: $0) }
+                }
             @unknown default: break
             }
         }
@@ -90,26 +93,6 @@ struct RootView: View {
                 await lock.protectedDataDidBecomeAvailable()
             }
         }
-    }
-
-    /// iOS suspends an app a few seconds after it leaves, and a save still being written can hold the lock past
-    /// that. The cleanup runs here as well, as nothing shows that SwiftUI updates the views in the background.
-    private func keepRunning(until locking: Task<Void, Never>) {
-        let id = UIApplication.shared.beginBackgroundTask(withName: "Lock") {
-            for id in backgroundTasks { endBackgroundTask(id) }
-        }
-        backgroundTasks.append(id)
-        Task {
-            await locking.value
-            LockCleanup.live(in: windowScene).run { endBackgroundTask(id) }
-        }
-    }
-
-    /// Once only for each id: iOS ends an app whose background time runs out without being ended.
-    private func endBackgroundTask(_ id: UIBackgroundTaskIdentifier) {
-        guard let index = backgroundTasks.firstIndex(of: id) else { return }
-        backgroundTasks.remove(at: index)
-        UIApplication.shared.endBackgroundTask(id)
     }
 
     private func showCover(_ hidden: Bool) {
