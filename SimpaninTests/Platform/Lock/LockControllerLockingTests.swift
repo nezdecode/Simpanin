@@ -23,9 +23,9 @@ struct LockControllerLockingTests {
     let clock = ManualClock()
 
     /// Open, over a store whose next lock waits until the test releases it.
-    func unlocked(_ vault: FakeVault) async -> LockController {
+    func unlocked(_ vault: FakeVault, autoLock: AutoLock = .oneMinute) async -> LockController {
         let clock = clock
-        let controller = LockController.make(vault, now: { clock.now })
+        let controller = LockController.make(vault, now: { clock.now }, autoLock: autoLock)
         await controller.sceneDidBecomeActive()
         await vault.gateNextLock()
         return controller
@@ -153,6 +153,68 @@ struct LockControllerLockingTests {
         await controller.sceneDidBecomeActive()
         await vault.releaseLock()
         await returning.value
+        #expect(controller.state == .unlocked)
+        #expect(await vault.lockCount == 1)
+        #expect(await vault.openCount == 2)
+    }
+
+    // MARK: "Langsung" locks as the app leaves
+
+    /// A return during the lock the leave started waits for it rather than locking again, so the store has
+    /// locked before anything opens.
+    @Test func theReturnWaitsForTheLockTheLeaveStarted() async {
+        let vault = FakeVault([])
+        let controller = await unlocked(vault, autoLock: .immediately)
+        controller.sceneDidBecomeInactive()
+        let leaving = controller.sceneDidEnterBackground()
+        #expect(await vault.waitUntilLocking())
+        let returning = Task { await controller.sceneDidBecomeActive() }
+        await Task.yield()
+        #expect(controller.contentHidden)
+        #expect(await vault.openCount == 1)
+        await vault.releaseLock()
+        await returning.value
+        await leaving?.value
+        #expect(controller.state == .unlocked)
+        #expect(await vault.lockCount == 1)
+        #expect(await vault.openCount == 2)
+    }
+
+    @Test func leavingAgainBeforeTheLeaveLockLandsLeavesThePromptForTheReturn() async {
+        let vault = FakeVault([])
+        let controller = await unlocked(vault, autoLock: .immediately)
+        let first = controller.sceneDidEnterBackground()
+        #expect(await vault.waitUntilLocking())
+        let returning = Task { await controller.sceneDidBecomeActive() }
+        await Task.yield()
+        controller.sceneDidBecomeInactive()
+        let second = controller.sceneDidEnterBackground()
+        await vault.releaseLock()
+        await returning.value
+        await first?.value
+        await second?.value
+        #expect(controller.state == .locked)
+        #expect(await vault.openCount == 1)
+        await controller.sceneDidBecomeActive()
+        #expect(controller.state == .unlocked)
+        #expect(await vault.openCount == 2)
+    }
+
+    /// Control Centre or a call while the leave lock waits: that activation is no return, so one prompt.
+    @Test func aMomentInactiveWhileTheLeaveLockWaitsDoesNotPromptTwice() async {
+        let vault = FakeVault([])
+        let controller = await unlocked(vault, autoLock: .immediately)
+        let leaving = controller.sceneDidEnterBackground()
+        #expect(await vault.waitUntilLocking())
+        let returning = Task { await controller.sceneDidBecomeActive() }
+        await Task.yield()
+        controller.sceneDidBecomeInactive()
+        let blip = Task { await controller.sceneDidBecomeActive() }
+        await Task.yield()
+        await vault.releaseLock()
+        await returning.value
+        await blip.value
+        await leaving?.value
         #expect(controller.state == .unlocked)
         #expect(await vault.lockCount == 1)
         #expect(await vault.openCount == 2)

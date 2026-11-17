@@ -63,6 +63,8 @@ final class LockController {
 
     private var hasBeenActive = false
     private var backgroundedAt: ContinuousClock.Instant?
+    /// The last lock "Langsung" started as the app left, which the return waits for.
+    private var leaving: Task<Void, Never>?
     private var waitingForProtectedData = false
     private var leftForegroundDuringPrompt = false
     private var failuresInARow = 0
@@ -135,6 +137,8 @@ final class LockController {
         // That trip keeps its own start, and the prompt waits for the return, as none can show in the background.
         let awaySince = backgroundedAt
         backgroundedAt = nil
+        // A lock started by the leave lands first, so this return neither locks again nor opens ahead of it.
+        await leaving?.value
         if let awaySince, state == .unlocked, timedOut(since: awaySince) { await lock() }
         guard backgroundedAt == nil else { return }
         // From the welcome too: it promises a passcode lock, and the passcode may have gone meanwhile.
@@ -159,10 +163,27 @@ final class LockController {
     }
 
     /// Suspended apps run no timers, so the timeout is checked on return.
-    func sceneDidEnterBackground() {
+    /// "Langsung" locks here instead, so no keys wait in a suspended app. The lock is decided before anything else
+    /// runs, so an open whose result is already on its way is dropped. The task is the store's half, for the app to
+    /// keep running until it lands.
+    @discardableResult
+    func sceneDidEnterBackground() -> Task<Void, Never>? {
         coverShown = true
         backgroundedAt = now()
         if state == .unlocking { leftForegroundDuringPrompt = true }
+        // The cover, the welcome and the recovery screens hold no keys, and a lock would replace a recovery screen.
+        guard autoLock == .immediately, state == .unlocked || state == .unlocking else { return nil }
+        decideLock()
+        let task = Task { [weak self] in
+            await self?.finishLock()
+            #if DEBUG
+                if let self {
+                    attemptLog.append("leave lock landed: \(backgroundedAt == nil ? "after return" : "away")")
+                }
+            #endif
+        }
+        leaving = task
+        return task
     }
 
     func protectedDataWillBecomeUnavailable() async {
@@ -283,8 +304,17 @@ final class LockController {
     func editChanged(_ unsaved: Bool) { editUnsaved = unsaved }
 
     func lock() async {
+        decideLock()
+        await finishLock()
+    }
+
+    /// From here an open still waiting can tell it lost, and the content is hidden.
+    private func decideLock() {
         lockCount += 1
         locksWaiting += 1
+    }
+
+    private func finishLock() async {
         await vault.lock()
         locksWaiting -= 1
         state = welcomeAfterLock ? .noVault : .locked

@@ -208,4 +208,22 @@ struct LockControllerCreateTests {
         #expect(controller.state == .noVault)
         #expect(controller.takePendingScan() == nil)
     }
+
+    /// With "Langsung", leaving locks a create in progress, as a phone lock would: the welcome if nothing was
+    /// written yet, the lock cover once the header was.
+    @Test(arguments: [false, true])
+    func leavingWhileTheWelcomeCreatesTheVaultWithImmediately(_ written: Bool) async {
+        let vault = FakeVault([])
+        let controller = await conditions.welcome(vault, clock: clock, autoLock: .immediately)
+        await vault.gateNextOpen()
+        let creating = Task { await controller.createVault(then: .camera) }
+        #expect(await vault.waitUntilOpening())
+        if written { conditions.vaultCreated() }
+        let leaving = controller.sceneDidEnterBackground()
+        await vault.release()
+        await creating.value
+        await leaving?.value
+        #expect(controller.state == (written ? LockController.State.locked : .noVault))
+        #expect(controller.takePendingScan() == nil)
+    }
 }

@@ -38,15 +38,16 @@ final class LaunchConditions {
 }
 
 extension LaunchConditions {
-    func makeController(_ vault: FakeVault, clock: ManualClock) -> LockController {
+    func makeController(_ vault: FakeVault, clock: ManualClock, autoLock: AutoLock = .oneMinute) -> LockController {
         LockController.make(
-            vault, now: { clock.now }, passcode: { self.passcode }, vaultExists: { self.headerExists },
-            vaultIsEmpty: { try self.isEmpty() }, protectedDataAvailable: { self.protectedData })
+            vault, now: { clock.now }, autoLock: autoLock, passcode: { self.passcode },
+            vaultExists: { self.headerExists }, vaultIsEmpty: { try self.isEmpty() },
+            protectedDataAvailable: { self.protectedData })
     }
 
     /// The welcome is up, nothing opened yet.
-    func welcome(_ vault: FakeVault, clock: ManualClock) async -> LockController {
-        let controller = makeController(vault, clock: clock)
+    func welcome(_ vault: FakeVault, clock: ManualClock, autoLock: AutoLock = .oneMinute) async -> LockController {
+        let controller = makeController(vault, clock: clock, autoLock: autoLock)
         await controller.sceneDidBecomeActive()
         #expect(controller.state == .noVault)
         return controller
