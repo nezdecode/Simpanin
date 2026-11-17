@@ -18,13 +18,15 @@ struct LockCleanup {
     let dismissPresented: (@escaping () -> Void) -> Void
     let clear: [() -> Void]
 
-    func run() {
+    /// `done` comes once, after the clears, so an app kept running in the background can stop only then.
+    func run(then done: @escaping () -> Void = {}) {
         var cleared = false
         dismissPresented {
             // Once only: the fallback below can come after the dismiss has finished.
             guard !cleared else { return }
             cleared = true
             for clear in clear { clear() }
+            done()
         }
     }
 
