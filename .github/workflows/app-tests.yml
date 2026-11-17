@@ -2,7 +2,9 @@
 # forks, and for every pull request while the repository variable APP_TESTS_ON_GITHUB is true (when the
 # maintainer's Mac is away). Otherwise scripts/ci-mac.sh runs them on the Mac and posts "App tests (Mac)":
 # these machines failed on their own more often than on the tests. A fork that edits the condition below
-# only changes which of GitHub's machines it runs on; nothing here reaches the Mac.
+# only changes which of GitHub's machines it runs on; nothing here reaches the Mac. On the maintainer's own
+# pull requests, the second job shows "App tests (Mac)" as waiting until the Mac posts, so a run that never
+# started can't go unnoticed.
 # UI tests take about 40 minutes one after another, so three jobs split them by class. Like checks.yml, they
 # advise and don't block: check them before merging (CONTRIBUTING.md).
 name: App tests
@@ -65,3 +67,28 @@ jobs:
       # Only test.sh's summary reaches this public log: test names, counts and build errors, never a
       # failure's message or the app's logs. Nothing is uploaded; a failure is rerun on the Mac with --only.
       - run: scripts/test.sh ${{ matrix.args }}
+
+  waiting-for-mac:
+    name: Waiting for the Mac
+    if: github.event.pull_request.head.repo.full_name == github.repository && vars.APP_TESTS_ON_GITHUB != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      statuses: write
+    steps:
+      - name: Mark App tests (Mac) as waiting, unless the Mac has posted
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          # The pushed commit, which the Mac tests, not the merge commit this event checks out.
+          SHA: ${{ github.event.pull_request.head.sha }}
+        # Only when the Mac hasn't posted: its status replaces this one, and this must never replace its. The
+        # read is a command of its own, so a failed one fails the step instead of looking like no status.
+        run: |
+          contexts=$(gh api "repos/$REPO/commits/$SHA/statuses" --jq '.[].context')
+          if echo "$contexts" | grep -qx 'App tests (Mac)'; then
+            echo "The Mac has posted already"
+          else
+            gh api "repos/$REPO/statuses/$SHA" -f state=pending -f context='App tests (Mac)' \
+              -f description='Waiting for the Mac; if it never starts, run scripts/ci-mac.sh <branch>' > /dev/null
+          fi
