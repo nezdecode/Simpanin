@@ -1,0 +1,29 @@
+#!/bin/bash
+# Starts scripts/ci-mac.sh for the branch being pushed, so the app's tests run on this Mac and their result
+# shows on the pull request. Only where it's turned on, on the maintainer's Mac:
+#   git config simpanin.ciMac true
+# It never holds up or fails a push: the run starts in a session of its own and waits for GitHub to have the
+# commit, and a push that's refused never gets one.
+[ "$(git config --bool simpanin.ciMac)" = true ] || exit 0
+[ "$1" = origin ] || exit 0
+
+# One run per push: ci-mac.sh runs one at a time anyway, so the last branch pushed is the one tested.
+sha=""
+while read -r _ local_sha remote_ref _; do
+  case "$remote_ref" in
+    refs/heads/main) continue ;;
+    refs/heads/*) ;;
+    *) continue ;;  # tags and anything else
+  esac
+  [ "${local_sha//0/}" = "" ] && continue  # a deletion
+  sha="$local_sha"
+done
+[ -n "$sha" ] || exit 0
+
+mkdir -p build/ci
+# shortcut: ci-mac.log only grows (a few lines a run); trim it by hand if it ever matters.
+# setsid, so closing the terminal or the tool that pushed doesn't stop it.
+nohup python3 -c 'import os, sys; os.setsid(); os.execvp(sys.argv[1], sys.argv[1:])' \
+  scripts/ci-mac.sh "$sha" >> build/ci/ci-mac.log 2>&1 < /dev/null &
+echo "ci-mac: testing ${sha:0:7} on this Mac once GitHub has it; see build/ci/ci-mac.log"
+exit 0
