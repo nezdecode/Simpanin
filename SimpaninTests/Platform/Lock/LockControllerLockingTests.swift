@@ -25,9 +25,7 @@ struct LockControllerLockingTests {
     /// Open, over a store whose next lock waits until the test releases it.
     func unlocked(_ vault: FakeVault) async -> LockController {
         let clock = clock
-        let controller = LockController(
-            vault: vault, now: { clock.now }, autoLock: .oneMinute, passcode: { .set }, vaultExists: { true },
-            vaultIsEmpty: { false }, protectedDataAvailable: { true })
+        let controller = LockController.make(vault, now: { clock.now })
         await controller.sceneDidBecomeActive()
         await vault.gateNextLock()
         return controller

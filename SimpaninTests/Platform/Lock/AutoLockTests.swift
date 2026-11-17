@@ -66,9 +66,7 @@ struct AutoLockTests {
 
     @Test func settingTheChoiceSavesAndAppliesIt() {
         let defaults = defaults()
-        let controller = LockController(
-            vault: FakeVault([]), settings: defaults, passcode: { .set }, vaultExists: { true },
-            vaultIsEmpty: { false }, protectedDataAvailable: { true })
+        let controller = LockController.make(FakeVault([]), settings: defaults)
         controller.setAutoLock(.fiveMinutes)
         #expect(controller.autoLock == .fiveMinutes)
         #expect(controller.relockTimeout == 300)
@@ -86,9 +84,7 @@ struct AutoLockTests {
     /// Open, with `choice` as the Kunci otomatis time.
     func unlocked(_ vault: FakeVault, autoLock choice: AutoLock = .oneMinute) async -> LockController {
         let clock = clock
-        let controller = LockController(
-            vault: vault, now: { clock.now }, autoLock: choice, settings: defaults(), passcode: { .set },
-            vaultExists: { true }, vaultIsEmpty: { false }, protectedDataAvailable: { true })
+        let controller = LockController.make(vault, now: { clock.now }, autoLock: choice, settings: defaults())
         await controller.sceneDidBecomeActive()
         return controller
     }
