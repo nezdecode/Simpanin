@@ -73,7 +73,11 @@ stop() {
   pkill -P "$pid" 2> /dev/null || true
   kill "$pid" 2> /dev/null || true
 }
-trap stop EXIT INT TERM
+# INT and TERM end the script too: a trap that only stopped xcodebuild let a run stopped between its two
+# tries go on into the second.
+trap stop EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 # Runs xcodebuild once with its log and result bundle in the folder it's given, stops it if it goes quiet,
 # and prints the summary. Sets run, log, bundle and stopped for the verdict.

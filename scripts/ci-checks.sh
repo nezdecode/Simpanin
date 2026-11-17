@@ -48,6 +48,8 @@ python3 scripts/commit-checks.py staged --all || failed=1
 python3 scripts/test-commit-checks.py || failed=1
 # What reaches CI's public log from a test run, so it's tested too.
 python3 scripts/test-xcodebuild-log.py || failed=1
+# The status the Mac posts for a pull request, so a failed or stopped run never shows as passed.
+python3 scripts/test-ci-mac.py || failed=1
 refused_files "$(git ls-files -z | tr '\0' '\n')" "the tree"
 python3 scripts/check-folder-rules.py || failed=1
 
