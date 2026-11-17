@@ -39,10 +39,9 @@ final class LaunchConditions {
 
 extension LaunchConditions {
     func makeController(_ vault: FakeVault, clock: ManualClock) -> LockController {
-        LockController(
-            vault: vault, now: { clock.now }, autoLock: .oneMinute, passcode: { self.passcode },
-            vaultExists: { self.headerExists }, vaultIsEmpty: { try self.isEmpty() },
-            protectedDataAvailable: { self.protectedData })
+        LockController.make(
+            vault, now: { clock.now }, passcode: { self.passcode }, vaultExists: { self.headerExists },
+            vaultIsEmpty: { try self.isEmpty() }, protectedDataAvailable: { self.protectedData })
     }
 
     /// The welcome is up, nothing opened yet.

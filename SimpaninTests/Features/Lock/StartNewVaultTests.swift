@@ -19,12 +19,7 @@ import Testing
 @Suite("Mulai vault baru")
 struct StartNewVaultTests {
     let quarantineFolder = URL(filePath: "/Support/Quarantine", directoryHint: .isDirectory)
-
-    func makeLock(_ vault: FakeVault) -> LockController {
-        LockController(
-            vault: vault, passcode: { .set }, vaultExists: { true }, vaultIsEmpty: { false },
-            protectedDataAvailable: { true })
-    }
+    let clock = ManualClock()
 
     @Test(arguments: ["MULAI BARU", "mulai baru", "  Mulai Baru "])
     func typedConfirmationMatches(_ text: String) {
@@ -39,7 +34,7 @@ struct StartNewVaultTests {
     @Test func confirmingQuarantinesThenOpens() async {
         let quarantine = FakeQuarantine()
         let vault = FakeVault([.failure(.vaultKeyMissing), .success(OpenReport())])
-        let lock = makeLock(vault)
+        let lock = LockController.make(vault)
         await lock.unlock()
         #expect(lock.state == .recovery(.keyMissing))
 
@@ -55,10 +50,7 @@ struct StartNewVaultTests {
         let conditions = LaunchConditions()
         conditions.vaultCreated()
         let vault = FakeVault([.failure(.vaultKeyMissing), .success(OpenReport())])
-        let lock = LockController(
-            vault: vault, passcode: { conditions.passcode },
-            vaultExists: { conditions.headerExists }, vaultIsEmpty: { try conditions.isEmpty() },
-            protectedDataAvailable: { true })
+        let lock = conditions.makeController(vault, clock: clock)
         await lock.unlock()
         #expect(lock.state == .recovery(.keyMissing))
 
@@ -76,10 +68,7 @@ struct StartNewVaultTests {
         let conditions = LaunchConditions()
         conditions.vaultCreated()
         let vault = FakeVault([.failure(.vaultKeyMissing), .success(OpenReport())])
-        let lock = LockController(
-            vault: vault, passcode: { conditions.passcode },
-            vaultExists: { conditions.headerExists }, vaultIsEmpty: { try conditions.isEmpty() },
-            protectedDataAvailable: { true })
+        let lock = conditions.makeController(vault, clock: clock)
         await lock.unlock()
         let model = StartNewVaultModel(store: FakeQuarantine(), quarantineFolder: quarantineFolder, lock: lock)
         model.typed = "MULAI BARU"
@@ -99,10 +88,7 @@ struct StartNewVaultTests {
         let conditions = LaunchConditions()
         conditions.vaultCreated()
         let vault = FakeVault([.failure(.vaultKeyMissing), .success(OpenReport())])
-        let lock = LockController(
-            vault: vault, passcode: { conditions.passcode },
-            vaultExists: { conditions.headerExists }, vaultIsEmpty: { try conditions.isEmpty() },
-            protectedDataAvailable: { true })
+        let lock = conditions.makeController(vault, clock: clock)
         await lock.unlock()
         let model = StartNewVaultModel(store: FakeQuarantine(), quarantineFolder: quarantineFolder, lock: lock)
         model.typed = "MULAI BARU"
@@ -122,10 +108,7 @@ struct StartNewVaultTests {
         let conditions = LaunchConditions()
         conditions.vaultCreated()
         let vault = FakeVault([.failure(.vaultKeyMissing), .failure(.vaultKeyUnavailable(status: -50))])
-        let lock = LockController(
-            vault: vault, passcode: { conditions.passcode },
-            vaultExists: { conditions.headerExists }, vaultIsEmpty: { try conditions.isEmpty() },
-            protectedDataAvailable: { true })
+        let lock = conditions.makeController(vault, clock: clock)
         await lock.unlock()
         let model = StartNewVaultModel(store: FakeQuarantine(), quarantineFolder: quarantineFolder, lock: lock)
         model.typed = "MULAI BARU"
@@ -139,7 +122,7 @@ struct StartNewVaultTests {
     @Test func nothingHappensWithoutTheWord() async {
         let quarantine = FakeQuarantine()
         let vault = FakeVault([.failure(.vaultUnreadable)])
-        let lock = makeLock(vault)
+        let lock = LockController.make(vault)
         await lock.unlock()
         let model = StartNewVaultModel(store: quarantine, quarantineFolder: quarantineFolder, lock: lock)
         model.typed = "mulai"
@@ -152,7 +135,7 @@ struct StartNewVaultTests {
         let quarantine = FakeQuarantine()
         await quarantine.setFailure(.fileUnavailable)
         let vault = FakeVault([.failure(.vaultUnreadable)])
-        let lock = makeLock(vault)
+        let lock = LockController.make(vault)
         await lock.unlock()
         let model = StartNewVaultModel(store: quarantine, quarantineFolder: quarantineFolder, lock: lock)
         model.typed = "MULAI BARU"

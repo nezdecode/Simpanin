@@ -24,12 +24,6 @@ struct CoverContentTests {
         CoverContent(state: state, isCreatingVault: creating, screenCaptured: recording, holdsLockScreen: hold)
     }
 
-    private func makeController(_ vault: FakeVault) -> LockController {
-        LockController(
-            vault: vault, passcode: { .set }, vaultExists: { true }, vaultIsEmpty: { false },
-            protectedDataAvailable: { true })
-    }
-
     /// Opens the vault, finishing the open while the app is inactive, as a Face ID prompt does.
     private func openWhileInactive(_ lock: LockController, _ vault: FakeVault) async throws {
         let launch = Task { await lock.sceneDidBecomeActive() }
@@ -72,7 +66,7 @@ struct CoverContentTests {
 
     @Test func unlockingWhileInactiveKeepsTheLockScreenUntilActive() async throws {
         let vault = FakeVault([], gated: true)
-        let lock = makeController(vault)
+        let lock = LockController.make(vault)
         try await openWhileInactive(lock, vault)
         #expect(lock.contentHidden)
         #expect(CoverContent(lock) == .lockScreen)
@@ -84,7 +78,7 @@ struct CoverContentTests {
     /// While recording the cover is up with the app active. A hold set then would never be cleared, and the
     /// open vault would stay behind "Terkunci" with no Buka.
     @Test func openingWhileActiveAndRecordingSetsNoHold() async {
-        let lock = makeController(FakeVault([]))
+        let lock = LockController.make(FakeVault([]))
         lock.screenCaptured = true
         await lock.sceneDidBecomeActive()
         #expect(lock.state == .unlocked)
@@ -94,7 +88,7 @@ struct CoverContentTests {
 
     @Test func theHoldWinsOverRecordingUntilActive() async throws {
         let vault = FakeVault([], gated: true)
-        let lock = makeController(vault)
+        let lock = LockController.make(vault)
         lock.screenCaptured = true
         try await openWhileInactive(lock, vault)
         #expect(CoverContent(lock) == .lockScreen)
@@ -103,7 +97,7 @@ struct CoverContentTests {
     }
 
     @Test func recordingWinsOverInactive() async {
-        let lock = makeController(FakeVault([]))
+        let lock = LockController.make(FakeVault([]))
         await lock.sceneDidBecomeActive()
         lock.screenCaptured = true
         lock.sceneDidBecomeInactive()
@@ -111,7 +105,7 @@ struct CoverContentTests {
     }
 
     @Test func recordingEndingShowsTheContent() async {
-        let lock = makeController(FakeVault([]))
+        let lock = LockController.make(FakeVault([]))
         await lock.sceneDidBecomeActive()
         lock.screenCaptured = true
         #expect(lock.contentHidden)
@@ -120,7 +114,7 @@ struct CoverContentTests {
     }
 
     @Test func lockingWhileRecordingShowsTheLockScreen() async {
-        let lock = makeController(FakeVault([]))
+        let lock = LockController.make(FakeVault([]))
         await lock.sceneDidBecomeActive()
         lock.screenCaptured = true
         #expect(CoverContent(lock) == .recording)

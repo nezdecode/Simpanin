@@ -25,9 +25,9 @@ struct LockControllerTests {
         _ vault: FakeVault, passcode: PasscodeState = .set, vaultExists: Bool = true,
         protectedData: @escaping @MainActor () -> Bool = { true }
     ) -> LockController {
-        LockController(
-            vault: vault, now: { clock.now }, autoLock: .oneMinute, passcode: { passcode },
-            vaultExists: { vaultExists }, vaultIsEmpty: { false }, protectedDataAvailable: protectedData)
+        LockController.make(
+            vault, now: { clock.now }, passcode: { passcode }, vaultExists: { vaultExists },
+            protectedDataAvailable: protectedData)
     }
 
     static func unavailable(_ status: Int32?) -> Result<OpenReport, VaultError> {
@@ -182,9 +182,7 @@ struct LockControllerTests {
         // "Settings link; retry on return": the user turns the passcode back on and comes back.
         let vault = FakeVault([])
         let passcode = Mutex(PasscodeState.notSet)
-        let controller = LockController(
-            vault: vault, passcode: { passcode.withLock { $0 } }, vaultExists: { true },
-            vaultIsEmpty: { false }, protectedDataAvailable: { true })
+        let controller = LockController.make(vault, passcode: { passcode.withLock { $0 } })
         await controller.sceneDidBecomeActive()
         #expect(controller.state == .recovery(.passcodeTurnedOff))
         controller.sceneDidEnterBackground()
@@ -260,9 +258,7 @@ struct LockControllerTests {
 @Suite("Notices")
 struct NoticeTests {
     func unlocked() async -> LockController {
-        let controller = LockController(
-            vault: FakeVault([]), autoLock: .oneMinute, passcode: { .set },
-            vaultExists: { true }, vaultIsEmpty: { false }, protectedDataAvailable: { true })
+        let controller = LockController.make(FakeVault([]))
         await controller.sceneDidBecomeActive()
         return controller
     }
@@ -375,9 +371,7 @@ struct NoticeTests {
         var report = OpenReport()
         report.newestChangeMayBeLost = true
         report.repairWaitingForSpace = true
-        let lock = LockController(
-            vault: FakeVault([.success(report)]), passcode: { .set },
-            vaultExists: { true }, vaultIsEmpty: { false }, protectedDataAvailable: { true })
+        let lock = LockController.make(FakeVault([.success(report)]))
         await lock.unlock()
         #expect(lock.notices == [.newestChangeMayBeLost, .repairWaitingForSpace])
         lock.dismiss(.newestChangeMayBeLost)
