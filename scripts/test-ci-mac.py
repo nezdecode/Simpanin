@@ -33,6 +33,9 @@ case "${FAKE_TEST_MODE:-pass}" in
   lies) echo "test.sh: 786 tests: 785 passed, 0 failed, 1 skipped"; echo "test.sh: PASSED"; exit 1 ;;
   sleep) sleep "${FAKE_SLEEP:-30}"; echo "test.sh: 786 tests: 785 passed, 0 failed, 1 skipped"; echo "test.sh: PASSED" ;;
   broken) echo "test.sh: FAILED, xcodebuild was stopped; see build/test-1/xcodebuild.log"; exit 1 ;;
+  # Ends on TERM, as test.sh does, but leaves a stand-in for an xcodebuild that ignores it.
+  leaves) (trap '' TERM; exec sleep 300) & echo $! | tee "$FAKE_DIR/xcodebuild.pid" >> "$FAKE_DIR/children.pids"
+    sleep 300 ;;
   # A stand-in for an xcodebuild that ignores TERM too, in the same process group, which must die with it.
   stubborn) (trap '' TERM; exec sleep 300) & echo $! | tee "$FAKE_DIR/xcodebuild.pid" >> "$FAKE_DIR/children.pids"
     trap 'echo TERM >> "$FAKE_DIR/test-sh.log"' TERM; while true; do sleep 1; done ;;
@@ -368,6 +371,21 @@ class CIMacTests(unittest.TestCase):
         self.assertEqual(newer.returncode, 0, newer.stdout + newer.stderr)
         self.assertFalse(alive(xcodebuild), "the older run's xcodebuild outlived it")
 
+    def test_a_stopped_run_leaves_no_test_process_behind(self):
+        run = self.clone.start_ci_mac(self.clone.first, FAKE_TEST_MODE='leaves')
+        self.assertTrue(self.clone.wait_for_file('xcodebuild.pid'), 'test.sh never started')
+        xcodebuild = int(self.clone.log('xcodebuild.pid')[0])
+        run.send_signal(signal.SIGTERM)
+        run.wait(timeout=30)
+        self.assertFalse(alive(xcodebuild), 'xcodebuild outlived the run')
+
+    def test_a_run_with_no_result_in_time_is_stopped_with_an_error(self):
+        result = self.clone.ci_mac(self.clone.first, FAKE_TEST_MODE='sleep', SIMPANIN_CI_LIMIT='3')
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertEqual(self.clone.statuses()[-1][:2], (self.clone.first, 'error'))
+        self.assertIn('no result after', self.clone.statuses()[-1][2])
+        self.assertFalse(alive(self.clone.test_sh_pid()), 'test.sh still running')
+
     def test_marks_a_run_killed_outright_as_interrupted(self):
         dead = subprocess.Popen(['true'])
         dead.wait()
@@ -515,6 +533,75 @@ class PrePushTests(unittest.TestCase):
         self.assertEqual(other.returncode, 0)
         time.sleep(1)
         self.assertEqual(self.started(wait=False), [])
+
+
+FAKE_XCODEBUILD = r'''#!/bin/bash
+echo $$ >> "$FAKE_DIR/xcodebuild.pids"
+echo "Building"
+sleep 60
+'''
+
+FAKE_XCRUN_FOR_TEST_SH = '#!/bin/bash\nexit 0\n'
+
+
+# The real test.sh, which ci-mac.sh relies on to end when it's stopped rather than go on to its retry.
+@unittest.skipUnless(sys.platform == 'darwin', 'test.sh runs on macOS only (BSD stat)')
+class TestShSignalTests(unittest.TestCase):
+    def setUp(self):
+        self.dir = tempfile.mkdtemp(prefix='test-sh-')
+        self.addCleanup(self.remove)
+        os.mkdir(os.path.join(self.dir, 'scripts'))
+        for name in ('test.sh', 'xcodebuild-log.py'):
+            shutil.copy(os.path.join(ROOT, 'scripts', name), os.path.join(self.dir, 'scripts'))
+        self.fakes = os.path.join(self.dir, 'fakes')
+        write(os.path.join(self.fakes, 'xcodebuild'), FAKE_XCODEBUILD)
+        write(os.path.join(self.fakes, 'xcrun'), FAKE_XCRUN_FOR_TEST_SH)
+
+    def started(self):
+        path = os.path.join(self.fakes, 'xcodebuild.pids')
+        if not os.path.exists(path):
+            return []
+        with open(path) as f:
+            return [int(pid) for pid in f.read().split()]
+
+    def remove(self):
+        for pid in self.started():
+            try:
+                os.kill(pid, signal.SIGKILL)
+            except OSError:
+                pass
+        shutil.rmtree(self.dir, ignore_errors=True)
+
+    def stopped_by(self, signum):
+        env = dict(os.environ, PATH=self.fakes + os.pathsep + os.environ['PATH'], FAKE_DIR=self.fakes,
+                   SIMPANIN_SIMULATOR='FAKE')
+        env.pop('GITHUB_ACTIONS', None)
+        run = subprocess.Popen(['scripts/test.sh'], cwd=self.dir, env=env,
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        deadline = time.time() + 20
+        while not self.started() and time.time() < deadline:
+            time.sleep(0.2)
+        self.assertTrue(self.started(), 'xcodebuild never started')
+        time.sleep(1)
+        run.send_signal(signum)
+        try:
+            run.wait(timeout=15)
+        except subprocess.TimeoutExpired:
+            run.kill()
+            run.wait()
+            self.fail('test.sh went on after the signal')
+        time.sleep(1)  # a second try would have started by now
+        return run.returncode
+
+    def test_term_ends_it_without_a_second_try(self):
+        self.assertEqual(self.stopped_by(signal.SIGTERM), 143)
+        self.assertEqual(len(self.started()), 1)
+        self.assertFalse(any(alive(pid) for pid in self.started()), 'xcodebuild still running')
+
+    def test_int_ends_it_without_a_second_try(self):
+        self.assertEqual(self.stopped_by(signal.SIGINT), 130)
+        self.assertEqual(len(self.started()), 1)
+        self.assertFalse(any(alive(pid) for pid in self.started()), 'xcodebuild still running')
 
 
 if __name__ == '__main__':

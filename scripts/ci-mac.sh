@@ -9,7 +9,8 @@
 # its own "iPhone 17 CI" simulator, so it never shares one with a local test.sh run. One run at a time: a
 # newer one stops the one going. Only the status line reaches GitHub; the logs stay in build/ci, the newest
 # five runs of them. SIMPANIN_CI_WAIT (seconds, default 120) is how long it waits for the push to land, and
-# SIMPANIN_CI_STOP_WAIT (default 120) how long for the run going to stop before it's killed.
+# SIMPANIN_CI_STOP_WAIT (default 120) how long for the run going to stop before it's killed, and
+# SIMPANIN_CI_LIMIT (default 7200) how long a run may take before it's stopped with an error.
 # The status is success when the tests passed, failure when some failed, and error for anything else: a
 # stop, a hang, a lost simulator, or a run killed outright, which the next run marks as interrupted.
 set -uo pipefail
@@ -49,7 +50,8 @@ write_pid_file() {
 
 # Whatever happens once pending is posted, the commit gets a final state, so it never stays pending.
 finish() {
-  trap '' USR1 INT TERM HUP  # nothing may cut this short
+  trap '' USR1 INT TERM HUP ALRM  # nothing may cut this short
+  [ -n "$timer" ] && { pkill -KILL -P "$timer"; kill -KILL "$timer"; } 2> /dev/null
   # test.sh runs in a process group of its own, xcodebuild with it; one stuck in a trap gets 10 s. Before
   # the post, which can hang on the network: a newer run that gives up waiting kills this run, not its tests.
   if [ -n "$group" ]; then
@@ -57,6 +59,9 @@ finish() {
     ( sleep 10; kill -KILL -- "-$group" 2> /dev/null ) &
     killer=$!
     wait "$group" 2> /dev/null
+    # test.sh sends xcodebuild TERM and ends without waiting; one that ignores it gets the same 10 s.
+    for _ in $(seq 20); do pgrep -g "$group" > /dev/null || break; sleep 0.5; done
+    kill -KILL -- "-$group" 2> /dev/null
     kill -KILL "$killer" 2> /dev/null  # it ignores TERM, as this function does
   fi
   if [ -n "$pending" ] && [ -z "$final" ]; then
@@ -112,7 +117,7 @@ main() {
   mkdir -p build/ci
   pid_file=build/ci/run.pid
   tree=build/ci/tree
-  pending="" final="" group="" simulator="" reason="stopped on the Mac"
+  pending="" final="" group="" timer="" simulator="" reason="stopped on the Mac"
 
   # The hook starts this before git sends the commit, so wait for a branch on origin to point at it. A push
   # that's refused never gets there, and neither does a fork's commit: nothing runs or is posted for them.
@@ -137,6 +142,8 @@ main() {
   trap finish EXIT
   trap 'reason="stopped, a newer run started; rerun: scripts/ci-mac.sh $short"; exit 1' USR1
   trap 'exit 130' INT TERM HUP
+  limit="${SIMPANIN_CI_LIMIT:-7200}"
+  trap 'reason="no result after $((limit / 60)) min; rerun: scripts/ci-mac.sh $short"; exit 1' ALRM
   write_pid_file "$$ $sha"
   python3 -c 'import fcntl; fcntl.flock(9, fcntl.LOCK_UN)'
   exec 9>&-
@@ -175,6 +182,10 @@ for runtime, devices in json.load(sys.stdin)["devices"].items():
     exec python3 -c 'import os, sys; os.setsid(); os.execvp(sys.argv[1], sys.argv[1:])' scripts/test.sh ) \
     > "$results/test.log" 2>&1 &
   group=$!
+  # test.sh only notices a run that goes quiet; one that hangs before xcodebuild, or never stops printing,
+  # would leave the commit pending for good.
+  ( sleep "$limit" && kill -ALRM $$ ) &
+  timer=$!
   write_pid_file "$$ $sha $group"
   wait "$group"
   status=$?
@@ -197,7 +208,7 @@ for runtime, devices in json.load(sys.stdin)["devices"].items():
     description="${description:-${counts:-test.sh exited with $status}}"
   fi
   echo "ci-mac: $short $state: $description"
-  trap '' USR1 INT TERM HUP  # a signal now would put an error over the result GitHub already has
+  trap '' USR1 INT TERM HUP ALRM  # a signal now would put an error over the result GitHub already has
   if post "$sha" "$state" "$description"; then
     final=yes
     write_pid_file "$$"  # finished: if this run dies now, the next one has nothing to mark interrupted
