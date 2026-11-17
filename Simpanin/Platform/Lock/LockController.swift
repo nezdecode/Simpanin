@@ -275,6 +275,15 @@ final class LockController {
             state = welcomeAfterLock ? .noVault : .locked
             return
         }
+        // An open can start after the app left, like a create after "Mulai vault baru" or a late welcome tap.
+        // With "Langsung" its keys mustn't stay while the app is away. A failed one holds none and keeps its screen.
+        if case .success = result, backgroundedAt != nil, autoLock == .immediately {
+            #if DEBUG
+                attemptLog.append("open: \(Self.describe(result)) -> locked, app away")
+            #endif
+            await lock()
+            return
+        }
         let outcome = RecoveryMapping.outcome(
             of: result, passcode: passcode(),
             failuresInARow: creating ? RecoveryMapping.failuresBeforeGivingUp - 1 : failuresInARow,

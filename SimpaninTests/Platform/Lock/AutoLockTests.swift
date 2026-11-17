@@ -164,6 +164,36 @@ struct AutoLockTests {
         #expect(controller.notices.contains(.scanDropped))
     }
 
+    /// An open can start after the app has left, like a tap on the welcome whose task runs late. With
+    /// "Langsung" its keys mustn't stay while the app is away; the other choices keep them until the return.
+    @Test(arguments: [AutoLock.immediately, .oneMinute])
+    func anOpenThatFinishesWhileAwayIsLockedOnlyWithImmediately(_ choice: AutoLock) async {
+        let vault = FakeVault([.failure(.vaultKeyUnavailable(status: -128)), .success(OpenReport())])
+        let clock = clock
+        let controller = LockController.make(vault, now: { clock.now }, autoLock: choice, settings: defaults())
+        await controller.sceneDidBecomeActive()
+        #expect(controller.state == .locked)
+        controller.sceneDidEnterBackground()
+        await controller.unlock()
+        #expect(controller.state == (choice == .immediately ? .locked : .unlocked))
+        #expect(await vault.lockCount == (choice == .immediately ? 1 : 0))
+        await controller.sceneDidBecomeActive()
+        #expect(controller.state == .unlocked)
+        #expect(await vault.openCount == (choice == .immediately ? 3 : 2))
+    }
+
+    /// A failed open holds no keys, so it keeps its screen rather than turning into the lock cover.
+    @Test func anOpenThatFailsWhileAwayKeepsItsScreen() async {
+        let vault = FakeVault([.failure(.vaultKeyUnavailable(status: -128)), .failure(.vaultKeyMissing)])
+        let clock = clock
+        let controller = LockController.make(vault, now: { clock.now }, autoLock: .immediately, settings: defaults())
+        await controller.sceneDidBecomeActive()
+        controller.sceneDidEnterBackground()
+        await controller.unlock()
+        #expect(controller.state == .recovery(.keyMissing))
+        #expect(await vault.lockCount == 0)
+    }
+
     /// The real clock can't run backwards. If the time away ever comes out negative, the vault locks rather
     /// than stays open, as it did when the phone's date was set back.
     @Test(arguments: AutoLock.allCases)
