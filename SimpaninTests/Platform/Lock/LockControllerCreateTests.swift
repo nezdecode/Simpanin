@@ -208,4 +208,63 @@ struct LockControllerCreateTests {
         #expect(controller.state == .noVault)
         #expect(controller.takePendingScan() == nil)
     }
+
+    /// With "Langsung", leaving locks a create in progress, as a phone lock would: the welcome if nothing was
+    /// written yet, the lock cover once the header was.
+    @Test(arguments: [false, true])
+    func leavingWhileTheWelcomeCreatesTheVaultWithImmediately(_ written: Bool) async {
+        let vault = FakeVault([])
+        let controller = await conditions.welcome(vault, clock: clock, autoLock: .immediately)
+        await vault.gateNextOpen()
+        let creating = Task { await controller.createVault(then: .camera) }
+        #expect(await vault.waitUntilOpening())
+        if written { conditions.vaultCreated() }
+        let leaving = controller.sceneDidEnterBackground()
+        await vault.release()
+        await creating.value
+        await leaving?.value
+        #expect(controller.state == (written ? LockController.State.locked : .noVault))
+        #expect(controller.takePendingScan() == nil)
+    }
+
+    /// "Mulai vault baru" moves the old vault aside, then creates: the app may have left meanwhile, from a
+    /// recovery screen, where leaving locks nothing.
+    @Test func aVaultStartedOverWhileAwayWithImmediatelyIsLocked() async {
+        let vault = FakeVault([.failure(.vaultKeyMissing), .success(OpenReport())])
+        conditions.headerExists = true
+        conditions.empty = false
+        let controller = conditions.makeController(vault, clock: clock, autoLock: .immediately)
+        await controller.sceneDidBecomeActive()
+        #expect(controller.state == .recovery(.keyMissing))
+        controller.sceneDidEnterBackground()
+        conditions.headerExists = false  // quarantined
+        conditions.empty = true
+        await vault.gateNextOpen()
+        let creating = Task { await controller.createVault(then: nil) }
+        #expect(await vault.waitUntilOpening())
+        conditions.vaultCreated()
+        await vault.release()
+        await creating.value
+        #expect(controller.state == .locked)
+        #expect(await vault.lockCount == 1)
+    }
+
+    /// A welcome tap runs in a task, so it can start after the app has left. With "Langsung" the new vault is
+    /// locked as soon as it opens.
+    @Test func aVaultCreatedWhileAwayWithImmediatelyIsLocked() async {
+        let vault = FakeVault([])
+        let controller = await conditions.welcome(vault, clock: clock, autoLock: .immediately)
+        controller.sceneDidEnterBackground()
+        await vault.gateNextOpen()
+        let creating = Task { await controller.createVault(then: nil) }
+        #expect(await vault.waitUntilOpening())
+        conditions.vaultCreated()
+        await vault.release()
+        await creating.value
+        #expect(controller.state == .locked)
+        #expect(await vault.lockCount == 1)
+        await controller.sceneDidBecomeActive()
+        #expect(controller.state == .unlocked)
+        #expect(await vault.openCount == 2)
+    }
 }

@@ -100,6 +100,100 @@ struct AutoLockTests {
         #expect(await vault.openCount == 2)
     }
 
+    /// "Langsung" drops the keys as the app leaves, so none wait in a suspended app for the next open.
+    @Test func immediatelyLocksAsTheAppLeaves() async {
+        let vault = FakeVault([])
+        let controller = await unlocked(vault, autoLock: .immediately)
+        await controller.sceneDidEnterBackground()?.value
+        #expect(controller.state == .locked)
+        #expect(await vault.lockCount == 1)
+    }
+
+    @Test(arguments: [AutoLock.oneMinute, .fiveMinutes])
+    func theOtherChoicesKeepTheKeysWhenTheAppLeaves(_ choice: AutoLock) async {
+        let vault = FakeVault([])
+        let controller = await unlocked(vault, autoLock: choice)
+        #expect(controller.sceneDidEnterBackground() == nil)
+        #expect(controller.state == .unlocked)
+        #expect(await vault.lockCount == 0)
+    }
+
+    /// Leaving cancels the prompt; an open that had already passed Face ID is dropped too.
+    @Test func immediatelyLocksWhenLeavingDuringThePrompt() async {
+        let vault = FakeVault([], gated: true, onlyFirstGated: true)
+        let clock = clock
+        let controller = LockController.make(
+            vault, now: { clock.now }, autoLock: .immediately, settings: defaults())
+        let opening = Task { await controller.sceneDidBecomeActive() }
+        #expect(await vault.waitUntilOpening())
+        controller.sceneDidBecomeInactive()
+        let leaving = controller.sceneDidEnterBackground()
+        await vault.release()
+        await opening.value
+        await leaving?.value
+        #expect(controller.state == .locked)
+        await controller.sceneDidBecomeActive()
+        #expect(controller.state == .unlocked)
+        #expect(await vault.openCount == 2)
+    }
+
+    /// No keys are held on these screens, and a lock would turn a recovery screen into the lock cover.
+    @Test(arguments: [
+        Result<OpenReport, VaultError>.failure(.vaultKeyUnavailable(status: -128)), .failure(.vaultKeyMissing), nil,
+    ])
+    func immediatelyLocksNothingOnTheCoverWelcomeOrARecoveryScreen(_ open: Result<OpenReport, VaultError>?) async {
+        let vault = FakeVault(open.map { [$0] } ?? [])
+        let clock = clock
+        let controller = LockController.make(
+            vault, now: { clock.now }, autoLock: .immediately, settings: defaults(), vaultIsEmpty: { open == nil })
+        await controller.sceneDidBecomeActive()
+        let screen = controller.state
+        #expect(screen != .unlocked)
+        #expect(controller.sceneDidEnterBackground() == nil)
+        #expect(controller.state == screen)
+        #expect(await vault.lockCount == 0)
+    }
+
+    @Test func aScanInProgressWhenTheAppLeavesIsToldAfterUnlocking() async throws {
+        let controller = await unlocked(FakeVault([]), autoLock: .immediately)
+        controller.scanStarted(.camera)
+        let leaving = try #require(controller.sceneDidEnterBackground())
+        await leaving.value
+        #expect(controller.state == .locked)
+        await controller.sceneDidBecomeActive()
+        #expect(controller.notices.contains(.scanDropped))
+    }
+
+    /// An open can start after the app has left, like a tap on the welcome whose task runs late. With
+    /// "Langsung" its keys mustn't stay while the app is away; the other choices keep them until the return.
+    @Test(arguments: [AutoLock.immediately, .oneMinute])
+    func anOpenThatFinishesWhileAwayIsLockedOnlyWithImmediately(_ choice: AutoLock) async {
+        let vault = FakeVault([.failure(.vaultKeyUnavailable(status: -128)), .success(OpenReport())])
+        let clock = clock
+        let controller = LockController.make(vault, now: { clock.now }, autoLock: choice, settings: defaults())
+        await controller.sceneDidBecomeActive()
+        #expect(controller.state == .locked)
+        controller.sceneDidEnterBackground()
+        await controller.unlock()
+        #expect(controller.state == (choice == .immediately ? .locked : .unlocked))
+        #expect(await vault.lockCount == (choice == .immediately ? 1 : 0))
+        await controller.sceneDidBecomeActive()
+        #expect(controller.state == .unlocked)
+        #expect(await vault.openCount == (choice == .immediately ? 3 : 2))
+    }
+
+    /// A failed open holds no keys, so it keeps its screen rather than turning into the lock cover.
+    @Test func anOpenThatFailsWhileAwayKeepsItsScreen() async {
+        let vault = FakeVault([.failure(.vaultKeyUnavailable(status: -128)), .failure(.vaultKeyMissing)])
+        let clock = clock
+        let controller = LockController.make(vault, now: { clock.now }, autoLock: .immediately, settings: defaults())
+        await controller.sceneDidBecomeActive()
+        controller.sceneDidEnterBackground()
+        await controller.unlock()
+        #expect(controller.state == .recovery(.keyMissing))
+        #expect(await vault.lockCount == 0)
+    }
+
     /// The real clock can't run backwards. If the time away ever comes out negative, the vault locks rather
     /// than stays open, as it did when the phone's date was set back.
     @Test(arguments: AutoLock.allCases)

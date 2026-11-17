@@ -21,6 +21,8 @@ struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var cover: CoverWindow<LockCoverView>
     @State private var windowScene: UIWindowScene?
+    /// For the lock that "Langsung" starts as the app leaves.
+    @State private var backgroundTime = BackgroundTime.live()
 
     init(vault: AppVault) {
         self.vault = vault
@@ -62,13 +64,20 @@ struct RootView: View {
         // Locking removes every screen at once, a scan or a share in progress included, before it can tidy
         // up; the page images VisionKit keeps in Caches and the shared copies in tmp are removed here.
         .onChange(of: lock.state) { _, state in
+            #if DEBUG
+                lock.log("state change seen: \(scenePhase == .background ? "away" : "active")")
+            #endif
             if state != .unlocked { LockCleanup.live(in: windowScene).run() }
         }
         .onChange(of: scenePhase, initial: true) { _, phase in
             switch phase {
             case .active: Task { await lock.sceneDidBecomeActive() }
             case .inactive: lock.sceneDidBecomeInactive()
-            case .background: lock.sceneDidEnterBackground()
+            case .background:
+                // The cleanup runs here too, so the time lasts until the files are gone; `onChange` can't wait for it.
+                if let locking = lock.sceneDidEnterBackground() {
+                    backgroundTime.hold(until: locking) { LockCleanup.live(in: windowScene).run(then: $0) }
+                }
             @unknown default: break
             }
         }

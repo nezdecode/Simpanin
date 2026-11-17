@@ -34,4 +34,18 @@ struct LockCleanupTests {
         finishDismiss?()
         #expect(steps == ["dismiss", "camera", "shared copies"])
     }
+
+    /// The app keeps running in the background until this comes, so the files must be gone by then.
+    @Test func theCompletionComesOnceAfterTheClears() {
+        var steps: [String] = []
+        var finishDismiss: (() -> Void)?
+        let cleanup = LockCleanup(
+            dismissPresented: { finishDismiss = $0 },
+            clear: [{ steps.append("camera") }, { steps.append("shared copies") }])
+        cleanup.run { steps.append("done") }
+        #expect(steps.isEmpty)
+        finishDismiss?()
+        finishDismiss?()
+        #expect(steps == ["camera", "shared copies", "done"])
+    }
 }
