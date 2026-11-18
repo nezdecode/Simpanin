@@ -18,7 +18,7 @@ import Testing
 struct IndonesianDateFormatTests {
     /// 14 Oct 2026, 02:12 UTC, which is 09.12 in Jakarta.
     let moment = Date(timeIntervalSince1970: 1_791_943_920)
-    let jakarta = TimeZone(identifier: "Asia/Jakarta")!
+    let jakarta = TimeZone.named("Asia/Jakarta")
 
     @Test func formats() {
         #expect(moment.formatted(.indonesianDate(timeZone: jakarta)) == "14 Okt 2026")

@@ -77,7 +77,7 @@ final class FakeKeychain: KeychainAPI {
 
 @Suite("KeychainKeyStore")
 struct KeychainKeyStoreTests {
-    let vaultID = VaultID(UUID(uuidString: "AAAAAAAA-BBBB-4CCC-8DDD-EEEEEEEEEEEE")!)
+    let vaultID = VaultID(UUID.fixed("AAAAAAAA-BBBB-4CCC-8DDD-EEEEEEEEEEEE"))
     let accessGroup = "TEAMPREFIX.simpanin.vault"
 
     func store(_ keychain: FakeKeychain) -> KeychainKeyStore {

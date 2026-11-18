@@ -17,10 +17,10 @@ import Testing
 
 @Suite("Crypto")
 struct CryptoTests {
-    let vaultID = VaultID(UUID(uuidString: "6F9619FF-8B86-D011-B42D-00C04FC964FF")!)
-    let docID = DocumentID(UUID(uuidString: "11111111-2222-3333-4444-555555555555")!)
-    let otherDocID = DocumentID(UUID(uuidString: "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE")!)
-    let pageID = PageID(UUID(uuidString: "99999999-8888-7777-6666-555555555555")!)
+    let vaultID = VaultID(UUID.fixed("6F9619FF-8B86-D011-B42D-00C04FC964FF"))
+    let docID = DocumentID(UUID.fixed("11111111-2222-3333-4444-555555555555"))
+    let otherDocID = DocumentID(UUID.fixed("AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE"))
+    let pageID = PageID(UUID.fixed("99999999-8888-7777-6666-555555555555"))
 
     // MARK: Associated data strings are part of the v1 format and must never change.
 
@@ -118,7 +118,7 @@ struct CryptoTests {
 
     @Test func pageIDAloneIsBound() throws {
         let key = VaultCrypto.newKey()
-        let otherPage = PageID(UUID(uuidString: "99999999-8888-7777-6666-000000000000")!)
+        let otherPage = PageID(UUID.fixed("99999999-8888-7777-6666-000000000000"))
         let sealed = try VaultCrypto.seal(Data("page".utf8), with: key, as: .page(docID, pageID))
         #expect(throws: VaultError.authenticationFailed) {
             try VaultCrypto.open(sealed, with: key, as: .page(docID, otherPage))
@@ -128,7 +128,7 @@ struct CryptoTests {
     @Test func vaultIDAloneIsBound() throws {
         // Same key and a different vault id, so only the associated data differs.
         let key = VaultCrypto.newKey()
-        let otherVault = VaultID(UUID(uuidString: "6F9619FF-8B86-D011-B42D-000000000000")!)
+        let otherVault = VaultID(UUID.fixed("6F9619FF-8B86-D011-B42D-000000000000"))
         let sealed = try VaultCrypto.seal(Data("index".utf8), with: key, as: .index(vaultID))
         #expect(throws: VaultError.authenticationFailed) {
             try VaultCrypto.open(sealed, with: key, as: .index(otherVault))

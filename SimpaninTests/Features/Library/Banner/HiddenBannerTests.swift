@@ -18,9 +18,9 @@ import VaultCore
 /// "Jangan tampilkan di sini": which documents stay out of the expiry banner, and where that's kept.
 @Suite("Hidden from the banner")
 struct HiddenBannerTests {
-    let today = CalendarDate(year: 2026, month: 10, day: 15)!
-    let soon = CalendarDate(year: 2026, month: 10, day: 25)!
-    let past = CalendarDate(year: 2026, month: 10, day: 1)!
+    let today = CalendarDate.day(2026, 10, 15)
+    let soon = CalendarDate.day(2026, 10, 25)
+    let past = CalendarDate.day(2026, 10, 1)
 
     @Test func aHiddenDocumentIsLeftOut() {
         var hidden = HiddenBanner()
@@ -63,7 +63,7 @@ struct HiddenBannerTests {
         let id = DocumentID()
         hidden.hide(id, expiry: soon, today: today)
         #expect(hidden.hides(id, expiry: soon, today: today))
-        let later = CalendarDate(year: 2026, month: 11, day: 1)!
+        let later = CalendarDate.day(2026, 11, 1)
         #expect(!hidden.hides(id, expiry: soon, today: later))
         hidden.hide(id, expiry: soon, today: later)
         #expect(hidden.hides(id, expiry: soon, today: later))
@@ -75,16 +75,16 @@ struct HiddenBannerTests {
         let id = DocumentID()
         hidden.hide(id, expiry: today, today: today)
         #expect(hidden.hides(id, expiry: today, today: today))
-        let tomorrow = CalendarDate(year: 2026, month: 10, day: 16)!
+        let tomorrow = CalendarDate.day(2026, 10, 16)
         #expect(!hidden.hides(id, expiry: today, today: tomorrow))
     }
 
     @Test func aDocumentHiddenAfterExpiringStaysHidden() {
         var hidden = HiddenBanner()
         let id = DocumentID()
-        let yesterday = CalendarDate(year: 2026, month: 10, day: 14)!
+        let yesterday = CalendarDate.day(2026, 10, 14)
         hidden.hide(id, expiry: yesterday, today: today)
-        #expect(hidden.hides(id, expiry: yesterday, today: CalendarDate(year: 2026, month: 10, day: 16)!))
+        #expect(hidden.hides(id, expiry: yesterday, today: CalendarDate.day(2026, 10, 16)))
     }
 
     /// Hides made while the file couldn't be read are kept when it can be again.

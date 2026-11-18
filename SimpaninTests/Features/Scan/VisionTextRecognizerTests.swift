@@ -20,7 +20,7 @@ import VaultCore
 /// Runs real Vision on a page the test draws itself, so no image file is needed. Synthetic values only.
 @Suite("Vision text recognizer")
 struct VisionTextRecognizerTests {
-    static let today = CalendarDate(year: 2026, month: 10, day: 15)!
+    static let today = CalendarDate.day(2026, 10, 15)
 
     /// A plain KTP-like page: black text on white, one printed line per line.
     static func syntheticKTP() throws -> CGImage {

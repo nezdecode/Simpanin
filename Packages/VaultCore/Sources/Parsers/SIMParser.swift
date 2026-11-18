@@ -267,8 +267,8 @@ public enum SIMParser {
 
     /// "1. BUDI CONTOH" on an older card.
     private static func numberedField(_ line: String) -> (number: Int, text: String)? {
-        guard let match = line.wholeMatch(of: /([1-6])\s*[.,]\s*(.*)/) else { return nil }
-        return (Int(match.1)!, String(match.2).trimmingCharacters(in: .whitespaces))
+        guard let match = line.wholeMatch(of: /([1-6])\s*[.,]\s*(.*)/), let number = Int(match.1) else { return nil }
+        return (number, String(match.2).trimmingCharacters(in: .whitespaces))
     }
 
     /// A field by its number on an older card, or by its label on a newer one.

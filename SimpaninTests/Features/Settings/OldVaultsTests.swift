@@ -118,7 +118,7 @@ struct OldVaultsTests {
 
     // MARK: Data lama, named after when the vault was moved aside (folder names are UTC)
 
-    let jakarta = TimeZone(identifier: "Asia/Jakarta")!
+    let jakarta = TimeZone.named("Asia/Jakarta")
 
     @Test func oldVaultTitleAndDetail() throws {
         let moved = try #require(OldVaultText.movedAt(folderName: "20261014-021200"))

@@ -31,7 +31,7 @@ struct FixtureTests {
 
     /// Test-only vault key for the fixture. It protects synthetic data only.
     static let keyFileName = "test-vault-key.base64"
-    static let t0 = ISO8601DateFormatter().date(from: "2026-10-04T00:00:00Z")!
+    static let t0 = Date.iso("2026-10-04T00:00:00Z")
 
     // MARK: Frozen expectations
 
@@ -52,9 +52,9 @@ struct FixtureTests {
     static let visaPage = "6b8d1bd48656a0e2e20d268a26331cf3c1fbec81ee74e46ebed252f1ca1a8ee3"
     static let passportPage = "263510e7f6e1f7be8b3984252a44870bf2add90521bc98b2f391ffb2abb5e601"
 
-    static let simExpiry = CalendarDate(year: 2030, month: 8, day: 17)!
-    static let visaExpiry = CalendarDate(year: 2027, month: 3, day: 1)!
-    static let passportExpiry = CalendarDate(year: 2031, month: 1, day: 31)!
+    static let simExpiry = CalendarDate.day(2030, 8, 17)
+    static let visaExpiry = CalendarDate.day(2027, 3, 1)
+    static let passportExpiry = CalendarDate.day(2031, 1, 31)
     static let visa = DocumentType(rawValue: "visa")  // not a type this build knows
 
     // MARK: Opening the fixture

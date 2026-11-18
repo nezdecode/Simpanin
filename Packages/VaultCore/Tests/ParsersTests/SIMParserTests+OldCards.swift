@@ -173,7 +173,7 @@ extension SIMParserTests {
         let right = ["BUDI CONTOH", "1990-08-17"]
         for key in [FieldKey.name, FieldKey.birthDate] {
             let value = result.fields.values[key]
-            #expect(value == nil || right.contains(value!) || result.needsCheck.contains(key), "\(key)")
+            #expect(value.map(right.contains) ?? true || result.needsCheck.contains(key), "\(key)")
         }
         #expect(
             result.expiry == nil || result.expiry == CalendarDate(year: 2027, month: 1, day: 4)

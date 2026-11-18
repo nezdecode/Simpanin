@@ -108,7 +108,7 @@ extension VaultStore {
 
     private func quarantineDestination(in directory: URL) -> URL {
         var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        calendar.timeZone = .gmt
         let time = calendar.dateComponents([.year, .month, .day, .hour, .minute, .second], from: now())
         let base = String(
             format: "%04d%02d%02d-%02d%02d%02d",

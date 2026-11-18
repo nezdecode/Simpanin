@@ -17,7 +17,7 @@ import VaultCore
 /// are all zeros but the last digits.
 @Suite("SIM parser")
 struct SIMParserTests {
-    static let today = CalendarDate(year: 2026, month: 10, day: 15)!
+    static let today = CalendarDate.day(2026, 10, 15)
 
     func parse(_ lines: [String]) -> ParsedDocument? {
         SIMParser.parse(lines, today: Self.today)

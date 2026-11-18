@@ -32,6 +32,7 @@ extension CalendarDate {
         calendar.timeZone = timeZone
         let parts = calendar.dateComponents([.year, .month, .day], from: date)
         return CalendarDate(year: parts.year ?? 2000, month: parts.month ?? 1, day: parts.day ?? 1)
+            // swiftlint:disable:next force_unwrapping - a fixed valid day, for a moment outside years 1 to 9999
             ?? CalendarDate(year: 2000, month: 1, day: 1)!
     }
 

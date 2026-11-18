@@ -18,7 +18,7 @@ import VaultCore
 /// How an expiry date reads, from the calendar days alone.
 @Suite("Expiry wording")
 struct ExpiryTextTests {
-    let today = CalendarDate(year: 2026, month: 10, day: 15)!
+    let today = CalendarDate.day(2026, 10, 15)
 
     func text(_ type: DocumentType, _ expiry: CalendarDate?) -> String {
         String(localized: ExpiryText.text(type: type, expiry: expiry, today: today))
@@ -60,7 +60,7 @@ struct ExpiryTextTests {
     }
 
     func day(_ offset: Int) -> CalendarDate {
-        CalendarDate(utc: today.utcDate!.addingTimeInterval(Double(offset) * 86_400))!
+        today.adding(days: offset)
     }
 
     func candidate(_ offset: Int?, _ type: DocumentType = .simC, created: TimeInterval = 0)

@@ -69,7 +69,7 @@ public struct CalendarDate: Hashable, Sendable, Comparable {
 
     public init?(year: Int, month: Int, day: Int) {
         var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        calendar.timeZone = .gmt
         let components = DateComponents(year: year, month: month, day: day)
         guard (1...9999).contains(year), (1...12).contains(month),
             let date = calendar.date(from: components),

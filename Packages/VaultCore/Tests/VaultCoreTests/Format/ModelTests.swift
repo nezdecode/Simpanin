@@ -16,8 +16,8 @@ import Testing
 
 @Suite("Models and on-disk format")
 struct ModelTests {
-    let docID = DocumentID(UUID(uuidString: "11111111-2222-3333-4444-555555555555")!)
-    let pageID = PageID(UUID(uuidString: "99999999-8888-7777-6666-555555555555")!)
+    let docID = DocumentID(UUID.fixed("11111111-2222-3333-4444-555555555555"))
+    let pageID = PageID(UUID.fixed("99999999-8888-7777-6666-555555555555"))
 
     func jsonObject(_ data: Data) throws -> [String: Any] {
         try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
@@ -57,7 +57,7 @@ struct ModelTests {
         #expect(throws: DecodingError.self) {
             try VaultJSON.decoder.decode([CalendarDate].self, from: Data(#"["17-08-2030"]"#.utf8))
         }
-        #expect(CalendarDate(year: 2030, month: 8, day: 17)! < CalendarDate(year: 2031, month: 1, day: 1)!)
+        #expect(CalendarDate.day(2030, 8, 17) < CalendarDate.day(2031, 1, 1))
     }
 
     @Test(arguments: ["+030-08-17", "2030-+8-17", "2030-08-+7"])
