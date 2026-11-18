@@ -16,7 +16,7 @@ import VaultCore
 /// Synthetic cards only: every NIK starts with 00, a province no real region has.
 @Suite("KTP parser")
 struct KTPParserTests {
-    static let today = CalendarDate(year: 2026, month: 10, day: 15)!
+    static let today = CalendarDate.day(2026, 10, 15)
 
     func parse(_ lines: [String]) -> ParsedDocument? {
         KTPParser.parse(lines, today: Self.today)

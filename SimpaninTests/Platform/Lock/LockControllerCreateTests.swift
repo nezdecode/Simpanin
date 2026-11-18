@@ -108,9 +108,11 @@ struct LockControllerCreateTests {
         await vault.gateNextOpen()
         let creating = Task { await controller.createVault(then: .camera) }
         #expect(await vault.waitUntilOpening())
-        await controller.createVault(then: .photos)
+        // The second tap waits for the create in flight, then finds the vault open.
+        let second = Task { await controller.createVault(then: .photos) }
         await vault.release()
         await creating.value
+        await second.value
         #expect(controller.state == .unlocked)
         #expect(controller.takePendingScan() == .camera)
         #expect(await vault.openCount == 1)
@@ -247,6 +249,28 @@ struct LockControllerCreateTests {
         await creating.value
         #expect(controller.state == .locked)
         #expect(await vault.lockCount == 1)
+    }
+
+    /// "Mulai vault baru" moves the old vault aside, then creates. A phone lock during the move replaces the screen
+    /// the tap came from, so the create doesn't go on against a locked phone; Buka then finds the folder empty.
+    @Test func aVaultStartedOverIsDroppedWhenThePhoneLocksDuringTheQuarantine() async {
+        let vault = FakeVault([.failure(.vaultKeyMissing)])
+        conditions.headerExists = true
+        conditions.empty = false
+        let controller = conditions.makeController(vault, clock: clock)
+        await controller.sceneDidBecomeActive()
+        #expect(controller.state == .recovery(.keyMissing))
+        conditions.protectedData = false
+        await controller.protectedDataWillBecomeUnavailable()
+        conditions.headerExists = false  // quarantined
+        conditions.empty = true
+        await controller.createVault(then: nil)
+        #expect(controller.state == .locked)
+        #expect(await vault.openCount == 1)
+        conditions.protectedData = true
+        await controller.unlock()
+        #expect(controller.state == .noVault)
+        #expect(await vault.openCount == 1)
     }
 
     /// A welcome tap runs in a task, so it can start after the app has left. With "Langsung" the new vault is

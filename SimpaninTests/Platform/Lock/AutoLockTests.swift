@@ -18,42 +18,43 @@ import Testing
 @MainActor
 @Suite("Auto-lock setting")
 struct AutoLockTests {
-    func defaults() -> UserDefaults {
+    func defaults() throws -> UserDefaults {
         let name = "AutoLockTests-\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: name)!
+        let defaults = try #require(UserDefaults(suiteName: name))
         defaults.removePersistentDomain(forName: name)
         return defaults
     }
 
-    @Test func choicesAndDefault() {
+    @Test func choicesAndDefault() throws {
         #expect(AutoLock.allCases.map(\.seconds) == [0, 60, 300])
-        #expect(AutoLock.stored(in: defaults()) == .oneMinute)
+        let defaults = try defaults()
+        #expect(AutoLock.stored(in: defaults) == .oneMinute)
         #expect(String(localized: AutoLock.immediately.title) == "Langsung")
         #expect(String(localized: AutoLock.oneMinute.title) == "Setelah 1 menit")
         #expect(String(localized: AutoLock.fiveMinutes.title) == "Setelah 5 menit")
     }
 
     /// The stored values are what's already on people's phones: renaming a case must not change them.
-    @Test func storedValuesNeverChange() {
+    @Test func storedValuesNeverChange() throws {
         let stored: [String: AutoLock] = [
             "immediately": .immediately, "oneMinute": .oneMinute, "fiveMinutes": .fiveMinutes,
         ]
         for (value, choice) in stored {
             #expect(AutoLock(rawValue: value) == choice)
         }
-        let defaults = defaults()
+        let defaults = try defaults()
         AutoLock.fiveMinutes.store(in: defaults)
         #expect(defaults.string(forKey: "autoLock") == "fiveMinutes")
     }
 
-    @Test func choiceIsKept() {
-        let defaults = defaults()
+    @Test func choiceIsKept() throws {
+        let defaults = try defaults()
         AutoLock.fiveMinutes.store(in: defaults)
         #expect(AutoLock.stored(in: defaults) == .fiveMinutes)
     }
 
-    @Test func launchUsesTheStoredChoice() {
-        let defaults = defaults()
+    @Test func launchUsesTheStoredChoice() throws {
+        let defaults = try defaults()
         AutoLock.fiveMinutes.store(in: defaults)
         let fiveMinutes = RootView.makeLock(for: .preview(), defaults: defaults)
         #expect(fiveMinutes.autoLock == .fiveMinutes)
@@ -64,8 +65,8 @@ struct AutoLockTests {
         #expect(immediately.relockTimeout == 0)
     }
 
-    @Test func settingTheChoiceSavesAndAppliesIt() {
-        let defaults = defaults()
+    @Test func settingTheChoiceSavesAndAppliesIt() throws {
+        let defaults = try defaults()
         let controller = LockController.make(FakeVault([]), settings: defaults)
         controller.setAutoLock(.fiveMinutes)
         #expect(controller.autoLock == .fiveMinutes)
@@ -82,16 +83,17 @@ struct AutoLockTests {
     let clock = ManualClock()
 
     /// Open, with `choice` as the Kunci otomatis time.
-    func unlocked(_ vault: FakeVault, autoLock choice: AutoLock = .oneMinute) async -> LockController {
+    func unlocked(_ vault: FakeVault, autoLock choice: AutoLock = .oneMinute) async throws -> LockController {
         let clock = clock
-        let controller = LockController.make(vault, now: { clock.now }, autoLock: choice, settings: defaults())
+        let settings = try defaults()
+        let controller = LockController.make(vault, now: { clock.now }, autoLock: choice, settings: settings)
         await controller.sceneDidBecomeActive()
         return controller
     }
 
-    @Test func immediatelyRelocksOnAnyReturn() async {
+    @Test func immediatelyRelocksOnAnyReturn() async throws {
         let vault = FakeVault([])
-        let controller = await unlocked(vault)
+        let controller = try await unlocked(vault)
         controller.setAutoLock(.immediately)
         controller.sceneDidEnterBackground()
         clock.advance(by: .seconds(1))
@@ -101,29 +103,30 @@ struct AutoLockTests {
     }
 
     /// "Langsung" drops the keys as the app leaves, so none wait in a suspended app for the next open.
-    @Test func immediatelyLocksAsTheAppLeaves() async {
+    @Test func immediatelyLocksAsTheAppLeaves() async throws {
         let vault = FakeVault([])
-        let controller = await unlocked(vault, autoLock: .immediately)
+        let controller = try await unlocked(vault, autoLock: .immediately)
         await controller.sceneDidEnterBackground()?.value
         #expect(controller.state == .locked)
         #expect(await vault.lockCount == 1)
     }
 
     @Test(arguments: [AutoLock.oneMinute, .fiveMinutes])
-    func theOtherChoicesKeepTheKeysWhenTheAppLeaves(_ choice: AutoLock) async {
+    func theOtherChoicesKeepTheKeysWhenTheAppLeaves(_ choice: AutoLock) async throws {
         let vault = FakeVault([])
-        let controller = await unlocked(vault, autoLock: choice)
+        let controller = try await unlocked(vault, autoLock: choice)
         #expect(controller.sceneDidEnterBackground() == nil)
         #expect(controller.state == .unlocked)
         #expect(await vault.lockCount == 0)
     }
 
     /// Leaving cancels the prompt; an open that had already passed Face ID is dropped too.
-    @Test func immediatelyLocksWhenLeavingDuringThePrompt() async {
+    @Test func immediatelyLocksWhenLeavingDuringThePrompt() async throws {
         let vault = FakeVault([], gated: true, onlyFirstGated: true)
         let clock = clock
+        let settings = try defaults()
         let controller = LockController.make(
-            vault, now: { clock.now }, autoLock: .immediately, settings: defaults())
+            vault, now: { clock.now }, autoLock: .immediately, settings: settings)
         let opening = Task { await controller.sceneDidBecomeActive() }
         #expect(await vault.waitUntilOpening())
         controller.sceneDidBecomeInactive()
@@ -141,11 +144,13 @@ struct AutoLockTests {
     @Test(arguments: [
         Result<OpenReport, VaultError>.failure(.vaultKeyUnavailable(status: -128)), .failure(.vaultKeyMissing), nil,
     ])
-    func immediatelyLocksNothingOnTheCoverWelcomeOrARecoveryScreen(_ open: Result<OpenReport, VaultError>?) async {
+    func immediatelyLocksNothingOnTheCoverWelcomeOrARecoveryScreen(_ open: Result<OpenReport, VaultError>?) async throws
+    {
         let vault = FakeVault(open.map { [$0] } ?? [])
         let clock = clock
+        let settings = try defaults()
         let controller = LockController.make(
-            vault, now: { clock.now }, autoLock: .immediately, settings: defaults(), vaultIsEmpty: { open == nil })
+            vault, now: { clock.now }, autoLock: .immediately, settings: settings, vaultIsEmpty: { open == nil })
         await controller.sceneDidBecomeActive()
         let screen = controller.state
         #expect(screen != .unlocked)
@@ -155,7 +160,7 @@ struct AutoLockTests {
     }
 
     @Test func aScanInProgressWhenTheAppLeavesIsToldAfterUnlocking() async throws {
-        let controller = await unlocked(FakeVault([]), autoLock: .immediately)
+        let controller = try await unlocked(FakeVault([]), autoLock: .immediately)
         controller.scanStarted(.camera)
         let leaving = try #require(controller.sceneDidEnterBackground())
         await leaving.value
@@ -168,28 +173,29 @@ struct AutoLockTests {
     /// "Langsung" its keys mustn't stay while the app is away; the other choices keep them until the return.
     @Test(arguments: [AutoLock.immediately, .oneMinute])
     func anOpenThatFinishesWhileAwayIsLockedOnlyWithImmediately(_ choice: AutoLock) async {
-        let vault = FakeVault([.failure(.vaultKeyUnavailable(status: -128)), .success(OpenReport())])
-        let clock = clock
-        let controller = LockController.make(vault, now: { clock.now }, autoLock: choice, settings: defaults())
-        await controller.sceneDidBecomeActive()
-        #expect(controller.state == .locked)
+        let vault = FakeVault([])
+        let conditions = LaunchConditions()
+        let controller = await conditions.welcome(vault, clock: clock, autoLock: choice)
         controller.sceneDidEnterBackground()
-        await controller.unlock()
+        await vault.gateNextOpen()
+        let creating = Task { await controller.createVault(then: nil) }
+        #expect(await vault.waitUntilOpening())
+        conditions.vaultCreated()
+        await vault.release()
+        await creating.value
         #expect(controller.state == (choice == .immediately ? .locked : .unlocked))
         #expect(await vault.lockCount == (choice == .immediately ? 1 : 0))
         await controller.sceneDidBecomeActive()
         #expect(controller.state == .unlocked)
-        #expect(await vault.openCount == (choice == .immediately ? 3 : 2))
+        #expect(await vault.openCount == (choice == .immediately ? 2 : 1))
     }
 
     /// A failed open holds no keys, so it keeps its screen rather than turning into the lock cover.
     @Test func anOpenThatFailsWhileAwayKeepsItsScreen() async {
-        let vault = FakeVault([.failure(.vaultKeyUnavailable(status: -128)), .failure(.vaultKeyMissing)])
-        let clock = clock
-        let controller = LockController.make(vault, now: { clock.now }, autoLock: .immediately, settings: defaults())
-        await controller.sceneDidBecomeActive()
+        let vault = FakeVault([.failure(.vaultKeyMissing)])
+        let controller = await LaunchConditions().welcome(vault, clock: clock, autoLock: .immediately)
         controller.sceneDidEnterBackground()
-        await controller.unlock()
+        await controller.createVault(then: nil)
         #expect(controller.state == .recovery(.keyMissing))
         #expect(await vault.lockCount == 0)
     }
@@ -197,9 +203,9 @@ struct AutoLockTests {
     /// The real clock can't run backwards. If the time away ever comes out negative, the vault locks rather
     /// than stays open, as it did when the phone's date was set back.
     @Test(arguments: AutoLock.allCases)
-    func aClockThatRanBackwardsRelocks(_ choice: AutoLock) async {
+    func aClockThatRanBackwardsRelocks(_ choice: AutoLock) async throws {
         let vault = FakeVault([])
-        let controller = await unlocked(vault, autoLock: choice)
+        let controller = try await unlocked(vault, autoLock: choice)
         controller.sceneDidEnterBackground()
         clock.advance(by: .seconds(-3600))
         await controller.sceneDidBecomeActive()
@@ -216,9 +222,9 @@ struct AutoLockTests {
     ]
 
     @Test(arguments: trips)
-    func returningRelocksOnlyFromTheChosenTime(_ choice: AutoLock, away: Duration, relocks: Bool) async {
+    func returningRelocksOnlyFromTheChosenTime(_ choice: AutoLock, away: Duration, relocks: Bool) async throws {
         let vault = FakeVault([])
-        let controller = await unlocked(vault, autoLock: choice)
+        let controller = try await unlocked(vault, autoLock: choice)
         controller.sceneDidEnterBackground()
         clock.advance(by: away)
         await controller.sceneDidBecomeActive()
@@ -226,9 +232,9 @@ struct AutoLockTests {
         #expect(await vault.openCount == (relocks ? 2 : 1))
     }
 
-    @Test func eachTimeAwayIsCountedFromItsOwnStart() async {
+    @Test func eachTimeAwayIsCountedFromItsOwnStart() async throws {
         let vault = FakeVault([])
-        let controller = await unlocked(vault)
+        let controller = try await unlocked(vault)
         for _ in 1...2 {
             controller.sceneDidEnterBackground()
             clock.advance(by: .seconds(40))
@@ -240,9 +246,9 @@ struct AutoLockTests {
 
     /// Control Centre, a call or the app switcher cover the content but start no timer, also right after a
     /// return from the background.
-    @Test func timePassedWhileOnlyInactiveNeverRelocks() async {
+    @Test func timePassedWhileOnlyInactiveNeverRelocks() async throws {
         let vault = FakeVault([])
-        let controller = await unlocked(vault)
+        let controller = try await unlocked(vault)
         controller.sceneDidEnterBackground()
         clock.advance(by: .seconds(40))
         await controller.sceneDidBecomeActive()
@@ -251,5 +257,53 @@ struct AutoLockTests {
         await controller.sceneDidBecomeActive()
         #expect(controller.state == .unlocked)
         #expect(await vault.lockCount == 0)
+    }
+
+    /// Buka found the phone locked, and the phone is unlocked while the app is away. Face ID can't show in the
+    /// background, so the return prompts instead, and a later phone unlock prompts nothing by itself.
+    @Test(arguments: [AutoLock.oneMinute, .immediately])
+    func protectedDataBackWhileAwayLeavesTheOpenToTheReturn(_ choice: AutoLock) async {
+        let vault = FakeVault([])
+        let conditions = LaunchConditions()
+        let controller = await conditions.waitingForThePhoneUnlock(vault, clock: clock, autoLock: choice)
+        controller.sceneDidBecomeInactive()
+        await controller.sceneDidEnterBackground()?.value
+        conditions.protectedData = true
+        await controller.protectedDataDidBecomeAvailable()
+        #expect(controller.state == .locked)
+        #expect(await vault.openCount == 1)
+        await controller.sceneDidBecomeActive()
+        #expect(controller.state == .unlocked)
+        #expect(await vault.openCount == 2)
+        await controller.lock()
+        await controller.protectedDataDidBecomeAvailable()
+        #expect(controller.state == .locked)
+        #expect(await vault.openCount == 2)
+    }
+
+    /// The same notice, waiting through a Langsung leave that drops the return's open: it opens nothing while the
+    /// app is away, where Face ID can't show, and the next return prompts.
+    @Test(.timeLimit(.minutes(1))) func aPhoneUnlockWaitingThroughALeaveOpensNothingAway() async {
+        let vault = FakeVault([])
+        let conditions = LaunchConditions()
+        let controller = await conditions.waitingForThePhoneUnlock(vault, clock: clock, autoLock: .immediately)
+        controller.sceneDidBecomeInactive()
+        controller.sceneDidEnterBackground()
+        conditions.protectedData = true
+        await vault.gateNextOpen()
+        let returning = Task { await controller.sceneDidBecomeActive() }
+        #expect(await vault.waitUntilOpening())
+        let notice = Task { await controller.protectedDataDidBecomeAvailable() }
+        // Long enough for the notice to start waiting for the return's open.
+        try? await Task.sleep(for: .milliseconds(100))
+        controller.sceneDidBecomeInactive()
+        await controller.sceneDidEnterBackground()?.value
+        await vault.release()
+        await returning.value
+        await notice.value
+        #expect(await vault.openCount == 2)
+        await controller.sceneDidBecomeActive()
+        #expect(controller.state == .unlocked)
+        #expect(await vault.openCount == 3)
     }
 }

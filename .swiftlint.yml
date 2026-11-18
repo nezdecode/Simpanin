@@ -35,6 +35,20 @@ opt_in_rules:
   - sorted_first_last
   - toggle_bool
   - unneeded_parentheses_in_closure_argument
+  # Crashes and leaks a tool can see.
+  - force_unwrapping
+  - implicitly_unwrapped_optional
+  - unowned_variable_capture
+  - weak_delegate
+  - discarded_notification_center_observer
+  # Errors are handled, not swallowed (CODING.md, Swift).
+  - unhandled_throwing_task
+  - fatal_error_message
+  # A view never keeps its own copy of state that lives elsewhere (CODING.md, SwiftUI).
+  - private_swiftui_state
+  - identical_operands
+  - contains_over_filter_count
+  - empty_xctest_method
 
 line_length:
   warning: 120  # the same as swift-format's lineLength
@@ -146,4 +160,13 @@ custom_rules:
     regex: "[A-Za-z]*([Cc]olour|[Bb]ehaviour|[Ff]avourite|[Cc]entre|[Gg]rey|[Ll]icence|[Cc]atalogue|[Ii]nitialis|[Oo]rganis|[Nn]ormalis|[Rr]ecognis|[Ss]ummaris|[Aa]uthoris|[Cc]ustomis)[A-Za-z]*"
     match_kinds:
       - identifier
+    severity: error
+  # `(try? load()) ?? []` turns a failure into an empty list (CODING.md, Swift).
+  try_as_empty:
+    name: A failure read as empty
+    message: "Handle the error: (try? x) ?? empty turns a failure into nothing, which can tell the user their documents are gone."
+    included: ".*\\.swift"
+    excluded: "/(SimpaninTests|SimpaninUITests|Tests)/"
+    regex: "\\(try\\?[^()]*(\\([^()]*\\)[^()]*)*\\)\\s*\\?\\?\\s*(\\[\\]|\\[:\\]|nil|\"\"|0|false)"
+    excluded_match_kinds: [comment, doccomment, string]
     severity: error

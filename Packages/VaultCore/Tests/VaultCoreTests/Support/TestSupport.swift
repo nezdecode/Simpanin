@@ -273,7 +273,7 @@ enum Synthetic {
 
     static let ktpFields = DocumentFields(["nik": nik, "name": name])
     static let simFields = DocumentFields(["number": simNumber, "name": name])
-    static let simExpiry = CalendarDate(year: 2030, month: 8, day: 17)!
+    static let simExpiry = CalendarDate.day(2030, 8, 17)
 
     /// A scan-sized stand-in, filled 8 bytes at a time so a 15 MB page takes milliseconds.
     static func largePage(bytes count: Int) -> Data {
@@ -344,5 +344,30 @@ extension VaultStore {
                 pages: try pages(of: doc.id).map(\.data)
             )
         }.sorted()
+    }
+}
+
+// Values written out in a test. A typo in one fails every run from the first, so these stop the run naming the
+// value, where a `!` would only say it found nil. Unwrap what the code under test returns with `try #require`.
+extension CalendarDate {
+    static func day(_ year: Int, _ month: Int, _ day: Int) -> CalendarDate {
+        guard let date = CalendarDate(year: year, month: month, day: day) else {
+            preconditionFailure("Not a day: \(year)-\(month)-\(day)")
+        }
+        return date
+    }
+}
+
+extension UUID {
+    static func fixed(_ string: String) -> UUID {
+        guard let id = UUID(uuidString: string) else { preconditionFailure("Not a UUID: \(string)") }
+        return id
+    }
+}
+
+extension Date {
+    static func iso(_ string: String) -> Date {
+        guard let date = ISO8601DateFormatter().date(from: string) else { preconditionFailure("Not a date: \(string)") }
+        return date
     }
 }

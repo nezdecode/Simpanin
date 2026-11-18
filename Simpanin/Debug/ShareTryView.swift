@@ -232,6 +232,7 @@
         /// The share sheet copies what it's given into a dot folder in our tmp and leaves it there.
         private static func sheetCopies() -> [URL] {
             let items =
+                // swiftlint:disable:next try_as_empty - no folder yet means no copies
                 (try? FileManager.default.contentsOfDirectory(
                     at: .temporaryDirectory, includingPropertiesForKeys: nil, options: [])) ?? []
             return items.filter { $0.lastPathComponent.hasPrefix(".com.apple.ShareSheet") }

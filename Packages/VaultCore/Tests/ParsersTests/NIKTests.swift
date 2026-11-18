@@ -16,7 +16,7 @@ import VaultCore
 /// The one check the app uses after an edit: whether a NIK and a birth date agree.
 @Suite("NIK and birth date")
 struct NIKTests {
-    let birth = CalendarDate(year: 1990, month: 8, day: 17)!
+    let birth = CalendarDate.day(1990, 8, 17)
 
     @Test func aMatchingDateAgrees() {
         #expect(NIK.agrees("0012341708900001", withBirthDate: birth) == true)

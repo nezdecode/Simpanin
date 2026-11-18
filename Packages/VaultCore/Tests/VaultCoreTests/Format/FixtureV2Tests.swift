@@ -23,7 +23,7 @@ struct FixtureV2Tests {
     static let fixtureURL = FixtureTests.fixtureURL
         .deletingLastPathComponent()
         .appending(path: "VaultV2", directoryHint: .isDirectory)
-    static let t0 = ISO8601DateFormatter().date(from: "2026-10-15T00:00:00Z")!
+    static let t0 = Date.iso("2026-10-15T00:00:00Z")
 
     // MARK: Frozen expectations
 
@@ -33,7 +33,7 @@ struct FixtureV2Tests {
     static let npwpFields: [String: String] = ["number": "00.000.000.0-000.001"]
     /// Not plain ASCII, so the encoding of the label is pinned too.
     static let motherLabel = "Ibu & Ayah · Ⅱ"
-    static let simExpiry = CalendarDate(year: 2031, month: 2, day: 28)!
+    static let simExpiry = CalendarDate.day(2031, 2, 28)
     static let simA = DocumentType(rawValue: "sim-a")
 
     /// SHA-256 of each page as stored by the writer.

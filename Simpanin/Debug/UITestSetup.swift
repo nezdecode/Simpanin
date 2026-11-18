@@ -228,9 +228,14 @@
 
         @MainActor
         static func lockController(for vault: AppVault) -> LockController {
+            // `-SimpaninUITestSlowOpen`: each open takes eight seconds before it reaches the store, like a Face ID
+            // read the app left during, so the lock lands while it still runs.
+            let slowOpen = ProcessInfo.processInfo.arguments.contains("-SimpaninUITestSlowOpen")
             let opener: any VaultOpening =
-                openFailure.map { ScriptedOpening(store: vault.store, failure: $0.error, times: $0.times) }
-                ?? vault.store
+                openFailure.map {
+                    ScriptedOpening(store: vault.store, failure: $0.error, times: $0.times, slow: slowOpen)
+                }
+                ?? (slowOpen ? ScriptedOpening(store: vault.store, slow: true) as any VaultOpening : vault.store)
             let passcode = passcode
             // `turnedOff`: the passcode is there while the vault opens and gone once it's open, as when it's
             // turned off in Settings while Simpanin runs.
@@ -336,20 +341,25 @@
     // actor's init nonisolated, and reject it, when a file using the actor is type-checked first.
     extension ScriptedDocuments: DocumentStoring, PageReading {}
 
-    /// Fails the first opens with a chosen error, then opens the real (throwaway) store.
+    /// Fails the first opens with a chosen error, then opens the real (throwaway) store; `slow`, eight seconds
+    /// before each.
     actor ScriptedOpening {
         private let store: VaultStore
-        private let failure: VaultError
+        private let failure: VaultError?
         private var remaining: Int
+        private let slow: Bool
 
-        init(store: VaultStore, failure: VaultError, times: Int) {
+        init(store: VaultStore, failure: VaultError? = nil, times: Int = 0, slow: Bool = false) {
             self.store = store
             self.failure = failure
             remaining = times
+            self.slow = slow
         }
 
         func open() async throws -> OpenReport {
-            if remaining > 0 {
+            // A sleep cut short only ends the wait early.
+            if slow { try? await Task.sleep(for: .seconds(8)) }
+            if remaining > 0, let failure {
                 remaining -= 1
                 throw failure
             }

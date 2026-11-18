@@ -42,7 +42,7 @@ struct ScanModelTests {
     }
 
     func model(_ fake: FakeRecognizer) -> ScanModel {
-        ScanModel(recognizer: { fake.using($0) }, today: { CalendarDate(year: 2026, month: 10, day: 15)! })
+        ScanModel(recognizer: { fake.using($0) }, today: { CalendarDate.day(2026, 10, 15) })
     }
 
     @Test func aKTPIsReadAndParsed() async throws {

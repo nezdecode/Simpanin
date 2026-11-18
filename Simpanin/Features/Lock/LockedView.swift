@@ -11,7 +11,8 @@
 
 import SwiftUI
 
-/// The dark cover with the app's name, and "Buka" when locked. While the vault is open it never says
+/// The dark cover with the app's name, and at its foot what `CoverContent` says: Buka, or a progress indicator
+/// while a lock or an open that lost to one still runs. While the vault is open it never says
 /// "Terkunci": only the name, or why it's hidden while the screen is recorded.
 struct LockedView: View {
     let lock: LockController
@@ -22,6 +23,29 @@ struct LockedView: View {
         case .recording: "cover.recording"
         case .nameOnly: nil
         default: "lock.subtitle"
+        }
+    }
+
+    private var openBlock: some View {
+        VStack(spacing: 12) {
+            Button {
+                Task { await lock.unlock() }
+            } label: {
+                Label {
+                    Text(ScreenText.open)
+                } icon: {
+                    Image(systemName: method.systemImage)
+                }
+                .font(.headline)
+                .frame(maxWidth: .infinity, minHeight: 54)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(Color(.lockBackground))
+            .background(.white, in: .capsule)
+            .accessibilityIdentifier("lock.open")
+            Text(method.caption)
+                .font(.footnote)
+                .foregroundStyle(Color(.lockSecondaryText))
         }
     }
 
@@ -43,26 +67,21 @@ struct LockedView: View {
             }
             .padding(.horizontal, 32)
             Spacer()
-            if lock.state == .locked {
-                VStack(spacing: 12) {
-                    Button {
-                        Task { await lock.unlock() }
-                    } label: {
-                        Label {
-                            Text(ScreenText.open)
-                        } icon: {
-                            Image(systemName: method.systemImage)
-                        }
-                        .font(.headline)
-                        .frame(maxWidth: .infinity, minHeight: 54)
+            if case .lockScreen(let action) = CoverContent(lock) {
+                // Laid out even while held back, so the title above doesn't move as Buka comes and goes. Hidden,
+                // not see-through, so neither a tap nor VoiceOver reaches it.
+                Group {
+                    if action == .open { openBlock } else { openBlock.hidden() }
+                }
+                // On Buka's row, not the middle of the block, which takes in the caption below it.
+                .overlay(alignment: .top) {
+                    if action == .waiting {
+                        ProgressView()
+                            .tint(.white)
+                            .frame(minHeight: 54)
+                            .accessibilityLabel(Text("lock.waiting"))
+                            .accessibilityIdentifier("lock.waiting")
                     }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(Color(.lockBackground))
-                    .background(.white, in: .capsule)
-                    .accessibilityIdentifier("lock.open")
-                    Text(method.caption)
-                        .font(.footnote)
-                        .foregroundStyle(Color(.lockSecondaryText))
                 }
                 .padding(.horizontal, 24)
                 .padding(.bottom, 32)

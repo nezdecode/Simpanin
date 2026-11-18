@@ -36,8 +36,9 @@ public enum CheckReason: String, Sendable, CaseIterable, Comparable {
     case expiryUnconfirmed
     case mayContinue
 
-    // A raw-value enum gets no synthesised `<`, so the order of the cases is the rank.
+    // A raw-value enum gets no synthesised `<`, so the order of the cases is the rank: of two different
+    // reasons, the one listed first ranks lower.
     public static func < (lhs: CheckReason, rhs: CheckReason) -> Bool {
-        allCases.firstIndex(of: lhs)! < allCases.firstIndex(of: rhs)!
+        lhs != rhs && allCases.first { $0 == lhs || $0 == rhs } == lhs
     }
 }

@@ -122,4 +122,25 @@ final class LockCoverUITests: UITestCase {
         XCTAssertTrue(app.textFields["review.field.nik"].waitForExistence(timeout: 10))
         XCTAssertFalse(app.staticTexts["lock.title"].exists)
     }
+
+    /// Kunci otomatis "Langsung", and the app left again while the return's open still waits for its key. Back at
+    /// once, the lock screen says it waits instead of showing a Buka that would do nothing, then the return's own
+    /// prompt opens the list.
+    @MainActor
+    func testTheCoverShowsProgressWhileALostOpenEnds() throws {
+        let app = launch(["-SimpaninUITestSlowOpen"])
+        XCTAssertTrue(app.buttons["list.settings"].waitForExistence(timeout: 20))
+        lockImmediately(app)
+        XCUIDevice.shared.press(.home)
+        app.activate()
+        XCTAssertTrue(app.staticTexts["lock.title"].waitForExistence(timeout: 5))
+        XCUIDevice.shared.press(.home)
+        app.activate()
+        let waiting = app.activityIndicators["lock.waiting"]
+        XCTAssertTrue(waiting.waitForExistence(timeout: 5))
+        XCTAssertEqual(waiting.label, "Menunggu")
+        XCTAssertFalse(app.buttons["lock.open"].exists)
+        screenshot("94 lock cover waiting")
+        XCTAssertTrue(app.buttons["list.settings"].waitForExistence(timeout: 30))
+    }
 }
