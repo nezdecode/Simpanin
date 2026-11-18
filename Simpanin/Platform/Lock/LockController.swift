@@ -70,16 +70,7 @@ final class LockController {
     private var failuresInARow = 0
     /// Bumped by every lock, so an attempt that was waiting for the vault can tell it lost.
     private var lockCount = 0
-    private var scanInProgress: ScanSource?
-    /// A lock dropped a scan; told once, after the next unlock.
-    private var scanDroppedByLock: ScanSource?
-    private var shareSheetUp = false
-    /// A lock came while the share sheet was up; told once, after the next unlock.
-    private var shareStoppedByLock = false
-    /// Edit dokumen holds changes not saved yet.
-    private var editUnsaved = false
-    /// A lock dropped them; told once, after the next unlock.
-    private var editDroppedByLock = false
+    private var work = WorkInProgress()
     /// The vault opened while the app was inactive, as after a Face ID prompt: the cover keeps its lock
     /// screen until the app is active, so an unlock never flashes the open cover.
     private(set) var holdsLockScreen = false
@@ -300,17 +291,17 @@ final class LockController {
     }
 
     /// The scan flow says when a scan starts and ends, so a lock in between can be told after unlocking.
-    func scanStarted(_ source: ScanSource) { scanInProgress = source }
+    func scanStarted(_ source: ScanSource) { work.scanInProgress = source }
 
-    func scanEnded() { scanInProgress = nil }
+    func scanEnded() { work.scanInProgress = nil }
 
     /// While the share sheet is up its copies can still be on their way, so a lock then is told.
-    func shareSheetShown() { shareSheetUp = true }
+    func shareSheetShown() { work.shareSheetUp = true }
 
-    func shareSheetEnded() { shareSheetUp = false }
+    func shareSheetEnded() { work.shareSheetUp = false }
 
     /// Edit dokumen says whether it holds changes not saved yet, so a lock then can be told after unlocking.
-    func editChanged(_ unsaved: Bool) { editUnsaved = unsaved }
+    func editChanged(_ unsaved: Bool) { work.editUnsaved = unsaved }
 
     func lock() async {
         decideLock()
@@ -328,41 +319,16 @@ final class LockController {
         locksWaiting -= 1
         state = welcomeAfterLock ? .noVault : .locked
         notices = []
-        // Locking removes every screen, a scan in progress with it; say so after unlocking.
-        if let scanInProgress { scanDroppedByLock = scanInProgress }
-        scanInProgress = nil
-        if shareSheetUp { shareStoppedByLock = true }
-        shareSheetUp = false
-        if editUnsaved { editDroppedByLock = true }
-        editUnsaved = false
+        work.lockLanded()
         pendingScan = nil
         failuresInARow = 0
     }
-
-    #if DEBUG
-        /// Statuses only: VaultError cases carry no ids or values, other errors show their type.
-        private static func describe(_ result: Result<OpenReport, any Error>) -> String {
-            switch result {
-            case .success: "opened"
-            case .failure(let error): ErrorSummary.describe(error)
-            }
-        }
-    #endif
 
     private func apply(_ outcome: LockOutcome) async {
         switch outcome {
         case .unlocked(let notices):
             failuresInARow = 0
-            switch scanDroppedByLock {
-            case .camera: self.notices = notices.union([.scanDropped])
-            case .photos: self.notices = notices.union([.photosDropped])
-            case nil: self.notices = notices
-            }
-            if shareStoppedByLock { self.notices.insert(.shareStopped) }
-            if editDroppedByLock { self.notices.insert(.editDropped) }
-            scanDroppedByLock = nil
-            shareStoppedByLock = false
-            editDroppedByLock = false
+            self.notices = notices.union(work.takeNotices())
             // Only while inactive, which always ends with an activation. Recording covers an active app,
             // so a hold set then would never be cleared.
             holdsLockScreen = coverShown
@@ -381,3 +347,15 @@ final class LockController {
         }
     }
 }
+
+#if DEBUG
+    extension LockController {
+        /// Statuses only: VaultError cases carry no ids or values, other errors show their type.
+        private static func describe(_ result: Result<OpenReport, any Error>) -> String {
+            switch result {
+            case .success: "opened"
+            case .failure(let error): ErrorSummary.describe(error)
+            }
+        }
+    }
+#endif
