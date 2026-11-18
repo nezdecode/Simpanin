@@ -165,7 +165,7 @@ struct LockControllerTests {
         #expect(await vault.openCount == 2)
     }
 
-    @Test func twoFailuresInARowShowTheScreenAndRetryStartsOver() async {
+    @Test(.timeLimit(.minutes(1))) func twoFailuresInARowShowTheScreenAndRetryStartsOver() async {
         let vault = FakeVault([Self.unavailable(nil), Self.unavailable(nil), Self.unavailable(nil)])
         let controller = makeController(vault)
         await controller.sceneDidBecomeActive()
@@ -215,7 +215,7 @@ struct LockControllerTests {
         #expect(log[2].contains("phone locked"))
     }
 
-    @Test func phoneLockingDuringThePromptIsACancelWithoutARetry() async {
+    @Test(.timeLimit(.minutes(1))) func phoneLockingDuringThePromptIsACancelWithoutARetry() async {
         // Check 7 on the iPhone: the phone locks while the prompt is up, and the interrupted
         // read returns -25293 before the app has left the foreground.
         let vault = FakeVault(
@@ -230,7 +230,7 @@ struct LockControllerTests {
         #expect(await vault.openCount == 1)  // no second prompt against a locked phone
     }
 
-    @Test func aLockDuringASuccessfulOpenWins() async {
+    @Test(.timeLimit(.minutes(1))) func aLockDuringASuccessfulOpenWins() async {
         // Face ID succeeds just as the phone locks: the open finishes after the lock.
         let vault = FakeVault([.success(OpenReport())], gated: true, onlyFirstGated: true)
         let controller = makeController(vault)

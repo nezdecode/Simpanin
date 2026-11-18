@@ -34,10 +34,33 @@ final class LockSequence {
         return task
     }
 
-    /// Waits until every lock decided so far, and any decided meanwhile, has landed.
+    /// The open in flight, cleared as its task's last step, so a finished open is never awaited again.
+    private(set) var opening: Task<Void, Never>?
+
+    /// Runs one open. Callers settle first and start it with no await in between, so no two overlap, and no
+    /// second caller joins an open a lock has already lost.
+    func open(_ body: @escaping @MainActor () async -> Void) async {
+        let task = Task { [weak self] in
+            await body()
+            self?.opening = nil
+        }
+        opening = task
+        await task.value
+    }
+
+    /// Waits until every lock decided so far has landed and the open in flight has ended, and for any that start
+    /// meanwhile.
     func settle() async {
-        // A lock decided meanwhile replaces `locking`, so look again. The last one ending means all have, and it
-        // counts itself down before it ends, so a finished task is never awaited twice.
-        while locksWaiting > 0, let locking { await locking.value }
+        // The last lock ending means all have, and it counts itself down before it ends, so a finished task is
+        // never awaited twice.
+        while true {
+            if locksWaiting > 0, let locking {
+                await locking.value
+            } else if let opening {
+                await opening.value
+            } else {
+                return
+            }
+        }
     }
 }

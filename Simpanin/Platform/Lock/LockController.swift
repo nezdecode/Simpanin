@@ -62,6 +62,8 @@ final class LockController {
     private let protectedDataAvailable: @MainActor () -> Bool
 
     private var hasBeenActive = false
+    /// Counts returns from the background, so of two waiting at once only the latest prompts.
+    @ObservationIgnored private var returns = 0
     private var backgroundedAt: ContinuousClock.Instant?
     private var waitingForProtectedData = false
     private var leftForegroundDuringPrompt = false
@@ -122,15 +124,22 @@ final class LockController {
         holdsLockScreen = false
         let returning = !hasBeenActive || backgroundedAt != nil
         hasBeenActive = true
+        if returning { returns += 1 }
+        let trip = returns
         // Cleared before the lock, not after: the app can go to the background again while the store answers.
         // That trip keeps its own start, and the prompt waits for the return, as none can show in the background.
         let awaySince = backgroundedAt
         backgroundedAt = nil
-        // Every lock already decided lands first, the leave's among them, so this return neither locks again nor
-        // opens ahead of one.
+        // Decided before the wait: the wait can span someone else's whole open, and with "Langsung" the time is
+        // always out, so a later check would lock a vault just opened. An open still running loses to this lock,
+        // as at a leave, so its keys aren't kept past the timeout; a lock already waiting locks anyway.
+        let open = state == .unlocked || state == .unlocking
+        if let awaySince, open, sequence.locksWaiting == 0, timedOut(since: awaySince) { _ = startLock() }
+        // Every lock already decided lands first, the leave's among them, and the open in flight ends, so this
+        // return neither prompts ahead of them nor joins an open a lock has lost.
         await sequence.settle()
-        if let awaySince, state == .unlocked, timedOut(since: awaySince) { await lock() }
-        guard backgroundedAt == nil else { return }
+        // A later return waited too, and prompts for both: one that went first would ask again after a Batal.
+        guard backgroundedAt == nil, trip == returns else { return }
         // From the welcome too: it promises a passcode lock, and the passcode may have gone meanwhile.
         if returning, state == .locked || state == .noVault || retriesOnReturn { await unlock() }
     }
@@ -194,21 +203,28 @@ final class LockController {
     func unlock() async {
         await sequence.settle()
         guard state != .unlocking, state != .unlocked else { return }
-        guard protectedDataAvailable() else {
-            waitingForProtectedData = true
-            return
-        }
-        if let screen = RecoveryMapping.beforeOpening(passcode: passcode(), vaultExists: vaultExists()) {
-            state = .recovery(screen)
-            return
-        }
-        // Opening would create the vault, so the welcome comes first. A folder that can't be read may
-        // hold documents, so only a folder known to be empty counts.
-        if isKnownEmpty {
-            state = .noVault
-            return
-        }
-        await open()
+        await sequence.open { [weak self] in await self?.unlockSteps() }
+    }
+
+    /// The checks before an open, then the open, again for as long as the outcome asks for another prompt; all one
+    /// open, so a retry never waits for itself.
+    private func unlockSteps() async {
+        repeat {
+            guard protectedDataAvailable() else {
+                waitingForProtectedData = true
+                return
+            }
+            if let screen = RecoveryMapping.beforeOpening(passcode: passcode(), vaultExists: vaultExists()) {
+                state = .recovery(screen)
+                return
+            }
+            // Opening would create the vault, so the welcome comes first. A folder that can't be read may
+            // hold documents, so only a folder known to be empty counts.
+            if isKnownEmpty {
+                state = .noVault
+                return
+            }
+        } while await open()
     }
 
     /// From the welcome screen, or after "Mulai vault baru". `scan` is what the list starts once it shows.
@@ -225,7 +241,7 @@ final class LockController {
         // for any open.
         isCreatingVault = state == .noVault
         creating = true
-        await open(creating: true)
+        await sequence.open { [weak self] in await self?.open(creating: true) }
         creating = false
         isCreatingVault = false
         if state != .unlocked { pendingScan = nil }
@@ -244,8 +260,9 @@ final class LockController {
     private var welcomeAfterLock: Bool { (state == .noVault || creating) && isKnownEmpty }
 
     /// `creating`: making a vault shows no prompt, so a retry would only land back on the welcome and hide the
-    /// error; the first failure counts as the last.
-    private func open(creating: Bool = false) async {
+    /// error; the first failure counts as the last. True when the outcome asks for the prompt again.
+    @discardableResult
+    private func open(creating: Bool = false) async -> Bool {
         state = .unlocking
         leftForegroundDuringPrompt = false
         let lockCountAtStart = lockCount
@@ -264,7 +281,7 @@ final class LockController {
             #endif
             await vault.lock()
             state = welcomeAfterLock ? .noVault : .locked
-            return
+            return false
         }
         // An open can start after the app left, like a create after "Mulai vault baru" or a late welcome tap.
         // With "Langsung" its keys mustn't stay while the app is away. A failed one holds none and keeps its screen.
@@ -273,7 +290,7 @@ final class LockController {
                 attemptLog.append("open: \(Self.describe(result)) -> locked, app away")
             #endif
             await lock()
-            return
+            return false
         }
         let outcome = RecoveryMapping.outcome(
             of: result, passcode: passcode(),
@@ -282,7 +299,7 @@ final class LockController {
         #if DEBUG
             attemptLog.append("open: \(Self.describe(result)) -> \(outcome)")
         #endif
-        await apply(outcome)
+        return apply(outcome)
     }
 
     /// Notices are shown once: dismissing one hides it until the next open reports it again.
@@ -323,7 +340,8 @@ final class LockController {
         failuresInARow = 0
     }
 
-    private func apply(_ outcome: LockOutcome) async {
+    /// True when the prompt should come again.
+    private func apply(_ outcome: LockOutcome) -> Bool {
         switch outcome {
         case .unlocked(let notices):
             failuresInARow = 0
@@ -332,17 +350,20 @@ final class LockController {
             // so a hold set then would never be cleared.
             holdsLockScreen = coverShown
             state = .unlocked
+            return false
         case .lockCover:
             // A create that didn't finish leaves nothing behind, so the welcome is still the way in.
             state = isKnownEmpty ? .noVault : .locked
+            return false
         case .promptAgain:
             failuresInARow += 1
             state = .locked
-            await unlock()
+            return true
         case .recovery(let screen):
             // A retry from the screen starts a fresh count.
             failuresInARow = 0
             state = .recovery(screen)
+            return false
         }
     }
 }

@@ -221,4 +221,27 @@ struct LockControllerLockingTests {
         #expect(await vault.lockCount == 1)
         #expect(await vault.openCount == 2)
     }
+
+    /// Two round trips while a save holds the first leave lock, so both returns wait for the same locks. Batal on
+    /// the prompt that follows is the user's answer, and the other return doesn't ask again.
+    @Test func aBatalOnTheFirstOfTwoQuickReturnsPromptsNoMore() async {
+        let vault = FakeVault([.success(OpenReport()), .failure(.vaultKeyUnavailable(status: -128))])
+        let controller = await unlocked(vault, autoLock: .immediately)
+        controller.sceneDidBecomeInactive()
+        controller.sceneDidEnterBackground()
+        #expect(await vault.waitUntilLocking())
+        let first = Task { await controller.sceneDidBecomeActive() }
+        await Task.yield()
+        // The first return has begun, so the second leave makes the next activation a return too, not a blip.
+        #expect(!controller.coverShown)
+        controller.sceneDidBecomeInactive()
+        controller.sceneDidEnterBackground()
+        let second = Task { await controller.sceneDidBecomeActive() }
+        await Task.yield()
+        await vault.releaseLock()
+        await first.value
+        await second.value
+        #expect(controller.state == .locked)
+        #expect(await vault.openCount == 2)
+    }
 }

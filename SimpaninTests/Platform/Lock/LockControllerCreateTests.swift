@@ -108,9 +108,11 @@ struct LockControllerCreateTests {
         await vault.gateNextOpen()
         let creating = Task { await controller.createVault(then: .camera) }
         #expect(await vault.waitUntilOpening())
-        await controller.createVault(then: .photos)
+        // The second tap waits for the create in flight, then finds the vault open.
+        let second = Task { await controller.createVault(then: .photos) }
         await vault.release()
         await creating.value
+        await second.value
         #expect(controller.state == .unlocked)
         #expect(controller.takePendingScan() == .camera)
         #expect(await vault.openCount == 1)
