@@ -193,7 +193,10 @@ final class LockController {
 
     func protectedDataDidBecomeAvailable() async {
         guard waitingForProtectedData else { return }
+        // Cleared either way, so a stale one can't prompt at some later phone unlock. Face ID can't show in the
+        // background, and the return prompts from the lock screen anyway.
         waitingForProtectedData = false
+        guard backgroundedAt == nil else { return }
         await unlock()
     }
 

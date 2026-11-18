@@ -260,4 +260,32 @@ struct AutoLockTests {
         #expect(controller.state == .unlocked)
         #expect(await vault.lockCount == 0)
     }
+
+    /// Buka found the phone locked, and the phone is unlocked while the app is away. Face ID can't show in the
+    /// background, so the return prompts instead, and a later phone unlock prompts nothing by itself.
+    @Test(arguments: [AutoLock.oneMinute, .immediately])
+    func protectedDataBackWhileAwayLeavesTheOpenToTheReturn(_ choice: AutoLock) async {
+        let vault = FakeVault([])
+        let conditions = LaunchConditions()
+        conditions.headerExists = true
+        conditions.empty = false
+        let controller = conditions.makeController(vault, clock: clock, autoLock: choice)
+        await controller.sceneDidBecomeActive()
+        await controller.lock()
+        conditions.protectedData = false
+        await controller.unlock()
+        controller.sceneDidBecomeInactive()
+        await controller.sceneDidEnterBackground()?.value
+        conditions.protectedData = true
+        await controller.protectedDataDidBecomeAvailable()
+        #expect(controller.state == .locked)
+        #expect(await vault.openCount == 1)
+        await controller.sceneDidBecomeActive()
+        #expect(controller.state == .unlocked)
+        #expect(await vault.openCount == 2)
+        await controller.lock()
+        await controller.protectedDataDidBecomeAvailable()
+        #expect(controller.state == .locked)
+        #expect(await vault.openCount == 2)
+    }
 }
