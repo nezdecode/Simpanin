@@ -149,9 +149,11 @@ struct LockControllerOrderTests {
     /// Buka's open runs while the return still waits: one prompt, and the return, whose relock was decided before
     /// it waited, doesn't lock the vault Buka just opened. Swift doesn't promise which of two tasks waiting for the
     /// lost open resumes first, so both orders run, and in one of them Buka's open comes while the return waits.
-    @Test(arguments: [true, false])
-    func bukaWhileTheReturnWaitsForALostOpenPromptsOnce(bukaFirst: Bool) async {
-        let vault = FakeVault([])
+    /// A Batal there answers the return too.
+    @Test(arguments: [true, false], [false, true])
+    func bukaWhileTheReturnWaitsForALostOpenPromptsOnce(bukaFirst: Bool, batal: Bool) async {
+        let cancel = Result<OpenReport, VaultError>.failure(.vaultKeyUnavailable(status: -128))
+        let vault = FakeVault(batal ? [.success(OpenReport()), .success(OpenReport()), cancel] : [])
         let controller = await unlocked(vault, autoLock: .immediately)
         await controller.lock()
         await vault.gateNextOpen()
@@ -170,10 +172,28 @@ struct LockControllerOrderTests {
         await opening.value
         await returning?.value
         await buka.value
-        #expect(controller.state == .unlocked)
+        #expect(controller.state == (batal ? .locked : .unlocked))
         #expect(await vault.openCount == 3)
         // Kunci, the leave lock, and the lost open locking the store again.
         #expect(await vault.lockCount == 3)
+    }
+
+    /// An open a lock dropped answered nothing, so an unlock waiting behind it still prompts.
+    @Test func anUnlockWaitingBehindAnOpenALockDroppedStillPrompts() async {
+        let vault = FakeVault([])
+        let controller = await unlocked(vault, autoLock: .oneMinute)
+        await controller.lock()
+        await vault.gateNextOpen()
+        let opening = Task { await controller.unlock() }
+        #expect(await vault.waitUntilOpening())
+        let waiting = Task { await controller.unlock() }
+        await letTheMainActorRun()
+        await controller.lock()
+        await vault.release()
+        await opening.value
+        await waiting.value
+        #expect(controller.state == .unlocked)
+        #expect(await vault.openCount == 3)
     }
 
     /// 1 menit, back before the read the leave cancelled has come back: the return waits for it, then prompts.

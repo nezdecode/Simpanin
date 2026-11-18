@@ -245,6 +245,28 @@ struct LockControllerLockingTests {
         #expect(await vault.openCount == 2)
     }
 
+    /// The phone unlocked and the app back: the return prompts, and the phone's notice comes during that prompt.
+    /// Batal answers both, so the notice doesn't ask again.
+    @Test(.timeLimit(.minutes(1))) func aPhoneUnlockDuringTheReturnsPromptAsksNoMoreAfterBatal() async {
+        let vault = FakeVault([.success(OpenReport()), .failure(.vaultKeyUnavailable(status: -128))])
+        let conditions = LaunchConditions()
+        let controller = await conditions.waitingForThePhoneUnlock(vault, clock: clock, autoLock: .oneMinute)
+        controller.sceneDidBecomeInactive()
+        controller.sceneDidEnterBackground()
+        conditions.protectedData = true
+        await vault.gateNextOpen()
+        let returning = Task { await controller.sceneDidBecomeActive() }
+        #expect(await vault.waitUntilOpening())
+        let notice = Task { await controller.protectedDataDidBecomeAvailable() }
+        // Long enough for the notice to start waiting for the return's open.
+        try? await Task.sleep(for: .milliseconds(100))
+        await vault.release()
+        await returning.value
+        await notice.value
+        #expect(controller.state == .locked)
+        #expect(await vault.openCount == 2)
+    }
+
     /// "Mulai vault baru" while the phone lock that came during the move is still landing: the create waits for it,
     /// finds the lock screen where it was tapped, and drops out.
     @Test func aCreateDropsOutWhenAPhoneLockLandsDuringItsWait() async {

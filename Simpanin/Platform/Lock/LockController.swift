@@ -68,6 +68,7 @@ final class LockController {
     private var hasBeenActive = false
     /// Counts returns from the background, so of two waiting at once only the latest prompts.
     @ObservationIgnored private var returns = 0
+    @ObservationIgnored private var answeredOpens = 0  // by the user: passed, Batal, a screen; not dropped, not left
     private var backgroundedAt: ContinuousClock.Instant?
     private var waitingForProtectedData = false
     private var leftForegroundDuringPrompt = false
@@ -130,6 +131,7 @@ final class LockController {
         hasBeenActive = true
         if returning { returns += 1 }
         let trip = returns
+        let answered = answeredOpens
         // Cleared before the lock, not after: the app can go to the background again while the store answers.
         // That trip keeps its own start, and the prompt waits for the return, as none can show in the background.
         let awaySince = backgroundedAt
@@ -139,11 +141,10 @@ final class LockController {
         // as at a leave, so its keys aren't kept past the timeout; a lock already waiting locks anyway.
         let open = state == .unlocked || state == .unlocking
         if let awaySince, open, sequence.locksWaiting == 0, timedOut(since: awaySince) { _ = startLock() }
-        // Every lock already decided lands first, the leave's among them, and the open in flight ends, so this
-        // return neither prompts ahead of them nor joins an open a lock has lost.
+        // Locks already decided, the leave's among them, and the open in flight end first: none is joined or overtaken.
         await sequence.settle()
-        // A later return waited too, and prompts for both: one that went first would ask again after a Batal.
-        guard backgroundedAt == nil, trip == returns else { return }
+        // A later return, or an open answered while this one waited, stands for it: asking again would repeat a Batal.
+        guard backgroundedAt == nil, trip == returns, answeredOpens == answered else { return }
         // From the welcome too: it promises a passcode lock, and the passcode may have gone meanwhile.
         if returning, state == .locked || state == .noVault || retriesOnReturn { await unlock() }
     }
@@ -208,8 +209,10 @@ final class LockController {
 
     /// From the lock cover's "Buka" button, a recovery screen's retry, or by itself.
     func unlock() async {
+        let answered = answeredOpens
         await sequence.settle()
-        guard state != .unlocking, state != .unlocked else { return }
+        // An open answered meanwhile answered this too, so Batal isn't asked again; none can show in the background.
+        guard answeredOpens == answered, backgroundedAt == nil, state != .unlocking, state != .unlocked else { return }
         await sequence.open { [weak self] in await self?.unlockSteps() }
     }
 
@@ -307,6 +310,7 @@ final class LockController {
             await lock()
             return false
         }
+        if !leftForegroundDuringPrompt { answeredOpens += 1 }
         let outcome = RecoveryMapping.outcome(
             of: result, passcode: passcode(),
             failuresInARow: creating ? RecoveryMapping.failuresBeforeGivingUp - 1 : failuresInARow,

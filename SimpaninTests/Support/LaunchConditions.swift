@@ -45,6 +45,18 @@ extension LaunchConditions {
             protectedDataAvailable: { self.protectedData })
     }
 
+    /// Locked, with an unlock that found the phone locked and waits for it to be unlocked.
+    func waitingForThePhoneUnlock(_ vault: FakeVault, clock: ManualClock, autoLock: AutoLock) async -> LockController {
+        headerExists = true
+        empty = false
+        let controller = makeController(vault, clock: clock, autoLock: autoLock)
+        await controller.sceneDidBecomeActive()
+        await controller.lock()
+        protectedData = false
+        await controller.unlock()
+        return controller
+    }
+
     /// The welcome is up, nothing opened yet.
     func welcome(_ vault: FakeVault, clock: ManualClock, autoLock: AutoLock = .oneMinute) async -> LockController {
         let controller = makeController(vault, clock: clock, autoLock: autoLock)
