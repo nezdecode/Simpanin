@@ -39,10 +39,10 @@ final class LockController {
     private(set) var coverShown = false
     /// Set by the view while the screen is recorded or mirrored.
     var screenCaptured = false
-    var contentHidden: Bool { state != .unlocked || coverShown || screenCaptured || locksWaiting > 0 }
-    /// Locks the store hasn't answered yet. A store that is busy with a write answers late, and `state` changes
-    /// only then, so this hides the content from the moment a lock is decided.
-    private var locksWaiting = 0
+    /// A store that is busy with a write answers a lock late, and `state` changes only then, so a lock still
+    /// waiting hides the content from the moment it is decided.
+    var contentHidden: Bool { state != .unlocked || coverShown || screenCaptured || sequence.locksWaiting > 0 }
+    private let sequence = LockSequence()
 
     /// The one place the Kunci otomatis choice lives while the app runs; Settings reads it here,
     /// so the screen can't show a different choice than the lock uses.
@@ -63,8 +63,6 @@ final class LockController {
 
     private var hasBeenActive = false
     private var backgroundedAt: ContinuousClock.Instant?
-    /// The last lock "Langsung" started as the app left, which the return waits for.
-    private var leaving: Task<Void, Never>?
     private var waitingForProtectedData = false
     private var leftForegroundDuringPrompt = false
     private var failuresInARow = 0
@@ -128,8 +126,9 @@ final class LockController {
         // That trip keeps its own start, and the prompt waits for the return, as none can show in the background.
         let awaySince = backgroundedAt
         backgroundedAt = nil
-        // A lock started by the leave lands first, so this return neither locks again nor opens ahead of it.
-        await leaving?.value
+        // Every lock already decided lands first, the leave's among them, so this return neither locks again nor
+        // opens ahead of one.
+        await sequence.settle()
         if let awaySince, state == .unlocked, timedOut(since: awaySince) { await lock() }
         guard backgroundedAt == nil else { return }
         // From the welcome too: it promises a passcode lock, and the passcode may have gone meanwhile.
@@ -164,16 +163,15 @@ final class LockController {
         if state == .unlocking { leftForegroundDuringPrompt = true }
         // The cover, the welcome and the recovery screens hold no keys, and a lock would replace a recovery screen.
         guard autoLock == .immediately, state == .unlocked || state == .unlocking else { return nil }
-        decideLock()
-        let task = Task { [weak self] in
-            await self?.finishLock()
-            #if DEBUG
+        let task = startLock()
+        #if DEBUG
+            Task { [weak self] in
+                await task.value
                 if let self {
                     attemptLog.append("leave lock landed: \(backgroundedAt == nil ? "after return" : "away")")
                 }
-            #endif
-        }
-        leaving = task
+            }
+        #endif
         return task
     }
 
@@ -194,6 +192,7 @@ final class LockController {
 
     /// From the lock cover's "Buka" button, a recovery screen's retry, or by itself.
     func unlock() async {
+        await sequence.settle()
         guard state != .unlocking, state != .unlocked else { return }
         guard protectedDataAvailable() else {
             waitingForProtectedData = true
@@ -214,6 +213,7 @@ final class LockController {
 
     /// From the welcome screen, or after "Mulai vault baru". `scan` is what the list starts once it shows.
     func createVault(then scan: ScanSource?) async {
+        await sequence.settle()
         guard state != .unlocking, state != .unlocked else { return }
         // Again, right before the key is made: the passcode may have gone since the welcome showed.
         if let screen = RecoveryMapping.beforeOpening(passcode: passcode(), vaultExists: vaultExists()) {
@@ -304,19 +304,18 @@ final class LockController {
     func editChanged(_ unsaved: Bool) { work.editUnsaved = unsaved }
 
     func lock() async {
-        decideLock()
-        await finishLock()
+        await startLock().value
     }
 
-    /// From here an open still waiting can tell it lost, and the content is hidden.
-    private func decideLock() {
+    /// Decided at once, so an open still waiting can tell it lost and the content is hidden; the store's half runs
+    /// after every earlier lock. The task is that half.
+    private func startLock() -> Task<Void, Never> {
         lockCount += 1
-        locksWaiting += 1
+        return sequence.lock { [weak self] in await self?.finishLock() }
     }
 
     private func finishLock() async {
         await vault.lock()
-        locksWaiting -= 1
         state = welcomeAfterLock ? .noVault : .locked
         notices = []
         work.lockLanded()

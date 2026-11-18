@@ -150,9 +150,11 @@ struct LockControllerLockingTests {
         let returning = Task { await controller.sceneDidBecomeActive() }
         #expect(await vault.waitUntilLocking())
         controller.sceneDidBecomeInactive()
-        await controller.sceneDidBecomeActive()
+        // The activation after the blip waits for the lock like any other, so it runs beside the release.
+        let blip = Task { await controller.sceneDidBecomeActive() }
         await vault.releaseLock()
         await returning.value
+        await blip.value
         #expect(controller.state == .unlocked)
         #expect(await vault.lockCount == 1)
         #expect(await vault.openCount == 2)
