@@ -77,7 +77,7 @@ struct StartNewVaultTests {
         await vault.gateNextOpen()
         let confirming = Task { await model.confirm() }
         #expect(await vault.waitUntilOpening())
-        #expect(CoverContent(lock) == .lockScreen)
+        #expect(CoverContent(lock) == .lockScreen(.nothing))
         await vault.release()
         await confirming.value
         #expect(lock.state == .unlocked)

@@ -958,6 +958,17 @@
         }
       }
     },
+    "lock.waiting" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menunggu"
+          }
+        }
+      }
+    },
     "main.add" : {
       "extractionState" : "manual",
       "localizations" : {

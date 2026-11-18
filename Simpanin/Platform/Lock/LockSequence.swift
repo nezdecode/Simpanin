@@ -21,14 +21,28 @@ final class LockSequence {
     /// The last lock decided. Each waits for the one before, so this one landing means all have.
     @ObservationIgnored private var locking: Task<Void, Never>?
 
+    /// A lock or an open is still running, so the lock screen holds Buka back.
+    var isBusy: Bool { locksWaiting > 0 || opening != nil }
+    /// True once a busy stretch has outlasted `waitBeforeShowing`, so a wait that ends at once shows no indicator.
+    private(set) var showsWaiting = false
+    @ObservationIgnored private let waitBeforeShowing: @MainActor () async -> Void
+    /// Counts each start and end of a busy stretch, so a timer from an earlier one can't show the indicator.
+    @ObservationIgnored private var stretch = 0
+
+    /// `waitBeforeShowing`: 300 ms, long enough that a lock landing at once shows nothing.
+    init(waitBeforeShowing: @escaping @MainActor () async -> Void = { try? await Task.sleep(for: .milliseconds(300)) })
+    {
+        self.waitBeforeShowing = waitBeforeShowing
+    }
+
     /// Starts a lock's store half once every earlier lock has landed.
     func lock(_ finish: @escaping @MainActor () async -> Void) -> Task<Void, Never> {
-        locksWaiting += 1
+        change { locksWaiting += 1 }
         let previous = locking
         let task = Task { [weak self] in
             await previous?.value
             await finish()
-            self?.locksWaiting -= 1
+            self?.change { self?.locksWaiting -= 1 }
         }
         locking = task
         return task
@@ -42,9 +56,9 @@ final class LockSequence {
     func open(_ body: @escaping @MainActor () async -> Void) async {
         let task = Task { [weak self] in
             await body()
-            self?.opening = nil
+            self?.change { self?.opening = nil }
         }
-        opening = task
+        change { opening = task }
         await task.value
     }
 
@@ -61,6 +75,23 @@ final class LockSequence {
             } else {
                 return
             }
+        }
+    }
+
+    private func change(_ update: () -> Void) {
+        let wasBusy = isBusy
+        update()
+        guard isBusy != wasBusy else { return }
+        stretch += 1
+        guard isBusy else {
+            showsWaiting = false
+            return
+        }
+        let current = stretch
+        Task { [weak self, waitBeforeShowing] in
+            await waitBeforeShowing()
+            guard let self, stretch == current else { return }
+            showsWaiting = true
         }
     }
 }

@@ -19,9 +19,12 @@ import VaultCore
 @Suite("Cover content")
 struct CoverContentTests {
     private func content(
-        _ state: LockController.State, creating: Bool = false, recording: Bool = false, hold: Bool = false
+        _ state: LockController.State, creating: Bool = false, recording: Bool = false, hold: Bool = false,
+        busy: Bool = false, waiting: Bool = false
     ) -> CoverContent {
-        CoverContent(state: state, isCreatingVault: creating, screenCaptured: recording, holdsLockScreen: hold)
+        CoverContent(
+            state: state, isCreatingVault: creating, screenCaptured: recording, holdsLockScreen: hold, isBusy: busy,
+            showsWaiting: waiting)
     }
 
     /// Opens the vault, finishing the open while the app is inactive, as a Face ID prompt does.
@@ -38,7 +41,22 @@ struct CoverContentTests {
 
     @Test(arguments: [LockController.State.locked, .unlocking], [false, true])
     func aLockedOrUnlockingVaultShowsTheLockScreen(_ state: LockController.State, _ recording: Bool) {
-        #expect(content(state, recording: recording) == .lockScreen)
+        #expect(content(state, recording: recording) == .lockScreen(state == .locked ? .open : .nothing))
+    }
+
+    /// Buka only while no lock or open runs, as a tap would wait for them; the indicator only on the locked screen,
+    /// never behind a Face ID prompt, where an open runs as long as the prompt is up.
+    @Test(arguments: [
+        (LockController.State.locked, false, false, CoverContent.Action.open),
+        (.locked, true, false, .nothing),
+        (.locked, true, true, .waiting),
+        (.unlocking, true, false, .nothing),
+        (.unlocking, true, true, .nothing),
+    ])
+    func theLockScreenOffersBukaOnlyWhileNothingRuns(
+        _ state: LockController.State, _ busy: Bool, _ waiting: Bool, _ action: CoverContent.Action
+    ) {
+        #expect(content(state, busy: busy, waiting: waiting) == .lockScreen(action))
     }
 
     @Test func anOpenVaultCoveredShowsOnlyTheName() {
@@ -69,7 +87,7 @@ struct CoverContentTests {
         let lock = LockController.make(vault)
         try await openWhileInactive(lock, vault)
         #expect(lock.contentHidden)
-        #expect(CoverContent(lock) == .lockScreen)
+        #expect(CoverContent(lock) == .lockScreen(.nothing))
         await lock.sceneDidBecomeActive()
         #expect(!lock.holdsLockScreen)
         #expect(!lock.contentHidden)
@@ -91,7 +109,7 @@ struct CoverContentTests {
         let lock = LockController.make(vault)
         lock.screenCaptured = true
         try await openWhileInactive(lock, vault)
-        #expect(CoverContent(lock) == .lockScreen)
+        #expect(CoverContent(lock) == .lockScreen(.nothing))
         await lock.sceneDidBecomeActive()
         #expect(CoverContent(lock) == .recording)
     }
@@ -120,6 +138,6 @@ struct CoverContentTests {
         #expect(CoverContent(lock) == .recording)
         await lock.lock()
         #expect(lock.state == .locked)
-        #expect(CoverContent(lock) == .lockScreen)
+        #expect(CoverContent(lock) == .lockScreen(.open))
     }
 }

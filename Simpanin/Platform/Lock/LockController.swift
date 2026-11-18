@@ -44,6 +44,10 @@ final class LockController {
     var contentHidden: Bool { state != .unlocked || coverShown || screenCaptured || sequence.locksWaiting > 0 }
     private let sequence = LockSequence()
 
+    /// A lock or an open still runs, so the lock screen holds Buka back, and shows that it waits once it has lasted.
+    var isBusy: Bool { sequence.isBusy }
+    var showsWaiting: Bool { sequence.showsWaiting }
+
     /// The one place the Kunci otomatis choice lives while the app runs; Settings reads it here,
     /// so the screen can't show a different choice than the lock uses.
     private(set) var autoLock: AutoLock
