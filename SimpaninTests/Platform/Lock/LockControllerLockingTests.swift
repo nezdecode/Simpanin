@@ -244,4 +244,30 @@ struct LockControllerLockingTests {
         #expect(controller.state == .locked)
         #expect(await vault.openCount == 2)
     }
+
+    /// "Mulai vault baru" while the phone lock that came during the move is still landing: the create waits for it,
+    /// finds the lock screen where it was tapped, and drops out.
+    @Test func aCreateDropsOutWhenAPhoneLockLandsDuringItsWait() async {
+        let vault = FakeVault([.failure(.vaultKeyMissing)])
+        let conditions = LaunchConditions()
+        conditions.headerExists = true
+        conditions.empty = false
+        let controller = conditions.makeController(vault, clock: clock)
+        await controller.sceneDidBecomeActive()
+        #expect(controller.state == .recovery(.keyMissing))
+        await vault.gateNextLock()
+        conditions.protectedData = false
+        let locking = Task { await controller.protectedDataWillBecomeUnavailable() }
+        #expect(await vault.waitUntilLocking())
+        conditions.headerExists = false  // quarantined
+        conditions.empty = true
+        let creating = Task { await controller.createVault(then: nil) }
+        // Long enough for the create to read its screen and start waiting before the lock lands.
+        try? await Task.sleep(for: .milliseconds(100))
+        await vault.releaseLock()
+        await locking.value
+        await creating.value
+        #expect(controller.state == .locked)
+        #expect(await vault.openCount == 1)
+    }
 }

@@ -162,4 +162,22 @@ struct LockControllerWelcomeTests {
         #expect(controller.state == .noVault)
         #expect(await vault.openCount == 0)
     }
+
+    /// Two taps on the welcome before it turns its buttons off. The first create fails; the second tap, which waited
+    /// for it, finds the error screen, not the welcome it was tapped on, so it doesn't create again.
+    @Test(.timeLimit(.minutes(1)))
+    func aSecondWelcomeTapAfterAFailedCreateDoesNotCreateAgain() async {
+        let vault = FakeVault([.failure(.storageFull)])
+        let controller = await welcome(vault)
+        await vault.gateNextOpen()
+        let first = Task { await controller.createVault(then: .camera) }
+        #expect(await vault.waitUntilOpening())
+        let second = Task { await controller.createVault(then: .camera) }
+        try? await Task.sleep(for: .milliseconds(100))
+        await vault.release()
+        await first.value
+        await second.value
+        #expect(controller.state == .recovery(.storageFullOnOpen))
+        #expect(await vault.openCount == 1)
+    }
 }

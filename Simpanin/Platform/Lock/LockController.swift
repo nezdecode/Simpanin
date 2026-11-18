@@ -229,8 +229,16 @@ final class LockController {
 
     /// From the welcome screen, or after "Mulai vault baru". `scan` is what the list starts once it shows.
     func createVault(then scan: ScanSource?) async {
+        let screen = state
         await sequence.settle()
-        guard state != .unlocking, state != .unlocked else { return }
+        // Only from the screen the tap came from, the welcome or a recovery screen, and only if it's still there.
+        // A lock puts the lock screen in its place, as when the phone locks while "Mulai vault baru" moves the old
+        // vault aside, and a create that failed meanwhile leaves its error screen, which no tap asked for again.
+        guard state == screen else { return }
+        switch screen {
+        case .noVault, .recovery: break
+        case .locked, .unlocking, .unlocked: return
+        }
         // Again, right before the key is made: the passcode may have gone since the welcome showed.
         if let screen = RecoveryMapping.beforeOpening(passcode: passcode(), vaultExists: vaultExists()) {
             state = .recovery(screen)
