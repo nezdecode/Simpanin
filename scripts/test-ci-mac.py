@@ -484,6 +484,90 @@ class CIMacTests(unittest.TestCase):
         self.assertFalse(os.path.exists(os.path.join(self.clone.fakes, 'test-sh.pid')))
 
 
+class DocsOnlyTests(unittest.TestCase):
+    """A branch that changes only docs since main is posted as skipped, and anything else runs the tests."""
+
+    SKIPPED = 'Skipped: only docs changed since main'
+
+    def setUp(self):
+        self.clone = Clone()
+        self.addCleanup(self.clone.remove)
+        self.clone.push(self.clone.first, 'main')
+
+    def branch(self, name, *changes, base=None):
+        """Commits each change on top of base (main by default) and pushes the last as ci/<name>. A change maps
+        paths to their text, or to None to delete them; ('mv', old, new) renames a file."""
+        git(self.clone.work, 'checkout', '-q', '--detach', base or self.clone.first)
+        for number, change in enumerate(changes):
+            if isinstance(change, tuple):
+                git(self.clone.work, 'mv', change[1], change[2])
+            else:
+                for path, text in change.items():
+                    if text is None:
+                        git(self.clone.work, 'rm', '-q', path)
+                    else:
+                        write(os.path.join(self.clone.work, path), text, 0o644)
+                        git(self.clone.work, 'add', '--', path)
+            git(self.clone.work, 'commit', '-q', '-m', f'{name} {number}')
+        sha = git(self.clone.work, 'rev-parse', 'HEAD')
+        self.clone.push(sha, f'ci/{name}')
+        return sha
+
+    def assertSkipped(self, sha):
+        result = self.clone.ci_mac(sha)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(self.clone.statuses(), [(sha, 'success', self.SKIPPED)])
+        self.assertFalse(os.path.exists(os.path.join(self.clone.fakes, 'test-sh.pid')))
+
+    def assertRan(self, sha):
+        result = self.clone.ci_mac(sha)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(self.clone.statuses()[-2:], [
+            (sha, 'pending', 'Running on the Mac'),
+            (sha, 'success', '786 tests: 785 passed, 0 failed, 1 skipped'),
+        ])
+
+    def test_skips_a_branch_that_changes_only_docs(self):
+        sha = self.branch('docs', {'README.md': 'a\n', '.github/pull_request_template.md': 'b\n'},
+                          {'.github/ISSUE_TEMPLATE/bug.md': 'c\n', 'CONTRIBUTING.md': 'd\n'})
+        self.assertSkipped(sha)
+
+    def test_runs_a_branch_whose_earlier_commit_changed_code(self):
+        sha = self.branch('code-then-docs', {'App.swift': 'let a = 1\n'}, {'README.md': 'a\n'})
+        self.assertRan(sha)
+
+    def test_runs_when_a_file_outside_the_allow_list_changed(self):
+        for number, path in enumerate(['.github/workflows/app-tests.yml', 'scripts/check.sh', '.swiftlint.yml',
+                                       'Simpanin/Resources/Localizable.xcstrings', 'README.txt']):
+            with self.subTest(path=path):
+                sha = self.branch(f'other-{number}', {'README.md': 'a\n', path: 'x\n'})
+                self.assertRan(sha)
+
+    def test_runs_when_markdown_inside_an_app_folder_changed(self):
+        # Xcode copies any file under the app's folders into the app, so it isn't only a doc there.
+        sha = self.branch('nested', {'Simpanin/Features/README.md': 'a\n'})
+        self.assertRan(sha)
+
+    def test_runs_when_a_file_was_renamed_to_markdown(self):
+        sha = self.branch('rename', ('mv', 'first.txt', 'first.md'))
+        self.assertRan(sha)
+
+    def test_runs_when_main_is_missing_or_nothing_changed(self):
+        self.assertRan(self.clone.first)  # main itself: nothing changed
+        sha = self.branch('docs', {'README.md': 'a\n'})
+        # Inside origin: a push may not delete the branch its HEAD names.
+        git(os.path.join(self.clone.dir, 'origin.git'), 'update-ref', '-d', 'refs/heads/main')
+        self.assertRan(sha)
+
+    def test_ignores_a_stale_local_origin_main(self):
+        git(self.clone.work, 'fetch', '-q', 'origin')
+        newer = self.branch('newer-main', {'App.swift': 'let a = 1\n'})
+        # Moved inside origin, as another push would: pushing from this clone would update its origin/main too.
+        git(os.path.join(self.clone.dir, 'origin.git'), 'update-ref', 'refs/heads/main', newer)
+        sha = self.branch('docs', {'README.md': 'a\n'}, base=newer)
+        self.assertSkipped(sha)
+
+
 class PrePushTests(unittest.TestCase):
     """The hook with a fake ci-mac.sh that records how it was started."""
 

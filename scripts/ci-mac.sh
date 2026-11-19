@@ -130,6 +130,20 @@ main() {
     sleep 2
   done
 
+  # A branch that changes only docs since main, in all its commits and not just the last push, can't change a test's
+  # result, so it's posted as skipped. Only Markdown at the top level counts: Xcode puts any file in the app's folders
+  # into the app. No main, a failed fetch, an empty diff or any other path runs the tests. main's sha comes from
+  # GitHub, so a stale origin/main can't hide a file. Keep the list as app-tests.yml's paths-ignore.
+  main_sha=$(git ls-remote origin refs/heads/main 2> /dev/null | awk '$2 == "refs/heads/main" { print $1 }')
+  if [ -n "$main_sha" ] && git fetch --quiet origin "$main_sha" 2> /dev/null \
+    && changed=$(git diff --name-only --no-renames "$main_sha...$sha") && [ -n "$changed" ] \
+    && ! grep -qvE '^([^/]*\.md|\.github/pull_request_template\.md|\.github/ISSUE_TEMPLATE/.*)$' <<< "$changed"; then
+    post "$sha" success "Skipped: only docs changed since main" \
+      || { echo "ci-mac: couldn't post the skip for $short" >&2; exit 1; }
+    echo "ci-mac: $short skipped: only docs changed since main"
+    exit 0
+  fi
+
   results="build/ci/$(date +%Y%m%d-%H%M%S)-$short"
   mkdir -p "$results"
   # Two pushes seconds apart would both find the same run going, both stop it, and both run on one
