@@ -68,7 +68,7 @@ struct LibraryView: View {
                         Label {
                             Text("main.subtitle \(library.documents.count)")
                         } icon: {
-                            Image(systemName: "lock.shield").foregroundStyle(.tint)
+                            Image(systemName: "lock.shield").foregroundStyle(.tint).accessibilityHidden(true)
                         }
                         .font(.subheadline)
                         .foregroundStyle(.secondary)

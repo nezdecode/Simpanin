@@ -32,12 +32,12 @@ struct IconBadge: View {
             .font(symbolFont)
             .foregroundStyle(tint)
             .frame(width: size, height: size)
+            .accessibilityHidden(true)
         Group {
             switch outline {
             case .circle: image.background(background, in: .circle)
             case .roundedRectangle(let radius): image.background(background, in: .rect(cornerRadius: radius))
             }
         }
-        .accessibilityHidden(true)
     }
 }
