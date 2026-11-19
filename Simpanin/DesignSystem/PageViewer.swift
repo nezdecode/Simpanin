@@ -60,15 +60,11 @@ struct PageViewer: View {
 
     private var closeButton: some View {
         Button(action: close) {
-            Label {
-                Text("button.close")
-            } icon: {
-                Image(systemName: "xmark")
-            }
-            .labelStyle(.iconOnly)
-            .font(.title3.weight(.semibold))
-            .frame(minWidth: 44, minHeight: 44)
-            .contentShape(.rect)
+            Label("button.close", systemImage: "xmark")
+                .labelStyle(.iconOnly)
+                .font(.title3.weight(.semibold))
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(.rect)
         }
         .buttonStyle(.bordered)
         .buttonBorderShape(.circle)

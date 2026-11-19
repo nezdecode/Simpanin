@@ -31,13 +31,9 @@ struct LockedView: View {
             Button {
                 Task { await lock.unlock() }
             } label: {
-                Label {
-                    Text(ScreenText.open)
-                } icon: {
-                    Image(systemName: method.systemImage)
-                }
-                .font(.headline)
-                .frame(maxWidth: .infinity, minHeight: 54)
+                Label(ScreenText.open, systemImage: method.systemImage)
+                    .font(.headline)
+                    .frame(maxWidth: .infinity, minHeight: 54)
             }
             .buttonStyle(.plain)
             .foregroundStyle(Color(.lockBackground))

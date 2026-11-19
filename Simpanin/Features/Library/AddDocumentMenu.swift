@@ -27,21 +27,13 @@ struct AddDocumentMenu<Title: View>: View {
                     Button {
                         onAdd(.camera)
                     } label: {
-                        Label {
-                            Text("main.scan")
-                        } icon: {
-                            Image(systemName: "camera")
-                        }
+                        Label("main.scan", systemImage: "camera")
                     }
                     .accessibilityIdentifier("list.scan.camera")
                     Button {
                         onAdd(.photos)
                     } label: {
-                        Label {
-                            Text("main.pickPhotos")
-                        } icon: {
-                            Image(systemName: "photo.on.rectangle")
-                        }
+                        Label("main.pickPhotos", systemImage: "photo.on.rectangle")
                     }
                     .accessibilityIdentifier("list.scan.photos")
                 } label: {
@@ -64,11 +56,7 @@ extension AddDocumentMenu where Title == Label<Text, Image> {
     /// The toolbar's "+".
     init(hasCamera: Bool, isDisabled: Bool, onAdd: @escaping (ScanSource) -> Void) {
         self.init(hasCamera: hasCamera, isDisabled: isDisabled, onAdd: onAdd) {
-            Label {
-                Text("main.add")
-            } icon: {
-                Image(systemName: "plus")
-            }
+            Label("main.add", systemImage: "plus")
         }
     }
 }

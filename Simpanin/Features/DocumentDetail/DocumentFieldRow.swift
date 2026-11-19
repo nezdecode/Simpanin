@@ -79,14 +79,10 @@ struct DocumentFieldRow: View {
         _ systemImage: String, label: LocalizedStringResource, action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
-            Label {
-                Text(label)
-            } icon: {
-                Image(systemName: systemImage)
-            }
-            .labelStyle(.iconOnly)
-            .frame(minWidth: 44, minHeight: 44)
-            .contentShape(.rect)
+            Label(label, systemImage: systemImage)
+                .labelStyle(.iconOnly)
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(.rect)
         }
         .buttonStyle(.borderless)
     }

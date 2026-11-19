@@ -83,11 +83,7 @@ struct WelcomeView: View {
         Button {
             Task { await lock.createVault(then: scan) }
         } label: {
-            Label {
-                Text(title)
-            } icon: {
-                Image(systemName: systemImage)
-            }
+            Label(title, systemImage: systemImage)
         }
         .buttonStyle(.prominent(emphasis))
     }

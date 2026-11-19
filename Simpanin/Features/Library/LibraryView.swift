@@ -94,11 +94,7 @@ struct LibraryView: View {
                                     Button(role: .destructive) {
                                         Task { await library.delete(document.id) }
                                     } label: {
-                                        Label {
-                                            Text("button.delete")
-                                        } icon: {
-                                            Image(systemName: "trash")
-                                        }
+                                        Label("button.delete", systemImage: "trash")
                                     }
                                 }
                             }
@@ -206,11 +202,7 @@ struct LibraryView: View {
                     #endif
                 }
             } label: {
-                Label {
-                    Text("main.lockNow")
-                } icon: {
-                    Image(systemName: "lock")
-                }
+                Label("main.lockNow", systemImage: "lock")
             }
             .accessibilityIdentifier("list.lock")
         }
@@ -218,11 +210,7 @@ struct LibraryView: View {
             NavigationLink {
                 SettingsView(vault: vault, lock: lock, library: library, documentScreen: documentScreen)
             } label: {
-                Label {
-                    Text("settings.title")
-                } icon: {
-                    Image(systemName: "gearshape")
-                }
+                Label("settings.title", systemImage: "gearshape")
             }
             .accessibilityIdentifier("list.settings")
         }
@@ -237,11 +225,7 @@ struct LibraryView: View {
                     Button {
                         Task { await library.addSample() }
                     } label: {
-                        Label {
-                            Text("debug.addSample")
-                        } icon: {
-                            Image(systemName: "doc.badge.plus")
-                        }
+                        Label("debug.addSample", systemImage: "doc.badge.plus")
                     }
                     // Saving while the list can't load would only confuse; it can't harm the vault.
                     .disabled(library.loadFailed)
