@@ -386,15 +386,3 @@ final class LockController {
         }
     }
 }
-
-#if DEBUG
-    extension LockController {
-        /// Statuses only: VaultError cases carry no ids or values, other errors show their type.
-        private static func describe(_ result: Result<OpenReport, any Error>) -> String {
-            switch result {
-            case .success: "opened"
-            case .failure(let error): ErrorSummary.describe(error)
-            }
-        }
-    }
-#endif
