@@ -24,13 +24,10 @@
 
 ## Flow
 
-<!-- For a change in logic: a Mermaid diagram of the order of events, or "not applicable".
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant App
-```
+<!-- For a change in logic, a Mermaid diagram of the kind that fits, or "not applicable":
+- `sequenceDiagram` for the order of events between parts (who calls whom, what waits for what);
+- `flowchart TD` for a decision with branches;
+- `stateDiagram-v2` for the states something can be in, and what moves it between them.
 -->
 
 ## Tests
