@@ -49,6 +49,12 @@ opt_in_rules:
   - identical_operands
   - contains_over_filter_count
   - empty_xctest_method
+  # Decorative images are hidden from VoiceOver, and a tap gesture says it's a button (CODING.md, SwiftUI).
+  - accessibility_label_for_image
+  - accessibility_trait_for_button
+  # Left off on purpose: strict_fileprivate (swift-format writes fileprivate on extension members, and private there
+  # isn't visible to the view using them), discouraged_optional_boolean (the parsers' Bool? means "couldn't be read"),
+  # legacy_objc_type (NSString gives CoreText's UTF-16 lengths, NSItemProvider takes NSData).
 
 line_length:
   warning: 120  # the same as swift-format's lineLength
