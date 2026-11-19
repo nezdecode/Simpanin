@@ -99,10 +99,15 @@ take_over() {
     { read -r old old_sha old_group < "$pid_file"; } 2> /dev/null && [ -n "${old_sha:-}" ] \
       && post "$old_sha" error "stopped, a newer run started; rerun: scripts/ci-mac.sh ${old_sha:0:7}"
   elif [ -n "${old_sha:-}" ]; then
-    kill_tests "$old_group"
-    post "$old_sha" error "interrupted (killed, or the Mac restarted); rerun: scripts/ci-mac.sh ${old_sha:0:7}" \
-      || true
+    recover_dead_run "$old_sha" "$old_group"
   fi
+}
+
+# Called holding the lock, for a run that died without finishing: its commit is marked interrupted, and its tests,
+# which can never post a result now, are killed.
+recover_dead_run() {  # the dead run's commit and test group, from the pid file
+  kill_tests "$2"
+  post "$1" error "interrupted (killed, or the Mac restarted); rerun: scripts/ci-mac.sh ${1:0:7}" || true
 }
 
 main() {
@@ -138,6 +143,18 @@ main() {
   if [ -n "$main_sha" ] && git fetch --quiet origin "$main_sha" 2> /dev/null \
     && changed=$(git diff --name-only --no-renames "$main_sha...$sha") && [ -n "$changed" ] \
     && ! grep -qvE '^([^/]*\.md|\.github/pull_request_template\.md|\.github/ISSUE_TEMPLATE/.*)$' <<< "$changed"; then
+    # A run killed outright is recovered here too, as every run does, so that doesn't wait for a code push. A live
+    # run is left going: stopping it would stop another branch's tests for a push that runs none.
+    exec 9> build/ci/lock
+    python3 -c 'import fcntl; fcntl.flock(9, fcntl.LOCK_EX)' || exit 1
+    if { read -r old old_sha old_group < "$pid_file"; } 2> /dev/null && [ -n "${old_sha:-}" ] && ! running "$old"
+    then
+      recover_dead_run "$old_sha" "$old_group"
+      # So the next run has nothing left to mark. Not this run's pid: a code run would stop it mid-post.
+      rm -f "$pid_file"
+    fi
+    python3 -c 'import fcntl; fcntl.flock(9, fcntl.LOCK_UN)'
+    exec 9>&-
     post "$sha" success "Skipped: only docs changed since main" \
       || { echo "ci-mac: couldn't post the skip for $short" >&2; exit 1; }
     echo "ci-mac: $short skipped: only docs changed since main"

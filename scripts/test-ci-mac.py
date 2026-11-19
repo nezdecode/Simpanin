@@ -567,6 +567,53 @@ class DocsOnlyTests(unittest.TestCase):
         sha = self.branch('docs', {'README.md': 'a\n'}, base=newer)
         self.assertSkipped(sha)
 
+    def dead_run(self, tests_group=''):
+        dead = subprocess.Popen(['true'])
+        dead.wait()
+        write(os.path.join(self.clone.work, 'build', 'ci', 'run.pid'),
+              f'{dead.pid} {self.clone.second} {tests_group}\n'.replace(' \n', '\n'), 0o644)
+
+    def test_a_docs_only_push_marks_a_run_killed_outright_as_interrupted(self):
+        self.dead_run()
+        sha = self.branch('docs', {'README.md': 'a\n'})
+        result = self.clone.ci_mac(sha)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        errors = lambda: [s for s in self.clone.statuses() if s[1] == 'error']
+        self.assertEqual([s[0] for s in errors()], [self.clone.second], self.clone.statuses())
+        self.assertIn('interrupted', errors()[0][2])
+        self.assertEqual(self.clone.statuses()[-1], (sha, 'success', self.SKIPPED))
+        # Not the skip's own pid either: a code run's take_over would take it for a run going and stop it.
+        self.assertFalse(os.path.exists(os.path.join(self.clone.work, 'build', 'ci', 'run.pid')))
+        # The dead run is recovered once: the next run finds nothing left to mark.
+        self.clone.ci_mac(self.clone.first)
+        self.assertEqual(len(errors()), 1, self.clone.statuses())
+
+    def test_a_docs_only_push_kills_the_tests_of_a_run_killed_outright(self):
+        tests = os.path.join(self.clone.dir, 'orphan')
+        write(os.path.join(tests, 'scripts', 'test.sh'), '#!/bin/bash\nsleep 30\n')
+        orphan = subprocess.Popen(['scripts/test.sh'], cwd=tests, start_new_session=True)
+        self.addCleanup(orphan.wait)
+        self.addCleanup(orphan.kill)
+        self.dead_run(orphan.pid)
+        result = self.clone.ci_mac(self.branch('docs', {'README.md': 'a\n'}))
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertTrue(self.clone.wait_for(lambda: orphan.poll() is not None, 5), "the dead run's tests still run")
+
+    def test_a_docs_only_push_leaves_a_live_run_going(self):
+        older = self.clone.start_ci_mac(self.clone.second, FAKE_TEST_MODE='sleep')
+        self.assertTrue(self.clone.wait_for_file('test-sh.pid'), 'older run never started')
+        pid_file = os.path.join(self.clone.work, 'build', 'ci', 'run.pid')
+        with open(pid_file) as f:
+            before = f.read()
+        sha = self.branch('docs', {'README.md': 'a\n'})
+        result = self.clone.ci_mac(sha)
+        with open(pid_file) as f:
+            self.assertEqual(f.read(), before, 'the skip rewrote a live run’s pid file')
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(self.clone.statuses()[-1], (sha, 'success', self.SKIPPED))
+        self.assertIsNone(older.poll(), 'the skip stopped a live run')
+        self.assertFalse([s for s in self.clone.statuses() if s[1] == 'error'], self.clone.statuses())
+
 
 class PrePushTests(unittest.TestCase):
     """The hook with a fake ci-mac.sh that records how it was started."""
