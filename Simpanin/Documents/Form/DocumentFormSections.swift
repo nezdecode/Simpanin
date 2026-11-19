@@ -49,13 +49,9 @@ struct DocumentFormSections: View {
             Text("review.label")
         } footer: {
             if DocumentForm.looksLikeANumber(label) {
-                Label {
-                    Text("review.labelIsNumber")
-                } icon: {
-                    Image(systemName: "exclamationmark.triangle")
-                }
-                .foregroundStyle(Color(.onWarning))
-                .accessibilityIdentifier("review.labelIsNumber")
+                Label("review.labelIsNumber", systemImage: "exclamationmark.triangle")
+                    .foregroundStyle(Color(.onWarning))
+                    .accessibilityIdentifier("review.labelIsNumber")
             } else {
                 Text("review.labelHint")
             }

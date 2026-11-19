@@ -24,6 +24,7 @@ struct GroupedRow: View {
             Spacer()
             Text(verbatim: value).foregroundStyle(.secondary)
             Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+                .accessibilityHidden(true)
         }
         .padding(.horizontal, 16)
         .frame(minHeight: 50)

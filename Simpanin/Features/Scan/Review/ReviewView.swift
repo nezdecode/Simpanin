@@ -42,12 +42,8 @@ struct ReviewView: View {
         NavigationStack {
             Form {
                 Section {
-                    Label {
-                        Text("review.onDevice")
-                    } icon: {
-                        Image(systemName: "iphone")
-                    }
-                    .foregroundStyle(.secondary)
+                    Label("review.onDevice", systemImage: "iphone")
+                        .foregroundStyle(.secondary)
                 }
                 ReviewPagesSection(
                     thumbnails: review.thumbnails, notes: review.pageNotes,

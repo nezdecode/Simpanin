@@ -180,4 +180,60 @@ struct LockControllerWelcomeTests {
         #expect(controller.state == .recovery(.storageFullOnOpen))
         #expect(await vault.openCount == 1)
     }
+
+    // MARK: A tap behind a phone lock
+
+    /// A phone lock keeps the welcome, so the tap that waited for it still finds its screen. It creates nothing, and
+    /// the welcome works again once the phone is unlocked.
+    @Test(.timeLimit(.minutes(1)))
+    func aWelcomeTapThatWaitedOutAPhoneLockCreatesNothing() async {
+        let vault = FakeVault([])
+        let controller = await welcome(vault)
+        await vault.gateNextLock()
+        conditions.protectedData = false
+        let locking = Task { await controller.protectedDataWillBecomeUnavailable() }
+        #expect(await vault.waitUntilLocking())
+        let creating = Task { await controller.createVault(then: .camera) }
+        // Long enough for the create to read its screen and start waiting before the lock lands.
+        try? await Task.sleep(for: .milliseconds(100))
+        await vault.releaseLock()
+        await locking.value
+        await creating.value
+        #expect(controller.state == .noVault)
+        #expect(await vault.openCount == 0)
+
+        conditions.protectedData = true
+        await controller.sceneDidBecomeActive()
+        #expect(controller.state == .noVault)
+        await controller.createVault(then: .camera)
+        #expect(controller.state == .unlocked)
+        #expect(await vault.openCount == 1)
+        #expect(controller.takePendingScan() == .camera)
+    }
+
+    /// iOS posts the phone lock before the files lock, so protected data can still read as there.
+    @Test(.timeLimit(.minutes(1)))
+    func aWelcomeTapIsDroppedWhenAPhoneLockLandsBeforeFilesLock() async {
+        let vault = FakeVault([])
+        let controller = await welcome(vault)
+        await vault.gateNextLock()
+        let locking = Task { await controller.protectedDataWillBecomeUnavailable() }
+        #expect(await vault.waitUntilLocking())
+        let creating = Task { await controller.createVault(then: .camera) }
+        try? await Task.sleep(for: .milliseconds(100))
+        await vault.releaseLock()
+        await locking.value
+        await creating.value
+        #expect(controller.state == .noVault)
+        #expect(await vault.openCount == 0)
+    }
+
+    @Test func aWelcomeTapWithoutProtectedDataCreatesNothing() async {
+        let vault = FakeVault([])
+        let controller = await welcome(vault)
+        conditions.protectedData = false
+        await controller.createVault(then: .camera)
+        #expect(controller.state == .noVault)
+        #expect(await vault.openCount == 0)
+    }
 }

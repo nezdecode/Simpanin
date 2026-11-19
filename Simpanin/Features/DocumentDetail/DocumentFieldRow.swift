@@ -29,6 +29,7 @@ struct DocumentFieldRow: View {
         layout {
             if field.canReveal {
                 // VoiceOver has the eye button for this, so the text stays one plain element.
+                // swiftlint:disable:next accessibility_trait_for_button - the eye button is the button for VoiceOver
                 content.contentShape(.rect).onTapGesture(perform: onToggleNumber)
             } else {
                 content
@@ -79,14 +80,10 @@ struct DocumentFieldRow: View {
         _ systemImage: String, label: LocalizedStringResource, action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
-            Label {
-                Text(label)
-            } icon: {
-                Image(systemName: systemImage)
-            }
-            .labelStyle(.iconOnly)
-            .frame(minWidth: 44, minHeight: 44)
-            .contentShape(.rect)
+            Label(label, systemImage: systemImage)
+                .labelStyle(.iconOnly)
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(.rect)
         }
         .buttonStyle(.borderless)
     }

@@ -240,6 +240,8 @@ final class LockController {
     /// From the welcome screen, or after "Mulai vault baru". `scan` is what the list starts once it shows.
     func createVault(then scan: ScanSource?) async {
         let screen = state
+        // Locks that had landed by the tap: one still landing then, as the phone lock it waits behind, counts as after.
+        let landedAtTap = lockCount - sequence.locksWaiting
         await sequence.settle()
         // Only from the screen the tap came from, the welcome or a recovery screen, and only if it's still there.
         // A lock puts the lock screen in its place, as when the phone locks while "Mulai vault baru" moves the old
@@ -249,6 +251,9 @@ final class LockController {
         case .noVault, .recovery: break
         case .locked, .unlocking, .unlocked: return
         }
+        // A phone lock keeps the welcome, so the screen check passes. iOS tells the app before the files lock, so the
+        // count shows the lock while protected data can still read as there.
+        if screen == .noVault, lockCount != landedAtTap || !protectedDataAvailable() { return }
         // Again, right before the key is made: the passcode may have gone since the welcome showed.
         if let screen = RecoveryMapping.beforeOpening(passcode: passcode(), vaultExists: vaultExists()) {
             state = .recovery(screen)
@@ -386,15 +391,3 @@ final class LockController {
         }
     }
 }
-
-#if DEBUG
-    extension LockController {
-        /// Statuses only: VaultError cases carry no ids or values, other errors show their type.
-        private static func describe(_ result: Result<OpenReport, any Error>) -> String {
-            switch result {
-            case .success: "opened"
-            case .failure(let error): ErrorSummary.describe(error)
-            }
-        }
-    }
-#endif

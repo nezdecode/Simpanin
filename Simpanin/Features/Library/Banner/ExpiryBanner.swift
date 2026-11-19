@@ -68,11 +68,7 @@ struct ExpiryBanner: View {
         Button {
             onHide(document)
         } label: {
-            Label {
-                Text("banner.hide")
-            } icon: {
-                Image(systemName: "eye.slash")
-            }
+            Label("banner.hide", systemImage: "eye.slash")
         }
     }
 }

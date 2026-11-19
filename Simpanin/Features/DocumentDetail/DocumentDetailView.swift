@@ -106,11 +106,7 @@ struct DocumentDetailView: View {
                             model.shareOpened()
                             shareShown = true
                         } label: {
-                            Label {
-                                Text("detail.share")
-                            } icon: {
-                                Image(systemName: "square.and.arrow.up")
-                            }
+                            Label("detail.share", systemImage: "square.and.arrow.up")
                         }
                         .accessibilityIdentifier("detail.share")
                     }

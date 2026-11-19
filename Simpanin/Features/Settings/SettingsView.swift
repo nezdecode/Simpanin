@@ -95,7 +95,7 @@ struct SettingsView: View {
                     Label {
                         Text("settings.noAccount \(Bundle.main.shortVersion)")
                     } icon: {
-                        Image(systemName: "checkmark.shield").foregroundStyle(.tint)
+                        Image(systemName: "checkmark.shield").foregroundStyle(.tint).accessibilityHidden(true)
                     }
                 }
             }

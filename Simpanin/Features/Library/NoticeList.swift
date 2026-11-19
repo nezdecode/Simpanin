@@ -27,6 +27,7 @@ struct NoticeList: View {
             if notices.contains(notice) {
                 HStack(alignment: .top, spacing: 12) {
                     Image(systemName: notice == .repairWaitingForSpace ? "externaldrive" : "info.circle")
+                        .accessibilityHidden(true)
                     VStack(alignment: .leading, spacing: 8) {
                         Text(notice.message)
                         Button {

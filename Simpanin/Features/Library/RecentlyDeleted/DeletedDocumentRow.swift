@@ -32,11 +32,7 @@ struct DeletedDocumentRow: View {
         .accessibilityAction(named: Text("button.restore"), onRestore)
         .contextMenu {
             Button(action: onRestore) {
-                Label {
-                    Text("button.restore")
-                } icon: {
-                    Image(systemName: "arrow.uturn.backward")
-                }
+                Label("button.restore", systemImage: "arrow.uturn.backward")
             }
         }
         .swipeActions {

@@ -28,7 +28,7 @@ struct WarningText: View {
         Label {
             text
         } icon: {
-            Image(systemName: "exclamationmark.triangle")
+            Image(systemName: "exclamationmark.triangle").accessibilityHidden(true)
         }
         .font(.footnote)
         .foregroundStyle(Color(Self.color))

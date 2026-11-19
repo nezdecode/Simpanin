@@ -22,15 +22,11 @@ struct RefusalText: View {
     static let ground = ColorResource.errorBackground
 
     var body: some View {
-        Label {
-            Text(text)
-        } icon: {
-            Image(systemName: "exclamationmark.circle")
-        }
-        .font(.footnote)
-        .foregroundStyle(Color(Self.color))
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(Color(Self.ground), in: .rect(cornerRadius: 6))
+        Label(text, systemImage: "exclamationmark.circle")
+            .font(.footnote)
+            .foregroundStyle(Color(Self.color))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(Color(Self.ground), in: .rect(cornerRadius: 6))
     }
 }
