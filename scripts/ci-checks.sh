@@ -21,9 +21,9 @@ refused_files() {
     echo "$bad" | sed 's/^/  /' >&2
     failed=1
   fi
-  private=$(printf '%s\n' "$paths" | grep -E '^(docs/|\.claude/|graphify-out/|CLAUDE\.md$)' || true)
+  private=$(printf '%s\n' "$paths" | grep -E '^(docs(/|$)|\.claude(/|$)|graphify-out/|CLAUDE\.md$|AGENTS\.md$)' || true)
   if [ -n "$private" ]; then
-    echo "ci-checks: $label: private files (docs/, .claude/, graphify-out/, CLAUDE.md):" >&2
+    echo "ci-checks: $label: private files (docs, .claude, graphify-out/, CLAUDE.md, AGENTS.md; a link to one too):" >&2
     echo "$private" | sed 's/^/  /' >&2
     failed=1
   fi
@@ -50,6 +50,8 @@ python3 scripts/test-commit-checks.py || failed=1
 python3 scripts/test-xcodebuild-log.py || failed=1
 # The status the Mac posts for a pull request, so a failed or stopped run never shows as passed.
 python3 scripts/test-ci-mac.py || failed=1
+# The check above that keeps the private notes out, so it's tested too.
+python3 scripts/test-private-files.py || failed=1
 refused_files "$(git ls-files -z | tr '\0' '\n')" "the tree"
 python3 scripts/check-folder-rules.py || failed=1
 
