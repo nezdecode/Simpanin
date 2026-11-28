@@ -57,6 +57,7 @@ Packages/*/.swiftpm/
 # device test results and private links, so they stay out of the public repo.
 /docs/
 /CLAUDE.md
+/AGENTS.md
 
 # Claude Code agents and settings, private like CLAUDE.md.
 /.claude/

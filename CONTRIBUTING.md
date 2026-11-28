@@ -25,7 +25,7 @@ Before every commit, the hooks in `scripts/hooks` refuse:
 
 Never skip them with `--no-verify`; if one is wrong, fix the check.
 
-After each commit, if graphify is installed and you have built its code graph (`graphify-out/`), the post-commit hook refreshes the graph in the background; otherwise it does nothing.
+After each commit, if graphify is installed and you have built its code graph (`graphify-out/`), the post-commit hook refreshes the graph in the background; otherwise it does nothing. When `git worktree add` makes a new worktree, the post-checkout hook links the private notes into it (`docs`, `AGENTS.md` and `CLAUDE.md`, each when the main worktree has it and git ignores it), and the pre-commit hook refuses those links like the files.
 
 Three scripts run what the hooks can't:
 

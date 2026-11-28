@@ -1,0 +1,30 @@
+#!/bin/sh
+# Links the private notes into a new worktree, which checks out only tracked files: docs, AGENTS.md and CLAUDE.md,
+# each when the main worktree has it, this one doesn't, and git ignores it here. Nothing in .claude/, which
+# agent-workflow never makes private.
+# Copy it into the project's hooks folder with the others (agent-workflow project does).
+# Its exit status becomes git worktree add's, so it always exits 0; a link it couldn't make is reported.
+
+# Only a new worktree or a clone: the old HEAD is all zeros (40 of them, or 64 with sha256). Any other checkout
+# would bring back a link someone removed. In a clone or the main worktree, the main worktree is this one, so
+# nothing is linked.
+case $1 in *[!0]*) exit 0 ;; esac
+
+main="$(git worktree list --porcelain | sed -n '1s/^worktree //p')"
+[ -n "$main" ] || exit 0
+for f in docs AGENTS.md CLAUDE.md; do
+    [ -e "$main/$f" ] && [ ! -e "$f" ] && [ ! -L "$f" ] || continue
+    # docs/ with the slash, before the link is made: git doesn't count a link as a folder.
+    path="$f" && [ "$f" = docs ] && path=docs/
+    git check-ignore -q "$path" || continue
+    ln -s "$main/$f" "$f" || { echo "post-checkout: couldn't link $f from $main" >&2; continue; }
+    [ "$f" = docs ] || continue
+    # /docs/ in .gitignore doesn't match the link, so /docs goes in info/exclude, which every worktree shares.
+    exclude="$(git rev-parse --git-path info/exclude)"
+    grep -qxF /docs "$exclude" 2>/dev/null && continue
+    # A last line without a newline would run into the new one.
+    [ -s "$exclude" ] && [ -n "$(tail -c 1 "$exclude")" ] && echo >> "$exclude"
+    { mkdir -p "$(dirname "$exclude")" && echo /docs >> "$exclude"; } ||
+        echo "post-checkout: couldn't add /docs to $exclude; git status will show the docs link" >&2
+done
+exit 0
