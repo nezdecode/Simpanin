@@ -22,10 +22,15 @@ PUBLIC = ['README.md', 'docsets.md', '.claudeignore', 'Simpanin/docs/notes.md', 
 LINKS = ['docs', '.claude']
 
 
-def pre_commit_refuses(path, link):
+def pre_commit(path, link):
     """Stages path alone in a new repository, as a link or a file, and runs the real pre-commit there."""
     with tempfile.TemporaryDirectory() as repo:
         subprocess.run(['git', 'init', '-q', repo], check=True)
+        # pre-commit runs commit-checks.py after the private check; a stand-in that passes lets a public path
+        # reach exit 0, so a hook that refused everything would fail the public cases.
+        os.makedirs(os.path.join(repo, 'scripts'))
+        with open(os.path.join(repo, 'scripts', 'commit-checks.py'), 'w') as file:
+            file.write('')
         full = os.path.join(repo, path)
         os.makedirs(os.path.dirname(full), exist_ok=True)
         if link:
@@ -34,8 +39,12 @@ def pre_commit_refuses(path, link):
             with open(full, 'w') as file:
                 file.write('made up\n')
         subprocess.run(['git', 'add', '-f', path], cwd=repo, check=True)
-        result = subprocess.run(['sh', PRE_COMMIT], cwd=repo, capture_output=True, text=True)
-        return 'refusing to commit private files' in result.stderr
+        return subprocess.run(['sh', PRE_COMMIT], cwd=repo, capture_output=True, text=True)
+
+
+def assert_refused(test, result):
+    test.assertEqual(result.returncode, 1, result.stderr)
+    test.assertIn('refusing to commit private files', result.stderr)
 
 
 def ci_checks_refuses(path):
@@ -53,17 +62,18 @@ class PrivateFilesTests(unittest.TestCase):
     def test_pre_commit_refuses_each_private_path(self):
         for path in PRIVATE:
             with self.subTest(path=path):
-                self.assertTrue(pre_commit_refuses(path, link=False))
+                assert_refused(self, pre_commit(path, link=False))
 
     def test_pre_commit_refuses_a_staged_link(self):
         for path in LINKS:
             with self.subTest(path=path):
-                self.assertTrue(pre_commit_refuses(path, link=True))
+                assert_refused(self, pre_commit(path, link=True))
 
     def test_pre_commit_lets_public_paths_through(self):
         for path in PUBLIC:
             with self.subTest(path=path):
-                self.assertFalse(pre_commit_refuses(path, link=False))
+                result = pre_commit(path, link=False)
+                self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_ci_checks_refuses_each_private_path(self):
         for path in PRIVATE:

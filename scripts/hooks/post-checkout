@@ -1,8 +1,6 @@
 #!/bin/sh
 # Links the private notes into a new worktree, which checks out only tracked files: docs, AGENTS.md and CLAUDE.md,
-# each when the main worktree has it, this one doesn't, and git ignores it here. Nothing in .claude/, which
-# agent-workflow never makes private.
-# Copy it into the project's hooks folder with the others (agent-workflow project does).
+# each when the main worktree has it, this one doesn't, and git ignores it here. .claude/ isn't linked.
 # Its exit status becomes git worktree add's, so it always exits 0; a link it couldn't make is reported.
 
 # Only a new worktree or a clone: the old HEAD is all zeros (40 of them, or 64 with sha256). Any other checkout
